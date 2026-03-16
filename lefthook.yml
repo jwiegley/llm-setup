@@ -1,0 +1,29 @@
+pre-commit:
+  parallel: true
+  commands:
+    byte-compile:
+      glob: "*.el"
+      run: >
+        emacs --batch -L . \
+          --eval '(setq byte-compile-error-on-warn t)' \
+          -f batch-byte-compile {staged_files}
+    format-check:
+      glob: "*.el"
+      run: scripts/check-format.sh {staged_files}
+    package-lint:
+      glob: "*.el"
+      exclude: "scripts/**"
+      run: >
+        emacs --batch -L . \
+          -l package-lint \
+          -f package-lint-batch-and-exit {staged_files}
+    checkdoc:
+      glob: "*.el"
+      exclude: "scripts/**"
+      run: emacs --batch -L . -l scripts/run-checkdoc.el {staged_files}
+    relint:
+      glob: "*.el"
+      run: emacs --batch -L . -l relint -f relint-batch {staged_files}
+    nix-check:
+      glob: "*.nix"
+      run: nix flake check --no-warn-dirty 2>&1
