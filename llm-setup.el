@@ -1,4 +1,4 @@
-;;; hf.el --- LLM model management  -*- lexical-binding: t; -*-
+;;; llm-setup.el --- LLM model management  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 John Wiegley
 
@@ -30,80 +30,80 @@
 (defvar gptel-model)
 (defvar gptel-backend)
 
-(defgroup hf nil
+(defgroup llm-setup nil
   "Model management configuration."
   :group 'tools)
 
-(defcustom hf-protocol "http"
+(defcustom llm-setup-protocol "http"
   "Protocol for model server."
   :type 'string
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-server "hera.lan"
+(defcustom llm-setup-server "hera.lan"
   "Server address."
   :type 'string
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-port 8080
+(defcustom llm-setup-port 8080
   "Server port."
   :type 'integer
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-prefix ""
+(defcustom llm-setup-prefix ""
   "API prefix."
   :type 'string
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-api-key "sk-1234"
+(defcustom llm-setup-api-key "sk-1234"
   "API key."
   :type 'string
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-threads 24
+(defcustom llm-setup-threads 24
   "Number of threads."
   :type 'integer
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-default-hostname "hera"
+(defcustom llm-setup-default-hostname "hera"
   "Name of model host."
   :type 'string
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-default-instance-name 'Qwen3.5-27B
+(defcustom llm-setup-default-instance-name 'Qwen3.5-27B
   "Name of default instance."
   :type 'symbol
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-valid-hostnames '("hera" "clio" ;; "vulcan"
+(defcustom llm-setup-valid-hostnames '("hera" "clio" ;; "vulcan"
     )
   "Name of hosts that can run models."
   :type '(repeat string)
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-llama-server-executable "llama-server"
+(defcustom llm-setup-llama-server-executable "llama-server"
   "Path to the llama-server executable."
   :type 'file
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-mlx-lm-executable "mlx-lm"
+(defcustom llm-setup-mlx-lm-executable "mlx-lm"
   "Path to the mlx-lm executable."
   :type 'file
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-vllm-mlx-executable "vllm-mlx"
+(defcustom llm-setup-vllm-mlx-executable "vllm-mlx"
   "Path to the vllm-mlx executable."
   :type 'file
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-llama-swap-prolog "
+(defcustom llm-setup-llama-swap-prolog "
 healthCheckTimeout: 7200
 startPort: 9400
 "
   "Prolog for beginning of llama-swap.yaml file."
   :type 'string
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-llama-swap-epilog "
+(defcustom llm-setup-llama-swap-epilog "
 groups:
   always_on:
     swap: false
@@ -172,20 +172,20 @@ groups:
 "
   "Epilog for beginning of llama-swap.yaml file."
   :type 'string
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-litellm-path
+(defcustom llm-setup-litellm-path
   "/ssh:vulcan|sudo:root@vulcan:/etc/litellm/config.yaml"
   "Pathname to LiteLLM's config.yaml file."
   :type 'file
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-litellm-prolog ""
+(defcustom llm-setup-litellm-prolog ""
   "Prolog for beginning of LiteLLM's config.yaml file."
   :type 'string
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-litellm-environment-function
+(defcustom llm-setup-litellm-environment-function
   (lambda ()
     (format-spec
      "
@@ -239,9 +239,9 @@ environment_variables:
             "positron@api-dev.positron.ai" "jwiegley" 443))))))
   "Function for generating credentials for LiteLLM's config.yaml file."
   :type 'function
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-litellm-credentials "
+(defcustom llm-setup-litellm-credentials "
 credential_list:
   - credential_name: hera_llama_swap_credential
     credential_values:
@@ -328,9 +328,9 @@ credential_list:
 "
   "Function for generating credentials for LiteLLM's config.yaml file."
   :type 'function
-  :group 'hf)
+  :group 'llm-setup)
 
-(defcustom hf-litellm-epilog-spec "
+(defcustom llm-setup-litellm-epilog-spec "
 litellm_settings:
   request_timeout: 7200
   streaming_request_timeout: 300
@@ -374,34 +374,41 @@ general_settings:
   "Epilog for LiteLLM's config.yaml file.
 Contains a %s placeholder for dynamically generated router fallbacks."
   :type 'string
-  :group 'hf)
+  :group 'llm-setup)
 
-(defsubst hf-api-base ()
+(defsubst llm-setup-api-base ()
   "Get API base URL."
-  (format "%s://%s:%d%s" hf-protocol hf-server hf-port hf-prefix))
+  (format "%s://%s:%d%s"
+          llm-setup-protocol
+          llm-setup-server
+          llm-setup-port
+          llm-setup-prefix))
 
 ;; Define paths
-(defvar hf-home (expand-file-name "~"))
-(defvar hf-xdg-local (expand-file-name ".local/share" hf-home))
-(defvar hf-gguf-models (expand-file-name "Models" hf-home))
-(defvar hf-mlx-models
-  (expand-file-name ".cache/huggingface/hub" hf-home))
-(defvar hf-lmstudio-models
-  (expand-file-name "lmstudio/models" hf-xdg-local))
-(defvar hf-ollama-models
-  (expand-file-name "ollama/models" hf-xdg-local))
+(defvar llm-setup-home (expand-file-name "~"))
+(defvar llm-setup-xdg-local
+  (expand-file-name ".local/share" llm-setup-home))
+(defvar llm-setup-gguf-models
+  (expand-file-name "Models" llm-setup-home))
+(defvar llm-setup-mlx-models
+  (expand-file-name ".cache/huggingface/hub" llm-setup-home))
+(defvar llm-setup-lmstudio-models
+  (expand-file-name "lmstudio/models" llm-setup-xdg-local))
+(defvar llm-setup-ollama-models
+  (expand-file-name "ollama/models" llm-setup-xdg-local))
 
-(defconst hf-all-model-characteristics
+(defconst llm-setup-all-model-characteristics
   '(high medium low remote local thinking instruct coding rewrite))
 
-(defconst hf-all-model-capabilities '(media tool json url))
+(defconst llm-setup-all-model-capabilities '(media tool json url))
 
-(defconst hf-all-model-mime-types
+(defconst llm-setup-all-model-mime-types
   '("image/jpeg" "image/png" "image/gif" "image/webp"))
 
-(defconst hf-all-model-kinds '(text-generation embedding reranker))
+(defconst llm-setup-all-model-kinds
+  '(text-generation embedding reranker))
 
-(defconst hf-all-model-providers
+(defconst llm-setup-all-model-providers
   '(local
     vibe-proxy
     openai
@@ -415,14 +422,15 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     groq
     openrouter))
 
-(defconst hf-all-model-engines '(llama-cpp koboldcpp mlx-lm vllm-mlx))
+(defconst llm-setup-all-model-engines
+  '(llama-cpp koboldcpp mlx-lm vllm-mlx))
 
 ;;; Models have several names:
 ;;
-;; hf-model-name
-;; hf-model-aliases
-;; hf-instance-name
-;; hf-instance-model-name
+;; llm-setup-model-name
+;; llm-setup-model-aliases
+;; llm-setup-instance-name
+;; llm-setup-instance-model-name
 ;;
 ;; These names are used in several places:
 ;;
@@ -450,15 +458,15 @@ Contains a %s placeholder for dynamically generated router fallbacks."
 ;;; litellm/config.yaml
 
 (cl-defstruct
- hf-model
+ llm-setup-model
  "Configuration data for a model, and its family of instances."
  name ; name of the model
  description ; description of the model
  characteristics
  (capabilities
-  hf-all-model-capabilities) ; capabilities of the model
+  llm-setup-all-model-capabilities) ; capabilities of the model
  (mime-types
-  hf-all-model-mime-types) ; MIME types that can be sent
+  llm-setup-all-model-mime-types) ; MIME types that can be sent
  context-length ; model context length
  max-input-tokens ; number of tokens to accept
  max-output-tokens ; number of tokens to predict
@@ -476,7 +484,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
  )
 
 (cl-defstruct
- hf-instance
+ llm-setup-instance
  "Configuration data for a model, and its family of instances."
  name ; alternate name to use with provider
  model-name ; alternate model-name to use
@@ -491,7 +499,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
  (kv-offload t) ; if nil, emit --no-kv-offload
  (engine 'llama-cpp) ; if local: llama.cpp, koboldcpp, etc.
  (hostnames
-  (list hf-default-hostname)) ; if local: hostname where engine runs
+  (list llm-setup-default-hostname)) ; if local: hostname where engine runs
  model-path ; if local: path to model directory
  file-path ; if local: (optional) path to model file
  draft-model ; if local: (optional) path to draft model
@@ -503,10 +511,10 @@ Contains a %s placeholder for dynamically generated router fallbacks."
  (slot-prompt-similarity nil) ; float: min prompt similarity to reuse slot
  )
 
-(defcustom hf-models-list
+(defcustom llm-setup-models-list
   (list
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'DeepSeek-R1-0528
     :context-length 163840
     :temperature 0.6
@@ -516,29 +524,29 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'deepseek/deepseek-r1-0528:free
       :provider 'openrouter)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'DeepSeek-V3
     :context-length 163840
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'deepseek-ai/DeepSeek-V3
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'DeepSeek-V3.2
     :context-length 163840
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :context-length 12000
       :model-path "~/Models/unsloth_DeepSeek-V3.2-GGUF")))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Kimi-K2.5
     :context-length 262144
     :temperature 1.0
@@ -548,12 +556,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :context-length 98304
       :max-output-tokens 32768
       :model-path "~/Models/unsloth_Kimi-K2.5-GGUF")))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'SERA-32B
     :context-length 40960
     :temperature 0.7
@@ -564,11 +572,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/noctrex_SERA-32B-GGUF"
-      :hostnames '("hera" "clio"))))
+      :hostnames
+      '("hera" "clio"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Llama-4-Scout-17B-16E-Instruct
     :context-length 10485760
     :temperature 0.6
@@ -577,35 +586,35 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :context-length 1048576
       :model-path "~/Models/unsloth_Llama-4-Scout-17B-16E-Instruct-GGUF"
       :cache-type-k 'q4_1
       :cache-type-v 'q4_1)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'meta-llama/llama-4-scout-17b-16e-instruct
       :provider 'groq)))
 
-   ;; (make-hf-model
+   ;; (make-llm-setup-model
    ;;  :name 'Llama-4-Maverick-17B-128E-Instruct
    ;;  :context-length 1048576
    ;;  :supports-function-calling t
    ;;  :instances
    ;;  (list
-   ;;   (make-hf-instance
+   ;;   (make-llm-setup-instance
    ;;    :context-length 65536
    ;;    :model-path "~/Models/unsloth_Llama-4-Maverick-17B-128E-Instruct-GGUF")
 
-   ;;   (make-hf-instance
+   ;;   (make-llm-setup-instance
    ;;    :name 'meta-llama/llama-4-maverick-17b-128e-instruct
    ;;    :provider 'groq)
 
-   ;;   (make-hf-instance
+   ;;   (make-llm-setup-instance
    ;;    :name 'meta-llama/llama-4-maverick:free
    ;;    :provider 'openrouter)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'GLM-4.7-REAP-218B-A32B
     :context-length 202752
     :temperature 0.7
@@ -616,10 +625,10 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_GLM-4.7-REAP-218B-A32B-GGUF")))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'GLM-4.7-Flash
     :context-length 202752
     :temperature 0.7
@@ -630,13 +639,13 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_GLM-4.7-Flash-GGUF"
       :cache-control t
       :arguments
       '("--repeat-penalty" "1.0"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'GLM-4.7-Flash-REAP-23B-A3B
     :context-length 202752
     :temperature 0.7
@@ -647,11 +656,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_GLM-4.7-Flash-REAP-23B-A3B-GGUF"
-      :hostnames '("hera" "clio"))))
+      :hostnames
+      '("hera" "clio"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'GLM-5
     :context-length 262144
     :temperature 1.0
@@ -661,9 +671,10 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance :model-path "~/Models/unsloth_GLM-5-GGUF")))
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_GLM-5-GGUF")))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'MiniMax-M2-REAP-162B-A10B
     :context-length 262144
     :temperature 1.0
@@ -673,10 +684,10 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/bartowski_cerebras_MiniMax-M2-REAP-162B-A10B-GGUF")))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'MiniMax-M2.5
     :context-length 262144
     :temperature 0.8
@@ -686,12 +697,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/MiniMax-M2.5-4bit
       :cache-control t
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Phi-4-reasoning-plus
     :context-length 32768
     :temperature 0.6
@@ -700,12 +711,14 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_Phi-4-reasoning-plus-GGUF"
-      :hostnames '("hera" "clio")
-      :arguments '("--flash-attn" "on"))))
+      :hostnames
+      '("hera" "clio")
+      :arguments
+      '("--flash-attn" "on"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3-30B-A3B
     :context-length 40000
     :temperature 0.2
@@ -716,14 +729,16 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning nil
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 32000
       :model-path "~/Models/unsloth_Qwen3-30B-A3B-GGUF"
-      :arguments '("--swa-full" "--no-mmap")
-      :hostnames '("hera" "clio")
+      :arguments
+      '("--swa-full" "--no-mmap")
+      :hostnames
+      '("hera" "clio")
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3-Coder-Next
     :context-length 262144
     :temperature 1.0
@@ -733,13 +748,14 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3-Coder-Next-GGUF"
       :cache-control t
-      :hostnames '("hera" "clio"))))
+      :hostnames
+      '("hera" "clio"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3-Coder-Next-REAP-40B-A3B
     :context-length 262144
     :temperature 1.0
@@ -749,13 +765,14 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/mradermacher_Qwen3-Coder-Next-REAP-40B-A3B-GGUF"
       :cache-control t
-      :hostnames '("hera" "clio"))))
+      :hostnames
+      '("hera" "clio"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-397B-A17B
     :context-length 262144
     :temperature 0.6
@@ -766,7 +783,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 81920
       :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
       :cache-type-k 'q8_0
@@ -790,11 +807,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         "/Users/johnw/Models/unsloth_Qwen3.5-397B-A17B-GGUF/mmproj-F16.gguf")
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-397B-A17B-4bit
       :engine 'vllm-mlx)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-397B-A17B-1M
     :context-length 1048576
     :temperature 0.6
@@ -805,7 +822,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 81920
       :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
       :cache-type-k 'q8_0
@@ -835,7 +852,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         "/Users/johnw/Models/unsloth_Qwen3.5-397B-A17B-GGUF/mmproj-F16.gguf")
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-397B-A17B-nvfp4
     :context-length 200000
     :temperature 0.6
@@ -846,14 +863,14 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-397B-A17B-nvfp4
       :max-output-tokens 81920
       :fallbacks '(hera/Qwen3.5-397B-A17B)
       :cache-control t
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-122B-A10B
     :context-length 262144
     :temperature 0.6
@@ -864,7 +881,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-122B-A10B-GGUF"
       :cache-type-k 'q8_0
@@ -889,11 +906,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :fallbacks '(clio/Qwen3.5-35B-A3B)
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-122B-A10B-4bit
       :engine 'vllm-mlx)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-35B-A3B
     :context-length 262144
     :temperature 0.6
@@ -904,7 +921,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-35B-A3B-GGUF"
       :cache-type-k 'q8_0
@@ -930,11 +947,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-35B-A3B-4bit
       :engine 'vllm-mlx)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-27B
     :context-length 262144
     :temperature 0.6
@@ -945,7 +962,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-27B-GGUF"
       :parallel 1
@@ -972,11 +989,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-27B-4bit
       :engine 'vllm-mlx)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-27B-Instruct
     :context-length 262144
     :temperature 0.7
@@ -987,7 +1004,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning nil
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-27B-GGUF"
       :parallel 1
@@ -1006,7 +1023,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-9B
     :context-length 262144
     :temperature 0.6
@@ -1017,7 +1034,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
       :cache-type-k 'q8_0
@@ -1043,11 +1060,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-9B-4bit
       :engine 'vllm-mlx)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-9B-Instruct
     :context-length 262144
     :temperature 0.6
@@ -1058,7 +1075,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
       :parallel 1
@@ -1077,7 +1094,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-4B
     :context-length 262144
     :temperature 0.6
@@ -1088,7 +1105,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
       :cache-type-k 'q8_0
@@ -1114,11 +1131,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-4B-4bit
       :engine 'vllm-mlx)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-4B-Instruct
     :context-length 262144
     :temperature 0.6
@@ -1129,7 +1146,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning nil
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
       :cache-type-k 'q8_0
@@ -1147,7 +1164,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-2B
     :context-length 262144
     :temperature 0.6
@@ -1158,7 +1175,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-2B-GGUF"
       :cache-type-k 'q8_0
@@ -1184,11 +1201,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-2B-4bit
       :engine 'vllm-mlx)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-2B-Instruct
     :context-length 262144
     :temperature 0.6
@@ -1199,7 +1216,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-2B-GGUF"
       :cache-type-k 'q8_0
@@ -1217,7 +1234,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3.5-0.8B
     :context-length 262144
     :temperature 0.6
@@ -1228,7 +1245,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-0.8B-GGUF"
       :cache-type-k 'q8_0
@@ -1254,11 +1271,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-0.8B-4bit
       :engine 'vllm-mlx)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gpt-oss-20b-MXFP4-Q8
     :context-length 131072
     :temperature 1.0
@@ -1268,13 +1285,14 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/gpt-oss-20b-MXFP4-Q8
-      :hostnames '("hera" "clio")
+      :hostnames
+      '("hera" "clio")
       :cache-control t
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gpt-oss-20b
     :context-length 131072
     :temperature 1.0
@@ -1284,12 +1302,13 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_gpt-oss-20b-GGUF"
-      :hostnames '("hera" "clio")
+      :hostnames
+      '("hera" "clio")
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gpt-oss-120b-MXFP4-Q8
     :context-length 131072
     :temperature 1.0
@@ -1299,12 +1318,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/gpt-oss-120b-MXFP4-Q8
       :cache-control t
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gpt-oss-120b
     :context-length 131072
     :temperature 1.0
@@ -1314,7 +1333,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_gpt-oss-120b-GGUF"
       ;; :draft-model "~/Models/unsloth_gpt-oss-20b-GGUF/gpt-oss-20b-Q8_0.gguf"
       :cache-control t
@@ -1322,7 +1341,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       ;;              anthropic/claude-sonnet-4-5-20250929)
       )))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gpt-oss-safeguard-20b-MLX-MXFP4
     :context-length 131072
     :temperature 1.0
@@ -1332,13 +1351,14 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'lmstudio-community/gpt-oss-safeguard-20b-MLX-MXFP4
-      :hostnames '("hera" "clio")
+      :hostnames
+      '("hera" "clio")
       :cache-control t
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gpt-oss-safeguard-20b
     :context-length 131072
     :temperature 1.0
@@ -1348,11 +1368,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_gpt-oss-safeguard-20b-GGUF"
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Devstral-2-123B-Instruct-2512
     :context-length 262144
     :temperature 1.0
@@ -1361,11 +1381,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_Devstral-2-123B-Instruct-2512-GGUF"
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Devstral-Small-2-24B-Instruct-2512
     :context-length 262144
     :temperature 1.0
@@ -1374,16 +1394,16 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF"
       :cache-control t)
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF"
       :hostnames '("clio")
       :context-length 140000
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Nemotron-3-Nano-30B-A3B
     :context-length 1048576
     :temperature 1.0
@@ -1392,12 +1412,13 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_Nemotron-3-Nano-30B-A3B-GGUF"
-      :hostnames '("hera" "clio")
+      :hostnames
+      '("hera" "clio")
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'NVIDIA-Nemotron-3-Super-120B-A12B
     :context-length 1048576
     :temperature 1.0
@@ -1406,11 +1427,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/unsloth_NVIDIA-Nemotron-3-Super-120B-A12B-GGUF"
       :cache-control t)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gemma-2-9b
     :context-length 131072
     :temperature 1.0
@@ -1418,9 +1439,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance :name 'google/gemma-2-9b :engine 'mlx-lm)))
+     (make-llm-setup-instance
+      :name 'google/gemma-2-9b
+      :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Seed-OSS-36B-Instruct
     :context-length 32768
     :temperature 1.0
@@ -1428,11 +1451,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'ByteDance-Seed/Seed-OSS-36B-Instruct
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'chinese-alpaca-2-7b
     :context-length 16384
     :temperature 1.0
@@ -1440,11 +1463,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'hfl/chinese-alpaca-2-7b
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'chatglm-6b
     :context-length 16384
     :temperature 1.0
@@ -1452,9 +1475,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance :name 'zai-org/chatglm-6b :engine 'mlx-lm)))
+     (make-llm-setup-instance
+      :name 'zai-org/chatglm-6b
+      :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'chatglm2-6b
     :context-length 16384
     :temperature 1.0
@@ -1462,9 +1487,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance :name 'zai-org/chatglm2-6b :engine 'mlx-lm)))
+     (make-llm-setup-instance
+      :name 'zai-org/chatglm2-6b
+      :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Llama-3.1-8B
     :context-length 131072
     :temperature 1.0
@@ -1472,11 +1499,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'meta-llama/Llama-3.1-8B
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Llama-3.1-8B-Instruct
     :context-length 131072
     :temperature 1.0
@@ -1484,11 +1511,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'meta-llama/Llama-3.1-8B-Instruct
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Llama-3.2-1B
     :context-length 131072
     :temperature 1.0
@@ -1496,11 +1523,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'meta-llama/Llama-3.2-1B
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Mistral-7B-Instruct-v0.2
     :context-length 131072
     :temperature 1.0
@@ -1508,11 +1535,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mistralai/Mistral-7B-Instruct-v0.2
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Mistral-7B-Instruct-v0.3
     :context-length 131072
     :temperature 1.0
@@ -1520,11 +1547,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mistralai/Mistral-7B-Instruct-v0.3
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Mixtral-8x7B-Instruct-v0.1
     :context-length 131072
     :temperature 1.0
@@ -1532,28 +1559,29 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 1.0
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mistralai/Mixtral-8x7B-Instruct-v0.1
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen.Qwen3-Reranker-8B
     :kind 'reranker
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/DevQuasar_Qwen.Qwen3-Reranker-8B-GGUF"
-      :hostnames '("hera" "clio")
+      :hostnames
+      '("hera" "clio")
       :arguments
       '("--reranking" "--batch-size" "4096" "--ubatch-size" "2048"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Qwen3-Embedding-8B
     :context-length 32767
     :kind 'embedding
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/Qwen_Qwen3-Embedding-8B-GGUF"
       :hostnames '("hera" "clio")
       :arguments
@@ -1565,13 +1593,13 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         "--ubatch-size"
         "2048"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'bge-m3
     :context-length 8192
     :kind 'embedding
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/gpustack_bge-m3-GGUF"
       :hostnames '("hera" "clio")
       :arguments
@@ -1583,24 +1611,25 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         "--ubatch-size"
         "4096"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'bge-reranker-v2-m3
     :kind 'reranker
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/gpustack_bge-reranker-v2-m3-GGUF"
-      :hostnames '("hera" "clio")
+      :hostnames
+      '("hera" "clio")
       :arguments
       '("--reranking" "--batch-size" "8192" "--ubatch-size" "4096"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'nomic-embed-text-v2-moe
     :context-length 512
     :kind 'embedding
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-path "~/Models/nomic-ai_nomic-embed-text-v2-moe-GGUF"
       :hostnames '("hera" "clio")
       :arguments
@@ -1612,142 +1641,147 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         "--ubatch-size"
         "4096"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'bge-base-en-v1.5
     :kind 'embedding
     :instances
     (list
-     (make-hf-instance :name 'BAAI/bge-base-en-v1.5 :engine 'mlx-lm)))
+     (make-llm-setup-instance
+      :name 'BAAI/bge-base-en-v1.5
+      :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'bge-large-en-v1.5
     :kind 'embedding
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'BAAI/bge-large-en-v1.5
       :engine 'mlx-lm
-      :hostnames '("hera" "clio"))))
+      :hostnames
+      '("hera" "clio"))))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'whisper-large-v3-mlx
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'mlx-community/whisper-large-v3-mlx
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'NV-Embed-v2
     :kind 'embedding
     :instances
     (list
-     (make-hf-instance :name 'nvidia/NV-Embed-v2 :engine 'mlx-lm)))
+     (make-llm-setup-instance
+      :name 'nvidia/NV-Embed-v2
+      :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'all-MiniLM-L6-v2
     :kind 'embedding
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'sentence-transformers/all-MiniLM-L6-v2
       :engine 'mlx-lm)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gemini-2.5-pro
     :description "Gemini 2.5 Pro (Positron)"
     :supports-function-calling t
     :instances
-    (list (make-hf-instance :provider 'positron_gemini)))
+    (list (make-llm-setup-instance :provider 'positron_gemini)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gemini-3-pro-preview
     :description "Gemini 3 Pro (Positron)"
     :supports-function-calling t
     :instances
-    (list (make-hf-instance :provider 'positron_gemini)))
+    (list (make-llm-setup-instance :provider 'positron_gemini)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gpt-5.3-codex
     :description "ChatGPT 5.3 Codex (Positron)"
     :supports-function-calling t
     :instances
-    (list (make-hf-instance :provider 'positron_openai)))
+    (list (make-llm-setup-instance :provider 'positron_openai)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gpt-5.2
     :description "ChatGPT 5.2 (Positron)"
     :supports-function-calling t
     :instances
-    (list (make-hf-instance :provider 'positron_openai)))
+    (list (make-llm-setup-instance :provider 'positron_openai)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gpt-5.2-codex
     :description "ChatGPT 5.2 Codex (Positron)"
     :supports-function-calling t
     :instances
-    (list (make-hf-instance :provider 'positron_openai)))
+    (list (make-llm-setup-instance :provider 'positron_openai)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'gpt-5.1
     :description "ChatGPT model"
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance :provider 'positron_openai)
+     (make-llm-setup-instance :provider 'positron_openai)
 
-     (make-hf-instance :provider 'openai)))
+     (make-llm-setup-instance :provider 'openai)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'claude-haiku
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-name 'claude-haiku-4-5-20251001
       :name 'claude-haiku-4-5-20251001
       :provider 'vibe-proxy
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'claude-haiku-4-5-20251001
       :provider 'positron_anthropic)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'claude-haiku-4-5-20251001
       :provider 'anthropic)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'claude-sonnet
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-name 'claude-sonnet-4-6
       :name 'claude-sonnet-4-6-thinking-32000
       :provider 'vibe-proxy
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-name 'claude-sonnet-4-6
       :name 'claude-sonnet-4-6
       :provider 'vibe-proxy
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'claude-sonnet-4-6
       :provider 'positron_anthropic)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'claude-sonnet-4-6
       :provider 'anthropic)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'claude-opus
     :supports-function-calling t
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-name 'claude-opus-4-6
       :name 'claude-opus-4-6-thinking-32000
       :provider 'vibe-proxy
@@ -1755,7 +1789,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :fallbacks '(hera/gpt-oss-120b)
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :model-name 'claude-opus-4-6
       :name 'claude-opus-4-6
       :provider 'vibe-proxy
@@ -1763,109 +1797,116 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :fallbacks '(hera/gpt-oss-120b)
       :cache-control t)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'claude-opus-4-6
       :provider 'positron_anthropic)
 
-     (make-hf-instance :name 'claude-opus-4-6 :provider 'anthropic)))
+     (make-llm-setup-instance
+      :name 'claude-opus-4-6
+      :provider 'anthropic)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'r1-1776
     :supports-reasoning t
-    :instances (list (make-hf-instance :provider 'perplexity)))
+    :instances
+    (list (make-llm-setup-instance :provider 'perplexity)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'sonar-deep-research
-    :instances (list (make-hf-instance :provider 'perplexity)))
+    :instances
+    (list (make-llm-setup-instance :provider 'perplexity)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'sonar-pro
-    :instances (list (make-hf-instance :provider 'perplexity)))
+    :instances
+    (list (make-llm-setup-instance :provider 'perplexity)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'sonar-reasoning-pro
     :supports-reasoning t
-    :instances (list (make-hf-instance :provider 'perplexity)))
+    :instances
+    (list (make-llm-setup-instance :provider 'perplexity)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'compound-beta
-    :instances (list (make-hf-instance :provider 'groq)))
+    :instances
+    (list (make-llm-setup-instance :provider 'groq)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'llama-3.3-70b
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'llama-3.3-70b-instruct-good-tp2
       :provider 'positron)
 
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'llama-3.3-70b-versatile
       :provider 'groq)))
 
-   (make-hf-model
+   (make-llm-setup-model
     :name 'Llama-Guard-4-12B
     :instances
     (list
-     (make-hf-instance
+     (make-llm-setup-instance
       :name 'meta-llama/Llama-Guard-4-12B
       :provider 'groq))))
   "List of configured models."
   :type '(repeat sexp)
-  :group 'hf)
+  :group 'llm-setup)
 
-(defun hf-models-from-characteristics (&rest characteristics)
+(defun llm-setup-models-from-characteristics (&rest characteristics)
   "Return all models that provides the full list of CHARACTERISTICS."
   (cl-loop
-   for model in hf-models-list when
-   (and-let* ((all-chars (hf-model-characteristics model)))
+   for model in llm-setup-models-list when
+   (and-let* ((all-chars (llm-setup-model-characteristics model)))
      (cl-subsetp characteristics all-chars))
-   return (hf-model-name model)))
+   return (llm-setup-model-name model)))
 
-;; (hf-models-from-characteristics 'high 'local 'thinking)
+;; (llm-setup-models-from-characteristics 'high 'local 'thinking)
 
-(defun hf-make-models-hash ()
-  "Build a hashtable from NAME to MODEL for `hf-models-list'."
+(defun llm-setup-make-models-hash ()
+  "Build a hashtable from NAME to MODEL for `llm-setup-models-list'."
   (let ((h (make-hash-table)))
     (cl-loop
      for
      model
      in
-     hf-models-list
+     llm-setup-models-list
      for
      name
      =
-     (hf-model-name model)
+     (llm-setup-model-name model)
      do
      (puthash name model h)
      finally
      (return h))))
 
-(defun hf-get-model (model-name &optional models-hash)
+(defun llm-setup-get-model (model-name &optional models-hash)
   "Using MODELS-HASH, find the model with the given MODEL-NAME."
-  (let ((models-hash (or models-hash (hf-make-models-hash))))
+  (let ((models-hash (or models-hash (llm-setup-make-models-hash))))
     (gethash model-name models-hash)))
 
-(defun hf-instances-list ()
+(defun llm-setup-instances-list ()
   "Return list of all current instances."
   (cl-loop
-   for model in hf-models-list nconc
+   for model in llm-setup-models-list nconc
    (cl-loop
     for
     instance
     in
-    (hf-model-instances model)
+    (llm-setup-model-instances model)
     collect
     (cons model instance))))
 
-(defun hf-full-model-name (directory)
+(defun llm-setup-full-model-name (directory)
   "Based on a model DIRECTORY, return the canonical full model name."
   (let ((name (file-name-nondirectory directory)))
     (when (string-prefix-p "models--" name)
       (setq name (substring name 8)))
     (replace-regexp-in-string "--" "/" name)))
 
-(defun hf-short-model-name (model-name)
+(defun llm-setup-short-model-name (model-name)
   "Given a full MODEL-NAME, return its short model name."
   (thread-last
    model-name
@@ -1874,9 +1915,9 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (replace-regexp-in-string "-GGUF" "")
    (replace-regexp-in-string ".*_" "")))
 
-(defconst hf-gguf-min-file-size (* 5 1024 1024))
+(defconst llm-setup-gguf-min-file-size (* 5 1024 1024))
 
-(defun hf-get-gguf-path (model)
+(defun llm-setup-get-gguf-path (model)
   "Find the best GGUF file for MODEL."
   (car
    (delete-dups
@@ -1893,12 +1934,13 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         ("q" "[Qq][234568]_\\(.*XL\\)?"))
       when (string-match-p pattern gguf) when
       (> (file-attribute-size (file-attributes gguf))
-         hf-gguf-min-file-size)
+         llm-setup-gguf-min-file-size)
       collect gguf)))))
 
-(defun hf-get-context-length (model)
+(defun llm-setup-get-context-length (model)
   "Get maximum context length of MODEL."
-  (when-let* ((gguf (expand-file-name (hf-get-gguf-path model))))
+  (when-let* ((gguf
+               (expand-file-name (llm-setup-get-gguf-path model))))
     (with-temp-buffer
       (when (zerop (call-process "gguf-tools" nil t nil "show" gguf))
         (goto-char (point-min))
@@ -1906,22 +1948,22 @@ Contains a %s placeholder for dynamically generated router fallbacks."
           (when (re-search-forward "\\[uint32\\] \\([0-9]+\\)" nil t)
             (string-to-number (match-string 1))))))))
 
-(defun hf-http-get (endpoint)
+(defun llm-setup-http-get (endpoint)
   "GET request to ENDPOINT."
   (let ((url-request-method "GET")
         (url-request-extra-headers
-         `(("Authorization" . ,(concat "Bearer " hf-api-key))
+         `(("Authorization" . ,(concat "Bearer " llm-setup-api-key))
            ("Content-Type" . "application/json"))))
     (with-current-buffer (url-retrieve-synchronously
-                          (concat (hf-api-base) endpoint) t)
+                          (concat (llm-setup-api-base) endpoint) t)
       (goto-char (point-min))
       (re-search-forward "^$")
       (json-read))))
 
-(defun hf-get-models ()
+(defun llm-setup-get-models ()
   "Get list of available models from server."
   (condition-case err
-      (let* ((response (hf-http-get "/v1/models"))
+      (let* ((response (llm-setup-http-get "/v1/models"))
              (data (alist-get 'data response))
              (models (make-hash-table :test 'equal)))
         (seq-doseq (item data)
@@ -1932,9 +1974,9 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (message "Error fetching models: %s" err)
      (make-hash-table :test 'equal))))
 
-;; (inspect (hf-get-models))
+;; (inspect (llm-setup-get-models))
 
-(defun hf-download (entries)
+(defun llm-setup-download (entries)
   "Download models from HuggingFace ENTRIES."
   (interactive "sModel entries (space-separated): ")
   (dolist (entry (split-string entries))
@@ -1946,7 +1988,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       (make-directory name t)
       (shell-command (format "git clone hf.co:%s %s" model name)))))
 
-(defun hf-checkout (models)
+(defun llm-setup-checkout (models)
   "Checkout MODELS using Git LFS."
   (interactive "sModel files (space-separated): ")
   (dolist (model (split-string models))
@@ -1959,7 +2001,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
          (format "cd %s && git lfs checkout %s" dir base))
         (shell-command (format "cd %s && git lfs dedup" dir))))))
 
-(defun hf-import-lmstudio (models)
+(defun llm-setup-import-lmstudio (models)
   "Import MODELS to LMStudio."
   (interactive "sModel files (space-separated): ")
   (dolist (model (split-string models))
@@ -1968,16 +2010,17 @@ Contains a %s placeholder for dynamically generated router fallbacks."
              (base
               (replace-regexp-in-string
                (concat
-                (regexp-quote hf-gguf-models) "/")
+                (regexp-quote llm-setup-gguf-models) "/")
                "" file-path))
              (name (replace-regexp-in-string "_" "/" base))
-             (target (expand-file-name name hf-lmstudio-models)))
+             (target
+              (expand-file-name name llm-setup-lmstudio-models)))
         (make-directory (file-name-directory target) t)
         (when (file-exists-p target)
           (delete-file target))
         (add-name-to-file file-path target)))))
 
-(defun hf-import-ollama (models)
+(defun llm-setup-import-ollama (models)
   "Import MODELS to Ollama."
   (interactive "sModel files (space-separated): ")
   (dolist (model (split-string models))
@@ -1995,74 +2038,78 @@ Contains a %s placeholder for dynamically generated router fallbacks."
          (format "ollama create %s -f %s" model-name modelfile-name))
         (delete-file modelfile-name)))))
 
-(defun hf-show (model)
+(defun llm-setup-show (model)
   "Show MODEL details."
   (interactive "sModel directory: ")
-  (let ((gguf (hf-get-gguf-path model)))
+  (let ((gguf (llm-setup-get-gguf-path model)))
     (when gguf
       (shell-command (format "gguf-tools show %s" gguf)))))
 
-(defun hf-get-instance-model-name (model instance)
+(defun llm-setup-get-instance-model-name (model instance)
   "Return the model name for the given MODEL and INSTANCE."
-  (or (hf-instance-model-name instance) (hf-model-name model)))
+  (or (llm-setup-instance-model-name instance)
+      (llm-setup-model-name model)))
 
-(defun hf-get-instance-name (model instance)
+(defun llm-setup-get-instance-name (model instance)
   "Return the model name for the given MODEL and INSTANCE."
-  (or (hf-instance-name instance) (hf-model-name model)))
+  (or (llm-setup-instance-name instance)
+      (llm-setup-model-name model)))
 
-(defun hf-get-instance-context-length (model instance)
+(defun llm-setup-get-instance-context-length (model instance)
   "Find maximum context-length for the given MODEL and INSTANCE."
-  (or (hf-instance-context-length instance)
-      (hf-model-context-length model)))
+  (or (llm-setup-instance-context-length instance)
+      (llm-setup-model-context-length model)))
 
-(defun hf-get-instance-max-input-tokens (model instance)
+(defun llm-setup-get-instance-max-input-tokens (model instance)
   "Find maximum output tokens for the given MODEL and INSTANCE."
-  (or (hf-instance-max-input-tokens instance)
-      (hf-model-max-input-tokens model)))
+  (or (llm-setup-instance-max-input-tokens instance)
+      (llm-setup-model-max-input-tokens model)))
 
-(defun hf-get-instance-max-output-tokens (model instance)
+(defun llm-setup-get-instance-max-output-tokens (model instance)
   "Find maximum output tokens for the given MODEL and INSTANCE."
-  (or (hf-instance-max-output-tokens instance)
-      (hf-model-max-output-tokens model)))
+  (or (llm-setup-instance-max-output-tokens instance)
+      (llm-setup-model-max-output-tokens model)))
 
-(defun hf-lookup-fallback-instance (fallback-name)
+(defun llm-setup-lookup-fallback-instance (fallback-name)
   "Look up the instance whose name matches FALLBACK-NAME.
 Returns a cons cell (MODEL . INSTANCE) or nil if not found."
   (cl-loop
    for
    (model . instance)
    in
-   (hf-instances-list)
+   (llm-setup-instances-list)
    when
-   (eq fallback-name (hf-get-instance-name model instance))
+   (eq fallback-name (llm-setup-get-instance-name model instance))
    return
    (cons model instance)))
 
-(defun hf-get-full-litellm-name (model instance)
+(defun llm-setup-get-full-litellm-name (model instance)
   "Return the full LiteLLM model name for MODEL and INSTANCE.
 For local/vibe-proxy providers, returns \"host/name\".
 For remote providers, returns \"provider/name\"."
-  (let ((provider (hf-instance-provider instance))
-        (name (hf-get-instance-name model instance)))
+  (let ((provider (llm-setup-instance-provider instance))
+        (name (llm-setup-get-instance-name model instance)))
     (if (memq provider '(local vibe-proxy))
         ;; For local instances, use the first hostname
-        (format "%s/%s" (car (hf-instance-hostnames instance)) name)
+        (format "%s/%s"
+                (car (llm-setup-instance-hostnames instance))
+                name)
       ;; For remote providers, use the provider name
       (format "%s/%s" provider name))))
 
-(defun hf-format-router-fallbacks ()
+(defun llm-setup-format-router-fallbacks ()
   "Collect all instance fallbacks and format as router_settings YAML.
 Returns a string suitable for insertion into the LiteLLM config."
   (let ((fallback-entries nil))
     ;; Collect all fallback mappings
-    (dolist (mi (hf-instances-list))
+    (dolist (mi (llm-setup-instances-list))
       (cl-destructuring-bind
        (model . instance) mi
-       (when-let* ((fallbacks (hf-instance-fallbacks instance))
-                   (provider (hf-instance-provider instance)))
+       (when-let* ((fallbacks (llm-setup-instance-fallbacks instance))
+                   (provider (llm-setup-instance-provider instance)))
          (let ((hostnames
                 (if (memq provider '(local vibe-proxy))
-                    (hf-instance-hostnames instance)
+                    (llm-setup-instance-hostnames instance)
                   (list provider))))
            ;; For each host where this instance is available
            (dolist (host hostnames)
@@ -2070,7 +2117,8 @@ Returns a string suitable for insertion into the LiteLLM config."
                  ((source-name
                    (format "%s/%s"
                            host
-                           (hf-get-instance-name model instance)))
+                           (llm-setup-get-instance-name
+                            model instance)))
                   ;; Resolve each fallback to its full name
                   ;; Fallbacks can be either:
                   ;; - Full names like 'openai/gpt-4.1 (already qualified)
@@ -2095,11 +2143,11 @@ Returns a string suitable for insertion into the LiteLLM config."
                     for
                     fb-mi
                     =
-                    (hf-lookup-fallback-instance fb)
+                    (llm-setup-lookup-fallback-instance fb)
                     when
                     fb-mi
                     collect
-                    (hf-get-full-litellm-name
+                    (llm-setup-get-full-litellm-name
                      (car fb-mi) (cdr fb-mi)))))
                (when resolved-fallbacks
                  (push (cons source-name resolved-fallbacks)
@@ -2119,57 +2167,58 @@ Returns a string suitable for insertion into the LiteLLM config."
                     "\n"))
       "")))
 
-(defsubst hf-remote-hostname-p (hostname)
+(defsubst llm-setup-remote-hostname-p (hostname)
   "Return non-nil if HOSTNAME is both non-nil and a remote host.
-Remote is defined by any hostname that does not match `hf-default-hostname'."
-  (and hostname (not (string= hostname hf-default-hostname))))
+Remote means it does not match `llm-setup-default-hostname'."
+  (and hostname (not (string= hostname llm-setup-default-hostname))))
 
-(defsubst hf-remote-path (path hostname)
+(defsubst llm-setup-remote-path (path hostname)
   "Given a possibly remote HOSTNAME, return the correct PATH to reference it."
-  (if (hf-remote-hostname-p hostname)
+  (if (llm-setup-remote-hostname-p hostname)
       (concat "/ssh:" hostname ":" path)
     path))
 
-(defun hf-get-instance-gguf-path (instance &optional hostname)
+(defun llm-setup-get-instance-gguf-path (instance &optional hostname)
   "Return file path for the GGUF file related to INSTANCE.
 Optionally read the path on the given HOSTNAME."
-  (or (hf-instance-file-path instance)
-      (when-let* ((path (hf-instance-model-path instance)))
-        (hf-get-gguf-path (hf-remote-path path hostname)))))
+  (or (llm-setup-instance-file-path instance)
+      (when-let* ((path (llm-setup-instance-model-path instance)))
+        (llm-setup-get-gguf-path
+         (llm-setup-remote-path path hostname)))))
 
-(defun hf-strip-tramp-prefix (path)
+(defun llm-setup-strip-tramp-prefix (path)
   "Remove TRAMP protocol/host info from PATH, leaving only the remote part."
   (if (file-remote-p path)
       (file-remote-p path 'localname)
     path))
 
-(defun hf-insert-instance-llama-swap
+(defun llm-setup-insert-instance-llama-swap
     (model instance &optional hostname)
   "Instance the llama-swap.yaml config for MODEL and INSTANCE.
 Optionally generate for the given HOSTNAME."
-  (let* ((engine (hf-instance-engine instance))
+  (let* ((engine (llm-setup-instance-engine instance))
          (max-output-tokens
-          (hf-get-instance-max-output-tokens model instance))
+          (llm-setup-get-instance-max-output-tokens model instance))
          (context-length
-          (hf-get-instance-context-length model instance))
-         (parallel (hf-instance-parallel instance))
-         (cache-type-k (hf-instance-cache-type-k instance))
-         (cache-type-v (hf-instance-cache-type-v instance))
-         (kv-offload (hf-instance-kv-offload instance))
-         (cache-prompt (hf-instance-cache-prompt instance))
-         (cache-reuse (hf-instance-cache-reuse instance))
-         (slot-save-path (hf-instance-slot-save-path instance))
+          (llm-setup-get-instance-context-length model instance))
+         (parallel (llm-setup-instance-parallel instance))
+         (cache-type-k (llm-setup-instance-cache-type-k instance))
+         (cache-type-v (llm-setup-instance-cache-type-v instance))
+         (kv-offload (llm-setup-instance-kv-offload instance))
+         (cache-prompt (llm-setup-instance-cache-prompt instance))
+         (cache-reuse (llm-setup-instance-cache-reuse instance))
+         (slot-save-path (llm-setup-instance-slot-save-path instance))
          (slot-prompt-similarity
-          (hf-instance-slot-prompt-similarity instance))
-         (temperature (hf-model-temperature model))
-         (min-p (hf-model-min-p model))
-         (top-p (hf-model-top-p model))
-         (top-k (hf-model-top-k model))
+          (llm-setup-instance-slot-prompt-similarity instance))
+         (temperature (llm-setup-model-temperature model))
+         (min-p (llm-setup-model-min-p model))
+         (top-p (llm-setup-model-top-p model))
+         (top-k (llm-setup-model-top-k model))
          (args
           (mapconcat
            #'identity
            (append
-            (hf-instance-arguments instance)
+            (llm-setup-instance-arguments instance)
             (and temperature
                  (cl-case
                   engine
@@ -2217,7 +2266,7 @@ Optionally generate for the given HOSTNAME."
                   "--slot-prompt-similarity"
                   (number-to-string slot-prompt-similarity)))
             (and-let* ((draft-model
-                        (hf-instance-draft-model instance))
+                        (llm-setup-instance-draft-model instance))
                        (expanded (expand-file-name draft-model)))
               (and (file-exists-p expanded)
                    (cl-case
@@ -2248,24 +2297,27 @@ Optionally generate for the given HOSTNAME."
                   (number-to-string parallel)
                   "--continuous-batching")))
            " "))
-         (leader (format "
+         (leader
+          (format "
   \"%s\":
     proxy: \"http://127.0.0.1:${PORT}\"
     cmd: >"
-                         (hf-get-instance-name model instance)))
+                  (llm-setup-get-instance-name model instance)))
          (footer "
     checkEndpoint: /health
 "))
     (cl-case
      engine
      (llama-cpp
-      (when-let* ((path (hf-get-instance-gguf-path instance hostname))
+      (when-let* ((path
+                   (llm-setup-get-instance-gguf-path instance
+                                                     hostname))
                   (exe
                    (let ((default-directory
-                          (hf-remote-path "~/" hostname)))
-                     (executable-find hf-llama-server-executable
-                                      (hf-remote-hostname-p
-                                       hostname)))))
+                          (llm-setup-remote-path "~/" hostname)))
+                     (executable-find
+                      llm-setup-llama-server-executable
+                      (llm-setup-remote-hostname-p hostname)))))
         (insert
          leader
          (format-spec
@@ -2277,16 +2329,17 @@ Optionally generate for the given HOSTNAME."
         --parallel %n
         --model %p %a"
           `((?e . ,exe)
-            (?p . ,(hf-strip-tramp-prefix (expand-file-name path)))
-            (?a . ,args)
-            (?n . ,(number-to-string parallel))))
+            (?p
+             .
+             ,(llm-setup-strip-tramp-prefix (expand-file-name path)))
+            (?a . ,args) (?n . ,(number-to-string parallel))))
          footer)))
      (mlx-lm
       (when-let* ((exe
                    (let ((default-directory
-                          (hf-remote-path "~/" hostname)))
-                     (executable-find hf-mlx-lm-executable
-                                      (hf-remote-hostname-p
+                          (llm-setup-remote-path "~/" hostname)))
+                     (executable-find llm-setup-mlx-lm-executable
+                                      (llm-setup-remote-hostname-p
                                        hostname)))))
         (insert
          leader
@@ -2297,15 +2350,15 @@ Optionally generate for the given HOSTNAME."
         --use-default-chat-template
         --model %p %a"
           `((?e . ,exe)
-            (?p . ,(hf-get-instance-name model instance))
+            (?p . ,(llm-setup-get-instance-name model instance))
             (?a . ,args)))
          footer)))
      (vllm-mlx
       (when-let* ((exe
                    (let ((default-directory
-                          (hf-remote-path "~/" hostname)))
-                     (executable-find hf-vllm-mlx-executable
-                                      (hf-remote-hostname-p
+                          (llm-setup-remote-path "~/" hostname)))
+                     (executable-find llm-setup-vllm-mlx-executable
+                                      (llm-setup-remote-hostname-p
                                        hostname)))))
         (insert
          leader
@@ -2314,73 +2367,80 @@ Optionally generate for the given HOSTNAME."
       %e serve %p
         --host 127.0.0.1 --port ${PORT} %a"
           `((?e . ,exe)
-            (?p . ,(hf-get-instance-name model instance))
+            (?p . ,(llm-setup-get-instance-name model instance))
             (?a . ,args)))
          footer))))))
 
-(defun hf-generate-llama-swap-yaml (hostname)
+(defun llm-setup-generate-llama-swap-yaml (hostname)
   "Build llama-swap.yaml configuration for HOSTNAME."
   (with-current-buffer (get-buffer-create "*llama-swap.yaml*")
     (erase-buffer)
-    (insert hf-llama-swap-prolog)
+    (insert llm-setup-llama-swap-prolog)
     (insert "\nmodels:")
-    (dolist (mi (hf-instances-list))
+    (dolist (mi (llm-setup-instances-list))
       (cl-destructuring-bind
        (model . instance) mi
        (when (and (memq
-                   (hf-instance-provider instance)
+                   (llm-setup-instance-provider instance)
                    '(local vibe-proxy))
-                  (member hostname (hf-instance-hostnames instance)))
-         (hf-insert-instance-llama-swap model instance hostname))))
-    (insert hf-llama-swap-epilog)
+                  (member
+                   hostname (llm-setup-instance-hostnames instance)))
+         (llm-setup-insert-instance-llama-swap model instance
+                                               hostname))))
+    (insert llm-setup-llama-swap-epilog)
     (yaml-mode)
     (current-buffer)))
 
-;; (display-buffer (hf-generate-llama-swap-yaml "hera"))
+;; (display-buffer (llm-setup-generate-llama-swap-yaml "hera"))
 
-(defun hf-build-llama-swap-yaml (&optional hostname)
+(defun llm-setup-build-llama-swap-yaml (&optional hostname)
   "Build llama-swap.yaml configuration, optionally for HOSTNAME."
-  (let* ((target-host (or hostname hf-default-hostname))
+  (let* ((target-host (or hostname llm-setup-default-hostname))
          (yaml-path
           (if (string= hostname "vulcan")
               (expand-file-name "llama-swap.yaml"
                                 "/home/johnw/Models")
-            (expand-file-name "llama-swap.yaml" hf-gguf-models))))
+            (expand-file-name "llama-swap.yaml"
+                              llm-setup-gguf-models))))
     (message "[llama-swap] Generating YAML for %s..." target-host)
     (with-temp-buffer
       (insert
-       (with-current-buffer (hf-generate-llama-swap-yaml target-host)
+       (with-current-buffer (llm-setup-generate-llama-swap-yaml
+                             target-host)
          (buffer-string)))
       (message "[llama-swap] Writing to %s..."
-               (hf-remote-path yaml-path hostname))
-      (write-file (hf-remote-path yaml-path hostname)))
+               (llm-setup-remote-path yaml-path hostname))
+      (write-file (llm-setup-remote-path yaml-path hostname)))
     (message "[llama-swap] Stopping llama-swap on %s..." target-host)
-    (if (and hostname (not (string= hostname hf-default-hostname)))
+    (if (and hostname
+             (not (string= hostname llm-setup-default-hostname)))
         (shell-command
          (format "ssh %s killall llama-swap 2>/dev/null" hostname))
       (shell-command "killall llama-swap 2>/dev/null"))
     (message "[llama-swap] Done for %s" target-host)))
 
-(defun hf-insert-instance-litellm (model instance)
+(defun llm-setup-insert-instance-litellm (model instance)
   "Instance the LiteLLM config for MODEL and INSTANCE."
-  (let* ((hostnames (hf-instance-hostnames instance))
-         (provider (hf-instance-provider instance))
-         (cache-control (hf-instance-cache-control instance))
-         (_model-name (hf-get-instance-model-name model instance))
-         (name (hf-get-instance-name model instance))
-         (kind (hf-model-kind model))
-         (description (hf-model-description model))
+  (let* ((hostnames (llm-setup-instance-hostnames instance))
+         (provider (llm-setup-instance-provider instance))
+         (cache-control (llm-setup-instance-cache-control instance))
+         (_model-name
+          (llm-setup-get-instance-model-name model instance))
+         (name (llm-setup-get-instance-name model instance))
+         (kind (llm-setup-model-kind model))
+         (description (llm-setup-model-description model))
          (max-input-tokens
-          (hf-get-instance-max-input-tokens model instance))
+          (llm-setup-get-instance-max-input-tokens model instance))
          (max-output-tokens
-          (hf-get-instance-max-output-tokens model instance))
+          (llm-setup-get-instance-max-output-tokens model instance))
          (supports-system-message
-          (hf-model-supports-system-message model))
+          (llm-setup-model-supports-system-message model))
          (supports-function-calling
-          (hf-model-supports-function-calling model))
-         (supports-reasoning (hf-model-supports-reasoning model))
+          (llm-setup-model-supports-function-calling model))
+         (supports-reasoning
+          (llm-setup-model-supports-reasoning model))
          (supports-response-schema
-          (hf-model-supports-response-schema model)))
+          (llm-setup-model-supports-response-schema model)))
     (dolist (host
              (if (memq provider '(local vibe-proxy))
                  hostnames
@@ -2457,191 +2517,196 @@ Optionally generate for the given HOSTNAME."
                    "true"
                  "false"))))))
 
-(defun hf-generate-litellm-yaml ()
+(defun llm-setup-generate-litellm-yaml ()
   "Build LiteLLM config.yaml configuration."
   (with-current-buffer (get-buffer-create "*litellm-config.yaml*")
     (erase-buffer)
-    (insert hf-litellm-prolog)
+    (insert llm-setup-litellm-prolog)
     (insert "model_list:")
-    (dolist (mi (hf-instances-list))
+    (dolist (mi (llm-setup-instances-list))
       (cl-destructuring-bind
        (model . instance)
        mi
-       (hf-insert-instance-litellm model instance)
+       (llm-setup-insert-instance-litellm model instance)
        ;; (unless (string= model (downcase model))
-       ;;   (hf-insert-instance-litellm (downcase model) instance))
+       ;;   (llm-setup-insert-instance-litellm (downcase model) instance))
        ))
-    (insert hf-litellm-credentials)
-    (insert (funcall hf-litellm-environment-function))
+    (insert llm-setup-litellm-credentials)
+    (insert (funcall llm-setup-litellm-environment-function))
     ;; Format the epilog with dynamically generated router fallbacks
     (insert
-     (format hf-litellm-epilog-spec (hf-format-router-fallbacks)))
+     (format llm-setup-litellm-epilog-spec
+             (llm-setup-format-router-fallbacks)))
     (yaml-mode)
     (current-buffer)))
 
-;; (display-buffer (hf-generate-litellm-yaml))
+;; (display-buffer (llm-setup-generate-litellm-yaml))
 
-(defun hf-build-litellm-yaml ()
+(defun llm-setup-build-litellm-yaml ()
   "Build LiteLLM config.yaml configuration."
   (message "[litellm] Generating LiteLLM configuration...")
   (with-temp-buffer
     (insert
-     (with-current-buffer (hf-generate-litellm-yaml)
+     (with-current-buffer (llm-setup-generate-litellm-yaml)
        (buffer-string)))
-    (message "[litellm] Writing to %s..." hf-litellm-path)
-    (write-file hf-litellm-path))
+    (message "[litellm] Writing to %s..." llm-setup-litellm-path)
+    (write-file llm-setup-litellm-path))
   (message "[litellm] Restarting LiteLLM service...")
   ;; (shell-command "ssh vulcan sudo systemctl restart litellm.service")
   (shell-command
    "sudo systemctl --user -M litellm@ restart litellm.service")
   (message "[litellm] Done"))
 
-(defun hf-reset ()
+(defun llm-setup-reset ()
   "Reset all of the configuration files related to LLMs."
   (interactive)
-  (message "[hf-reset] Starting reset process...")
+  (message "[llm-setup-reset] Starting reset process...")
   ;; First check that everything is sane
-  (message "[hf-reset] Step 1/5: Checking instances...")
-  (unless (= 0 (hf-check-instances))
+  (message "[llm-setup-reset] Step 1/5: Checking instances...")
+  (unless (= 0 (llm-setup-check-instances))
     (error "Failed to check installed and defined instances"))
-  (message "[hf-reset] Step 1/5: Instance check complete")
+  (message "[llm-setup-reset] Step 1/5: Instance check complete")
   ;; Update llama-swap configurations on all machines that run models
-  (message "[hf-reset] Step 2/5: Building llama-swap.yaml for %s..."
-           hf-default-hostname)
-  (hf-build-llama-swap-yaml)
   (message
-   "[hf-reset] Step 3/5: Building llama-swap.yaml for clio...")
-  (hf-build-llama-swap-yaml "clio")
-  ;; (hf-build-llama-swap-yaml "vulcan")
+   "[llm-setup-reset] Step 2/5: Building llama-swap.yaml for %s..."
+   llm-setup-default-hostname)
+  (llm-setup-build-llama-swap-yaml)
+  (message
+   "[llm-setup-reset] Step 3/5: Building llama-swap.yaml for clio...")
+  (llm-setup-build-llama-swap-yaml "clio")
+  ;; (llm-setup-build-llama-swap-yaml "vulcan")
   ;; Update LiteLLM to refer to all local and remote models
   (message
-   "[hf-reset] Step 4/5: Building LiteLLM config and restarting service...")
-  (hf-build-litellm-yaml)
+   "[llm-setup-reset] Step 4/5: Building LiteLLM config and restarting service...")
+  (llm-setup-build-litellm-yaml)
   ;; Update GPTel with instance list, to remain in sync with LiteLLM
-  (message "[hf-reset] Step 5/5: Updating GPTel backends...")
+  (message "[llm-setup-reset] Step 5/5: Updating GPTel backends...")
   (setq
-   gptel-model hf-default-instance-name
+   gptel-model llm-setup-default-instance-name
    gptel-backend (gptel-backends-make-litellm))
-  (message "[hf-reset] Complete!"))
+  (message "[llm-setup-reset] Complete!"))
 
-(defun hf-get-instance-gptel-backend
+(defun llm-setup-get-instance-gptel-backend
     (model instance &optional hostname)
   "Instance the llama-swap.yaml config for MODEL and INSTANCE.
 If HOSTNAME is non-nil, only generate definitions for that host."
-  (let* ((model-name (hf-get-instance-name model instance)))
-    (unless (memq (hf-model-kind model) '(embedding reranker))
+  (let* ((model-name (llm-setup-get-instance-name model instance)))
+    (unless (memq (llm-setup-model-kind model) '(embedding reranker))
       (cl-loop
        for server in
-       (let ((provider (hf-instance-provider instance)))
+       (let ((provider (llm-setup-instance-provider instance)))
          (if (or (null provider) (memq provider '(local vibe-proxy)))
-             (hf-instance-hostnames instance)
+             (llm-setup-instance-hostnames instance)
            (list provider)))
        when (or (null hostname) (string= server hostname)) collect
        (list
         (if hostname
             model-name
           (intern (format "%s/%s" server model-name)))
-        :description (or (hf-model-description model) "")
-        :capabilities (hf-model-capabilities model)
-        :mime-types (hf-model-mime-types model))))))
+        :description (or (llm-setup-model-description model) "")
+        :capabilities (llm-setup-model-capabilities model)
+        :mime-types (llm-setup-model-mime-types model))))))
 
-(defun hf-gptel-backends (&optional hostname)
+(defun llm-setup-gptel-backends (&optional hostname)
   "Return the GPTel backends for all defined instances.
 If HOSTNAME is non-nil, only generate definitions for that host."
   (cl-loop
    for
    (model . instance)
    in
-   (hf-instances-list)
+   (llm-setup-instances-list)
    for
    backends
    =
-   (hf-get-instance-gptel-backend model instance hostname)
+   (llm-setup-get-instance-gptel-backend model instance hostname)
    when
    backends
    nconc
    backends))
 
-;; (inspect (hf-gptel-backends))
+;; (inspect (llm-setup-gptel-backends))
 
-(defun hf-lookup-instance (model)
+(defun llm-setup-lookup-instance (model)
   "Return the instance whole model matches the symbol MODEL."
   (cl-loop
    for
    (m . instance)
    in
-   (hf-instances-list)
+   (llm-setup-instances-list)
    when
    (eq model m)
    return
    instance))
 
-(defun hf-check-instances ()
+(defun llm-setup-check-instances ()
   "Check all model and instances definitions."
   (interactive)
-  (let ((models-hash (hf-make-models-hash))
+  (let ((models-hash (llm-setup-make-models-hash))
         (warnings 0)
-        (host-count (length hf-valid-hostnames))
+        (host-count (length llm-setup-valid-hostnames))
         (host-idx 0))
-    (message "[hf-check] Scanning installed models on %d hosts..."
-             host-count)
-    (dolist (host hf-valid-hostnames)
+    (message
+     "[llm-setup-check] Scanning installed models on %d hosts..."
+     host-count)
+    (dolist (host llm-setup-valid-hostnames)
       (cl-incf host-idx)
-      (message "[hf-check]   Host %d/%d: Scanning %s..."
+      (message "[llm-setup-check]   Host %d/%d: Scanning %s..."
                host-idx
                host-count
                host)
-      (let ((installed-models (hf-installed-models host)))
-        (message "[hf-check]   Host %d/%d: Found %d models on %s"
-                 host-idx
-                 host-count
-                 (length installed-models)
-                 host)
+      (let ((installed-models (llm-setup-installed-models host)))
+        (message
+         "[llm-setup-check]   Host %d/%d: Found %d models on %s"
+         host-idx host-count (length installed-models) host)
         (dolist (installed installed-models)
-          (unless (hf-get-model installed models-hash)
+          (unless (llm-setup-get-model installed models-hash)
             (warn "Missing model for host %s: %s" host installed)
             (cl-incf warnings))
           (unless (catch 'found
-                    (dolist (mi (hf-instances-list))
+                    (dolist (mi (llm-setup-instances-list))
                       (cl-destructuring-bind
                        (model . instance) mi
                        (when (and (member
                                    host
-                                   (hf-instance-hostnames instance))
+                                   (llm-setup-instance-hostnames
+                                    instance))
                                   (eq
-                                   installed (hf-model-name model)))
+                                   installed
+                                   (llm-setup-model-name model)))
                          (throw 'found instance)))))
             (warn "Missing instance for host %s: %s" host installed)
             (cl-incf warnings)))))
-    (message "[hf-check] Validating %d model definitions..."
-             (length hf-models-list))
-    (dolist (model hf-models-list)
-      (let ((capabilities (hf-model-capabilities model))
-            (mime-types (hf-model-mime-types model))
-            (kind (hf-model-kind model)))
+    (message "[llm-setup-check] Validating %d model definitions..."
+             (length llm-setup-models-list))
+    (dolist (model llm-setup-models-list)
+      (let ((capabilities (llm-setup-model-capabilities model))
+            (mime-types (llm-setup-model-mime-types model))
+            (kind (llm-setup-model-kind model)))
         (dolist (cap capabilities)
-          (unless (member cap hf-all-model-capabilities)
+          (unless (member cap llm-setup-all-model-capabilities)
             (warn "Unknown capability: %S" cap)
             (cl-incf warnings)))
         (dolist (mime mime-types)
-          (unless (member mime hf-all-model-mime-types)
+          (unless (member mime llm-setup-all-model-mime-types)
             (warn "Unknown mime-type: %S" mime)
             (cl-incf warnings)))
-        (unless (member kind hf-all-model-kinds)
+        (unless (member kind llm-setup-all-model-kinds)
           (warn "Unknown kind: %S" kind)
           (cl-incf warnings))))
-    (let ((instances (hf-instances-list)))
-      (message "[hf-check] Validating %d instance definitions..."
-               (length instances))
+    (let ((instances (llm-setup-instances-list)))
+      (message
+       "[llm-setup-check] Validating %d instance definitions..."
+       (length instances))
       (dolist (mi instances)
         (cl-destructuring-bind
          (_model . instance) mi
-         (let ((model-path (hf-instance-model-path instance))
-               (file-path (hf-instance-file-path instance))
-               (hostnames (hf-instance-hostnames instance))
-               (provider (hf-instance-provider instance))
-               (engine (hf-instance-engine instance))
-               (draft-model (hf-instance-draft-model instance)))
+         (let ((model-path (llm-setup-instance-model-path instance))
+               (file-path (llm-setup-instance-file-path instance))
+               (hostnames (llm-setup-instance-hostnames instance))
+               (provider (llm-setup-instance-provider instance))
+               (engine (llm-setup-instance-engine instance))
+               (draft-model
+                (llm-setup-instance-draft-model instance)))
            (unless (or (null model-path)
                        (file-directory-p model-path))
              (warn "Unknown model-path: %s" model-path)
@@ -2650,24 +2715,25 @@ If HOSTNAME is non-nil, only generate definitions for that host."
              (warn "Unknown file-path: %s" file-path)
              (cl-incf warnings))
            (dolist (host hostnames)
-             (unless (member host hf-valid-hostnames)
+             (unless (member host llm-setup-valid-hostnames)
                (warn "Unknown hostname: %s" host)
                (cl-incf warnings)))
-           (unless (member provider hf-all-model-providers)
+           (unless (member provider llm-setup-all-model-providers)
              (warn "Unknown provider: %s" provider)
              (cl-incf warnings))
-           (unless (member engine hf-all-model-engines)
+           (unless (member engine llm-setup-all-model-engines)
              (warn "Unknown engine: %s" engine)
              (cl-incf warnings))
            (unless (or (null draft-model)
                        (file-regular-p draft-model))
              (warn "Unknown draft-model: %S" draft-model)
              (cl-incf warnings))))))
-    (message "[hf-check] Validation complete: %d warning(s)" warnings)
+    (message "[llm-setup-check] Validation complete: %d warning(s)"
+             warnings)
     warnings))
 
 (cl-defun
- hf-run-mlx
+ llm-setup-run-mlx
  (model &key (port 8081))
  "Start mlx-lm with a specific MODEL on the given PORT."
  (interactive (list
@@ -2683,7 +2749,7 @@ If HOSTNAME is non-nil, only generate definitions for that host."
    (message "Started mlx-lm with model %s on port %d" model port)))
 
 (cl-defun
- hf-run-vllm-mlx
+ llm-setup-run-vllm-mlx
  (model &key (port 8081))
  "Start vllm-mlx with a specific MODEL on the given PORT."
  (interactive (list
@@ -2699,7 +2765,7 @@ If HOSTNAME is non-nil, only generate definitions for that host."
    (message "Started vllm-mlx with model %s on port %d" model port)))
 
 (cl-defun
- hf-run-llama-cpp
+ llm-setup-run-llama-cpp
  (model &key (port 8081))
  "Start llama.cpp with a specific MODEL on the given PORT."
  (interactive (list
@@ -2715,36 +2781,36 @@ If HOSTNAME is non-nil, only generate definitions for that host."
                        "--model"
                        model
                        "--threads"
-                       (format "%d" hf-threads))))
+                       (format "%d" llm-setup-threads))))
    (set-process-query-on-exit-flag proc nil)
    (message
     "Started llama.cpp with model %s on port %d using %d threads"
-    model port hf-threads)))
+    model port llm-setup-threads)))
 
-(defun hf-run-llama-swap ()
+(defun llm-setup-run-llama-swap ()
   "Start llama-swap with generated config."
   (interactive)
   (let ((config-path
-         (expand-file-name "llama-swap.yaml" hf-gguf-models)))
+         (expand-file-name "llama-swap.yaml" llm-setup-gguf-models)))
     (shell-command (format "llama-swap --config %s" config-path))))
 
-(defun hf-status ()
+(defun llm-setup-status ()
   "Get llama-swap status."
   (interactive)
   (with-current-buffer (get-buffer-create "*Model Status*")
     (erase-buffer)
-    (insert (json-encode (hf-http-get "/running")))
+    (insert (json-encode (llm-setup-http-get "/running")))
     (json-pretty-print-buffer)
     (json-mode)
     (display-buffer (current-buffer))))
 
-(defun hf-unload ()
+(defun llm-setup-unload ()
   "Unload current model."
   (interactive)
-  (hf-http-get "/unload")
+  (llm-setup-http-get "/unload")
   (message "Current model unloaded"))
 
-(defun hf-git-pull-all ()
+(defun llm-setup-git-pull-all ()
   "Run git-pull in all model directories."
   (interactive)
   (async-shell-command
@@ -2755,7 +2821,7 @@ If HOSTNAME is non-nil, only generate definitions for that host."
      for
      dir
      in
-     (directory-files hf-gguf-models t "\\`[^.]")
+     (directory-files llm-setup-gguf-models t "\\`[^.]")
      when
      (file-directory-p dir)
      when
@@ -2764,7 +2830,7 @@ If HOSTNAME is non-nil, only generate definitions for that host."
      dir)
     " ; ")))
 
-(defun hf-installed-models (&optional hostname)
+(defun llm-setup-installed-models (&optional hostname)
   "List all models from MLX and GGUF directories, optionally for HOSTNAME."
   (interactive)
   (cl-loop
@@ -2772,10 +2838,10 @@ If HOSTNAME is non-nil, only generate definitions for that host."
    base-dir
    in
    (list
-    ;; (hf-remote-path hf-mlx-models hostname)
-    (hf-remote-path hf-gguf-models hostname))
+    ;; (llm-setup-remote-path llm-setup-mlx-models hostname)
+    (llm-setup-remote-path llm-setup-gguf-models hostname))
    do
-   (message "[hf-installed] Checking directory: %s" base-dir)
+   (message "[llm-setup-installed] Checking directory: %s" base-dir)
    when
    (file-exists-p base-dir)
    nconc
@@ -2789,13 +2855,14 @@ If HOSTNAME is non-nil, only generate definitions for that host."
     unless
     (string= (file-name-nondirectory item) ".locks")
     collect
-    (intern (hf-short-model-name (hf-full-model-name item))))))
+    (intern
+     (llm-setup-short-model-name (llm-setup-full-model-name item))))))
 
-;; (hf-installed-models "vulcan")
+;; (llm-setup-installed-models "vulcan")
 
 (cl-defun
- hf-generate-instance-declarations
- (&key (hostname hf-default-hostname))
+ llm-setup-generate-instance-declarations
+ (&key (hostname llm-setup-default-hostname))
  "Generate model declarations from DIRECTORY's subdirectories.
 These declarations are for HOSTNAME."
  (interactive)
@@ -2803,15 +2870,15 @@ These declarations are for HOSTNAME."
         (cl-remove-if-not
          #'file-directory-p
          (directory-files "~/Models" t "\\`[^.]"))))
-   (with-current-buffer (get-buffer-create "*HF Instances*")
+   (with-current-buffer (get-buffer-create "*LLM-SETUP Instances*")
      (erase-buffer)
      (insert ";; Generated model configs from ~/Models\n")
      (dolist (dir dirs)
-       (let* ((full-model (hf-full-model-name dir))
-              (model-name (hf-short-model-name full-model))
-              (context-length (hf-get-context-length dir)))
+       (let* ((full-model (llm-setup-full-model-name dir))
+              (model-name (llm-setup-short-model-name full-model))
+              (context-length (llm-setup-get-context-length dir)))
          (insert
-          "(make-hf-model\n"
+          "(make-llm-setup-model\n"
           "  :name '"
           model-name
           "\n"
@@ -2828,10 +2895,10 @@ These declarations are for HOSTNAME."
           "  :aliases '())\n\n")))
      (insert "\n;; Generated model instances from ~/Models\n")
      (dolist (dir dirs)
-       (let* ((full-model (hf-full-model-name dir))
-              (model-name (hf-short-model-name full-model)))
+       (let* ((full-model (llm-setup-full-model-name dir))
+              (model-name (llm-setup-short-model-name full-model)))
          (insert
-          "(make-hf-instance\n"
+          "(make-llm-setup-instance\n"
           "  :model '"
           model-name
           "\n"
@@ -2846,6 +2913,6 @@ These declarations are for HOSTNAME."
           "  :arguments '())\n\n")))
      (display-buffer (current-buffer)))))
 
-(provide 'hf)
+(provide 'llm-setup)
 
-;;; hf.el ends here
+;;; llm-setup.el ends here
