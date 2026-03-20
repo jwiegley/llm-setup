@@ -34,7 +34,7 @@
   "Model management configuration."
   :group 'tools)
 
-(defcustom llm-setup-protocol "http"
+(defcustom llm-setup-protocol "https"
   "Protocol for model server."
   :type 'string
   :group 'llm-setup)
@@ -44,7 +44,7 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-port 8080
+(defcustom llm-setup-port 8443
   "Server port."
   :type 'integer
   :group 'llm-setup)
@@ -245,7 +245,7 @@ environment_variables:
 credential_list:
   - credential_name: hera_llama_swap_credential
     credential_values:
-      api_base: http://hera.lan:8080/v1
+      api_base: https://hera.lan:8443/v1
       api_key: \"fake\"
     credential_info:
       description: \"API Key for llama-swap on Hera\"
@@ -257,16 +257,9 @@ credential_list:
     credential_info:
       description: \"API Key for vibe-proxy on Hera\"
 
-  - credential_name: vulcan_llama_swap_credential
-    credential_values:
-      api_base: http://127.0.0.1:8080/v1
-      api_key: \"fake\"
-    credential_info:
-      description: \"API Key for llama-swap on Vulcan\"
-
   - credential_name: clio_llama_swap_credential
     credential_values:
-      api_base: http://clio.lan:8080/v1
+      api_base: https://clio.lan:8443/v1
       api_key: \"fake\"
     credential_info:
       description: \"API Key for llama-swap on Clio\"
@@ -506,6 +499,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
  arguments ; if local: arguments to engine
  fallbacks ; if remote: list of fallback model names
  (cache-prompt t) ; if nil, emit --no-cache-prompt
+ (cache-ram nil) ; if non-nil, emit --cache-ram
  (cache-reuse nil) ; integer: min chunk size for cache reuse
  (slot-save-path nil) ; path for saving/restoring slot KV cache
  (slot-prompt-similarity nil) ; float: min prompt similarity to reuse slot
@@ -519,7 +513,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 163840
     :temperature 0.6
     :min-p 0.01
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-reasoning t
     :instances
@@ -551,7 +545,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 1.0
     :min-p 0.01
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :instances
@@ -619,7 +613,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 202752
     :temperature 0.7
     :min-p 0.01
-    :top-p 1.0
+    :top-p 0.9
     :top-k 40
     :supports-function-calling t
     :supports-reasoning t
@@ -633,7 +627,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 202752
     :temperature 0.7
     :min-p 0.01
-    :top-p 1.0
+    :top-p 0.9
     :top-k 40
     :supports-function-calling t
     :supports-reasoning t
@@ -650,7 +644,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 202752
     :temperature 0.7
     :min-p 0.01
-    :top-p 1.0
+    :top-p 0.9
     :top-k 40
     :supports-function-calling t
     :supports-reasoning t
@@ -665,7 +659,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :name 'GLM-5
     :context-length 262144
     :temperature 1.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 40
     :supports-function-calling t
     :supports-reasoning t
@@ -678,7 +672,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :name 'MiniMax-M2-REAP-162B-A10B
     :context-length 262144
     :temperature 1.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 40
     :supports-function-calling t
     :supports-reasoning t
@@ -692,7 +686,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.8
     :min-p 0.01
-    :top-p 0.95
+    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :instances
@@ -732,8 +726,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 32000
       :model-path "~/Models/unsloth_Qwen3-30B-A3B-GGUF"
-      :arguments
-      '("--swa-full" "--no-mmap")
+      :arguments '("--swa-full")
       :hostnames
       '("hera" "clio")
       :cache-control t)))
@@ -743,7 +736,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 1.0
     :min-p 0.01
-    :top-p 0.95
+    :top-p 0.9
     :top-k 40
     :supports-function-calling t
     :instances
@@ -760,7 +753,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 1.0
     :min-p 0.01
-    :top-p 0.95
+    :top-p 0.9
     :top-k 40
     :supports-function-calling t
     :instances
@@ -777,7 +770,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -789,20 +782,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments
       '("--swa-full"
-        ;; "--kv-unified"
-        "--spec-type"
-        "ngram-mod"
-        "--spec-ngram-size-n"
-        "24"
-        "--draft-min"
-        "48"
-        "--draft-max"
-        "64"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
         "--mmproj"
         "/Users/johnw/Models/unsloth_Qwen3.5-397B-A17B-GGUF/mmproj-F16.gguf")
       :cache-control t)
@@ -816,7 +795,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 1048576
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -826,30 +805,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :max-output-tokens 81920
       :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
       :cache-type-k 'q8_0
-      :arguments
-      '("--swa-full"
-        "--kv-unified"
-        "--spec-type"
-        "ngram-mod"
-        "--spec-ngram-size-n"
-        "24"
-        "--draft-min"
-        "48"
-        "--draft-max"
-        "64"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--rope-scaling"
-        "yarn"
-        "--rope-scale"
-        "4"
-        "--yarn-orig-ctx"
-        "262144"
-        "--no-mmap"
-        "--mmproj"
-        "/Users/johnw/Models/unsloth_Qwen3.5-397B-A17B-GGUF/mmproj-F16.gguf")
+      :arguments '("--swa-full")
       :cache-control t)))
 
    (make-llm-setup-model
@@ -857,7 +813,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 200000
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -875,7 +831,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -885,24 +841,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-122B-A10B-GGUF"
       :cache-type-k 'q8_0
-      :arguments
-      '("--swa-full"
-        ;; "--kv-unified"
-        "--spec-type"
-        "ngram-mod"
-        "--spec-ngram-size-n"
-        "24"
-        "--draft-min"
-        "48"
-        "--draft-max"
-        "64"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
-        "--mmproj"
-        "/Users/johnw/Models/unsloth_Qwen3.5-122B-A10B-GGUF/mmproj-F16.gguf")
+      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-35B-A3B)
       :cache-control t)
 
@@ -915,7 +854,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -925,24 +864,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-35B-A3B-GGUF"
       :cache-type-k 'q8_0
-      :arguments
-      '("--swa-full"
-        ;; "--kv-unified"
-        "--spec-type"
-        "ngram-mod"
-        "--spec-ngram-size-n"
-        "24"
-        "--draft-min"
-        "48"
-        "--draft-max"
-        "64"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
-        "--mmproj"
-        "/Users/johnw/Models/unsloth_Qwen3.5-35B-A3B-GGUF/mmproj-F16.gguf")
+      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-35B-A3B)
       :hostnames '("hera" "clio")
       :cache-control t)
@@ -956,7 +878,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -967,24 +889,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :model-path "~/Models/unsloth_Qwen3.5-27B-GGUF"
       :parallel 1
       :cache-type-k 'q8_0
-      :arguments
-      '("--swa-full"
-        ;; "--kv-unified"
-        "--spec-type"
-        "ngram-mod"
-        "--spec-ngram-size-n"
-        "24"
-        "--draft-min"
-        "48"
-        "--draft-max"
-        "64"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
-        "--mmproj"
-        "/Users/johnw/Models/unsloth_Qwen3.5-27B-GGUF/mmproj-F16.gguf")
+      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-27B)
       :hostnames '("hera" "clio")
       :cache-control t)
@@ -1011,12 +916,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments
       '("--swa-full"
-        ;; "--kv-unified"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-27B-Instruct)
@@ -1028,7 +927,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -1038,24 +937,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
       :cache-type-k 'q8_0
-      :arguments
-      '("--swa-full"
-        ;; "--kv-unified"
-        "--spec-type"
-        "ngram-mod"
-        "--spec-ngram-size-n"
-        "24"
-        "--draft-min"
-        "48"
-        "--draft-max"
-        "64"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
-        "--mmproj"
-        "/Users/johnw/Models/unsloth_Qwen3.5-9B-GGUF/mmproj-F16.gguf")
+      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-9B)
       :hostnames '("hera" "clio")
       :cache-control t)
@@ -1069,7 +951,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -1082,12 +964,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments
       '("--swa-full"
-        ;; "--kv-unified"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-9B-Instruct)
@@ -1099,7 +975,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -1109,24 +985,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
       :cache-type-k 'q8_0
-      :arguments
-      '("--swa-full"
-        ;; "--kv-unified"
-        "--spec-type"
-        "ngram-mod"
-        "--spec-ngram-size-n"
-        "24"
-        "--draft-min"
-        "48"
-        "--draft-max"
-        "64"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
-        "--mmproj"
-        "/Users/johnw/Models/unsloth_Qwen3.5-4B-GGUF/mmproj-F16.gguf")
+      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-4B)
       :hostnames '("hera" "clio")
       :cache-control t)
@@ -1140,7 +999,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning nil
@@ -1152,12 +1011,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments
       '("--swa-full"
-        ;; "--kv-unified"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-4B)
@@ -1169,7 +1022,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -1179,24 +1032,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-2B-GGUF"
       :cache-type-k 'q8_0
-      :arguments
-      '("--swa-full"
-        ;; "--kv-unified"
-        "--spec-type"
-        "ngram-mod"
-        "--spec-ngram-size-n"
-        "24"
-        "--draft-min"
-        "48"
-        "--draft-max"
-        "64"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
-        "--mmproj"
-        "/Users/johnw/Models/unsloth_Qwen3.5-2B-GGUF/mmproj-F16.gguf")
+      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-2B)
       :hostnames '("hera" "clio")
       :cache-control t)
@@ -1210,7 +1046,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -1222,12 +1058,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments
       '("--swa-full"
-        ;; "--kv-unified"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-2B)
@@ -1239,7 +1069,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
-    :top-p 0.95
+    :top-p 0.9
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
@@ -1249,24 +1079,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-0.8B-GGUF"
       :cache-type-k 'q8_0
-      :arguments
-      '("--swa-full"
-        ;; "--kv-unified"
-        "--spec-type"
-        "ngram-mod"
-        "--spec-ngram-size-n"
-        "24"
-        "--draft-min"
-        "48"
-        "--draft-max"
-        "64"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"
-        "--no-mmap"
-        "--mmproj"
-        "/Users/johnw/Models/unsloth_Qwen3.5-0.8B-GGUF/mmproj-F16.gguf")
+      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-0.8B)
       :hostnames '("hera" "clio")
       :cache-control t)
@@ -1280,7 +1093,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :instances
@@ -1297,7 +1110,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :instances
@@ -1313,7 +1126,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :instances
@@ -1328,7 +1141,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :instances
@@ -1346,7 +1159,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :instances
@@ -1363,7 +1176,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :instances
@@ -1377,7 +1190,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :supports-function-calling t
     :instances
     (list
@@ -1390,7 +1203,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 262144
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :supports-function-calling t
     :instances
     (list
@@ -1408,7 +1221,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 1048576
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :supports-function-calling t
     :instances
     (list
@@ -1423,7 +1236,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 1048576
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :supports-function-calling t
     :instances
     (list
@@ -1436,7 +1249,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1448,7 +1261,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 32768
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1460,7 +1273,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 16384
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1472,7 +1285,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 16384
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1484,7 +1297,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 16384
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1496,7 +1309,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1508,7 +1321,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1520,7 +1333,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1532,7 +1345,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1544,7 +1357,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1556,12 +1369,25 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :context-length 131072
     :temperature 1.0
     :min-p 0.0
-    :top-p 1.0
+    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
       :name 'mistralai/Mixtral-8x7B-Instruct-v0.1
       :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'Leanstral-2603
+    :context-length 262144
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :supports-reasoning t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/jackcloudman_Leanstral-2603-GGUF")))
 
    (make-llm-setup-model
     :name 'Qwen.Qwen3-Reranker-8B
@@ -2207,6 +2033,7 @@ Optionally generate for the given HOSTNAME."
          (kv-offload (llm-setup-instance-kv-offload instance))
          (cache-prompt (llm-setup-instance-cache-prompt instance))
          (cache-reuse (llm-setup-instance-cache-reuse instance))
+         (cache-ram (llm-setup-instance-cache-ram instance))
          (slot-save-path (llm-setup-instance-slot-save-path instance))
          (slot-prompt-similarity
           (llm-setup-instance-slot-prompt-similarity instance))
@@ -2255,6 +2082,9 @@ Optionally generate for the given HOSTNAME."
                  (eq engine 'llama-cpp)
                  (list
                   "--cache-reuse" (number-to-string cache-reuse)))
+            (and cache-ram
+                 (eq engine 'llama-cpp)
+                 (list "--cache-ram" (number-to-string cache-ram)))
             (and slot-save-path
                  (eq engine 'llama-cpp)
                  (list
@@ -2482,8 +2312,8 @@ Optionally generate for the given HOSTNAME."
                  provider))
                (if (eq kind 'embedding)
                    "drop_params: true
-                      encoding_format: \"float\"
-"
+      encoding_format: \"float\"
+      "
                  "")
 
                (concat
