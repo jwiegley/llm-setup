@@ -780,10 +780,10 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :max-output-tokens 81920
       :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
       :cache-type-k 'q8_0
-      :arguments
-      '("--swa-full"
-        "--mmproj"
-        "/Users/johnw/Models/unsloth_Qwen3.5-397B-A17B-GGUF/mmproj-F16.gguf")
+      ;; :arguments
+      ;; '("--swa-full"
+      ;;   "--mmproj"
+      ;;   "/Users/johnw/Models/unsloth_Qwen3.5-397B-A17B-GGUF/mmproj-F16.gguf")
       :cache-control t)
 
      (make-llm-setup-instance
@@ -886,12 +886,22 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :max-output-tokens 131072
-      :model-path "~/Models/unsloth_Qwen3.5-27B-GGUF"
+      :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q8_K_XL.gguf"
       :parallel 1
       :cache-type-k 'q8_0
       :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-27B)
-      :hostnames '("hera" "clio")
+      :hostnames '("hera")
+      :cache-control t)
+
+     (make-llm-setup-instance
+      :max-output-tokens 131072
+      :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
+      :parallel 1
+      :cache-type-k 'q8_0
+      :arguments '("--swa-full")
+      :fallbacks '(clio/Qwen3.5-27B)
+      :hostnames '("clio")
       :cache-control t)
 
      (make-llm-setup-instance
@@ -911,7 +921,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :max-output-tokens 131072
-      :model-path "~/Models/unsloth_Qwen3.5-27B-GGUF"
+      :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
       :parallel 1
       :cache-type-k 'q8_0
       :arguments
@@ -1227,6 +1237,21 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_Nemotron-3-Nano-30B-A3B-GGUF"
+      :hostnames
+      '("hera" "clio")
+      :cache-control t)))
+
+   (make-llm-setup-model
+    :name 'Nemotron-Cascade-2-30B-A3B
+    :context-length 262144
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/mradermacher_Nemotron-Cascade-2-30B-A3B-GGUF"
       :hostnames
       '("hera" "clio")
       :cache-control t)))
