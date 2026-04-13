@@ -135,6 +135,7 @@ groups:
     swap: true
     exclusive: false
     members:
+      - GLM-5.1
       - Kimi-K2.5
       - Llama-4-Maverick-17B-128E-Instruct
       - Llama-4-Scout-17B-16E-Instruct
@@ -666,6 +667,19 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_GLM-5-GGUF")))
+
+   (make-llm-setup-model
+    :name 'GLM-5.1
+    :context-length 200000
+    :temperature 1.0
+    :top-p 0.9
+    :top-k 40
+    :supports-function-calling t
+    :supports-reasoning t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_GLM-5.1-GGUF")))
 
    (make-llm-setup-model
     :name 'MiniMax-M2-REAP-162B-A10B
