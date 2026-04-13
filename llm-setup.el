@@ -724,7 +724,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 32000
       :model-path "~/Models/unsloth_Qwen3-30B-A3B-GGUF"
-      :arguments '("--swa-full")
       :hostnames
       '("hera" "clio"))))
 
@@ -774,11 +773,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 81920
       :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
+      :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0)
-     ;; :arguments
-     ;; '("--swa-full"
-     ;;   "--mmproj"
-     ;;   "/Users/johnw/Models/unsloth_Qwen3.5-397B-A17B-GGUF/mmproj-F16.gguf")
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-397B-A17B-4bit
@@ -798,8 +794,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 81920
       :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
-      :cache-type-k 'q8_0
-      :arguments '("--swa-full"))))
+      :arguments '("--no-prefill-assistant")
+      :cache-type-k 'q8_0)))
 
    (make-llm-setup-model
     :name 'Qwen3.5-397B-A17B-nvfp4
@@ -832,8 +828,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-122B-A10B-GGUF"
+      :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-35B-A3B))
 
      (make-llm-setup-instance
@@ -854,8 +850,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-35B-A3B-GGUF"
+      :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-35B-A3B)
       :hostnames '("hera" "clio"))
 
@@ -877,18 +873,18 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 131072
       :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q8_K_XL.gguf"
+      :arguments '("--no-prefill-assistant")
       :parallel 1
       :cache-type-k 'q8_0
-      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-27B)
       :hostnames '("hera"))
 
      (make-llm-setup-instance
       :max-output-tokens 131072
       :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
+      :arguments '("--no-prefill-assistant")
       :parallel 1
       :cache-type-k 'q8_0
-      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-27B)
       :hostnames '("clio"))
 
@@ -913,7 +909,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :parallel 1
       :cache-type-k 'q8_0
       :arguments
-      '("--swa-full"
+      '("--no-prefill-assistant"
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-27B-Instruct)
@@ -933,8 +929,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
+      :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-9B)
       :hostnames '("hera" "clio"))
 
@@ -959,7 +955,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :parallel 1
       :cache-type-k 'q8_0
       :arguments
-      '("--swa-full"
+      '("--no-prefill-assistant"
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-9B-Instruct)
@@ -979,8 +975,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
+      :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-4B)
       :hostnames '("hera" "clio"))
 
@@ -1004,7 +1000,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
       :cache-type-k 'q8_0
       :arguments
-      '("--swa-full"
+      '("--no-prefill-assistant"
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-4B)
@@ -1024,8 +1020,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-2B-GGUF"
+      :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-2B)
       :hostnames '("hera" "clio"))
 
@@ -1049,7 +1045,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :model-path "~/Models/unsloth_Qwen3.5-2B-GGUF"
       :cache-type-k 'q8_0
       :arguments
-      '("--swa-full"
+      '("--no-prefill-assistant"
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-2B)
@@ -1069,8 +1065,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3.5-0.8B-GGUF"
+      :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-0.8B)
       :hostnames '("hera" "clio"))
 
