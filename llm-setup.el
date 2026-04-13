@@ -1652,14 +1652,14 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :name 'claude-opus-4-6-thinking-32000
       :provider 'vibe-proxy
       ;; :fallbacks '(hera/Qwen3.5-27B)
-      :fallbacks '(hera/gpt-oss-120b))
+      :fallbacks '(hera/Qwen3.5-27B))
 
      (make-llm-setup-instance
       :model-name 'claude-opus-4-6
       :name 'claude-opus-4-6
       :provider 'vibe-proxy
       ;; :fallbacks '(hera/Qwen3.5-27B-Instruct)
-      :fallbacks '(hera/gpt-oss-120b))
+      :fallbacks '(hera/Qwen3.5-27B-Instruct))
 
      (make-llm-setup-instance
       :name 'claude-opus-4-6
