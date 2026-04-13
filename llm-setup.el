@@ -2065,10 +2065,10 @@ Optionally generate for the given HOSTNAME."
                  (not (eq engine 'vllm-mlx))
                  (list "--top-k" (number-to-string top-k)))
             (and cache-type-k
-                 (not (eq engine 'vllm-mlx))
+                 (eq engine 'llama-cpp)
                  (list "--cache-type-k" (symbol-name cache-type-k)))
             (and cache-type-v
-                 (not (eq engine 'vllm-mlx))
+                 (eq engine 'llama-cpp)
                  (list "--cache-type-v" (symbol-name cache-type-v)))
             (and (not kv-offload)
                  (eq engine 'llama-cpp)
