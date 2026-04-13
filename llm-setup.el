@@ -887,7 +887,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 131072
       :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
-      :parallel 1
+      :parallel 2
       :cache-type-k 'q8_0
       :arguments
       '("--no-prefill-assistant"
