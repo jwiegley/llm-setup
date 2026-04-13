@@ -1227,6 +1227,69 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :engine 'mlx-lm)))
 
    (make-llm-setup-model
+    :name 'gemma-4-26B-A4B-it
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_gemma-4-26B-A4B-it-GGUF"
+      :hostnames
+      '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'gemma-4-31B-it
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_gemma-4-31B-it-GGUF"
+      :hostnames
+      '("hera" "clio"))))
+
+   ;; (make-llm-setup-model
+   ;;  :name 'Trinity-Large-Thinking
+   ;;  :context-length 131072
+   ;;  :temperature 1.0
+   ;;  :min-p 0.0
+   ;;  :top-p 0.9
+   ;;  :instances
+   ;;  (list
+   ;;   (make-llm-setup-instance
+   ;;    :model-path "~/Models/arcee-ai_Trinity-Large-Thinking-GGUF")))
+
+   (make-llm-setup-model
+    :name 'LFM2.5-350M
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/LiquidAI_LFM2.5-350M-GGUF"
+      :hostnames
+      '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'Bonsai-8B
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/prism-ml_Bonsai-8B-gguf"
+      :hostnames
+      '("hera" "clio"))))
+
+   (make-llm-setup-model
     :name 'Seed-OSS-36B-Instruct
     :context-length 32768
     :temperature 1.0
@@ -1453,6 +1516,16 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :name 'BAAI/bge-large-en-v1.5
+      :engine 'mlx-lm
+      :hostnames
+      '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'cohere-transcribe-03-2026-mlx-8bit
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/cohere-transcribe-03-2026-mlx-8bit
       :engine 'mlx-lm
       :hostnames
       '("hera" "clio"))))
