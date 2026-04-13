@@ -140,8 +140,6 @@ groups:
       - Llama-4-Maverick-17B-128E-Instruct
       - Llama-4-Scout-17B-16E-Instruct
       - Phi-4-reasoning-plus
-      - mlx-community/Qwen3.5-397B-A17B-nvfp4
-      - mlx-community/MiniMax-M2.5-4bit
       - mlx-community/gpt-oss-120b-MXFP4-Q8
 
   # Only one of these can be loaded at a time
@@ -695,20 +693,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :model-path "~/Models/bartowski_cerebras_MiniMax-M2-REAP-162B-A10B-GGUF")))
 
    (make-llm-setup-model
-    :name 'MiniMax-M2.5
-    :context-length 262144
-    :temperature 0.8
-    :min-p 0.01
-    :top-p 0.9
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/MiniMax-M2.5-4bit
-      :engine 'mlx-lm)))
-
-   (make-llm-setup-model
     :name 'Phi-4-reasoning-plus
     :context-length 32768
     :temperature 0.6
@@ -810,23 +794,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0)))
-
-   (make-llm-setup-model
-    :name 'Qwen3.5-397B-A17B-nvfp4
-    :context-length 200000
-    :temperature 0.6
-    :min-p 0.0
-    :top-p 0.9
-    :top-k 20
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/Qwen3.5-397B-A17B-nvfp4
-      :max-output-tokens 81920
-      :fallbacks '(hera/Qwen3.5-397B-A17B)
-      :engine 'mlx-lm)))
 
    (make-llm-setup-model
     :name 'Qwen3.5-122B-A10B
