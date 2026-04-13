@@ -635,7 +635,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_GLM-4.7-Flash-GGUF"
-      :cache-control t
       :arguments
       '("--repeat-penalty" "1.0"))))
 
@@ -693,7 +692,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :name 'mlx-community/MiniMax-M2.5-4bit
-      :cache-control t
       :engine 'mlx-lm)))
 
    (make-llm-setup-model
@@ -728,8 +726,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :model-path "~/Models/unsloth_Qwen3-30B-A3B-GGUF"
       :arguments '("--swa-full")
       :hostnames
-      '("hera" "clio")
-      :cache-control t)))
+      '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3-Coder-Next
@@ -744,7 +741,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3-Coder-Next-GGUF"
-      :cache-control t
       :hostnames
       '("hera" "clio"))))
 
@@ -761,7 +757,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 131072
       :model-path "~/Models/mradermacher_Qwen3-Coder-Next-REAP-40B-A3B-GGUF"
-      :cache-control t
       :hostnames
       '("hera" "clio"))))
 
@@ -779,12 +774,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :max-output-tokens 81920
       :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
-      :cache-type-k 'q8_0
-      ;; :arguments
-      ;; '("--swa-full"
-      ;;   "--mmproj"
-      ;;   "/Users/johnw/Models/unsloth_Qwen3.5-397B-A17B-GGUF/mmproj-F16.gguf")
-      :cache-control t)
+      :cache-type-k 'q8_0)
+     ;; :arguments
+     ;; '("--swa-full"
+     ;;   "--mmproj"
+     ;;   "/Users/johnw/Models/unsloth_Qwen3.5-397B-A17B-GGUF/mmproj-F16.gguf")
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-397B-A17B-4bit
@@ -805,8 +799,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :max-output-tokens 81920
       :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
       :cache-type-k 'q8_0
-      :arguments '("--swa-full")
-      :cache-control t)))
+      :arguments '("--swa-full"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-397B-A17B-nvfp4
@@ -823,7 +816,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :name 'mlx-community/Qwen3.5-397B-A17B-nvfp4
       :max-output-tokens 81920
       :fallbacks '(hera/Qwen3.5-397B-A17B)
-      :cache-control t
       :engine 'mlx-lm)))
 
    (make-llm-setup-model
@@ -842,8 +834,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :model-path "~/Models/unsloth_Qwen3.5-122B-A10B-GGUF"
       :cache-type-k 'q8_0
       :arguments '("--swa-full")
-      :fallbacks '(clio/Qwen3.5-35B-A3B)
-      :cache-control t)
+      :fallbacks '(clio/Qwen3.5-35B-A3B))
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-122B-A10B-4bit
@@ -866,8 +857,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-35B-A3B)
-      :hostnames '("hera" "clio")
-      :cache-control t)
+      :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-35B-A3B-4bit
@@ -891,8 +881,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-27B)
-      :hostnames '("hera")
-      :cache-control t)
+      :hostnames '("hera"))
 
      (make-llm-setup-instance
       :max-output-tokens 131072
@@ -901,8 +890,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-27B)
-      :hostnames '("clio")
-      :cache-control t)
+      :hostnames '("clio"))
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-27B-4bit
@@ -929,8 +917,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-27B-Instruct)
-      :hostnames '("hera" "clio")
-      :cache-control t)))
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-9B
@@ -949,8 +936,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-9B)
-      :hostnames '("hera" "clio")
-      :cache-control t)
+      :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-9B-4bit
@@ -977,8 +963,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-9B-Instruct)
-      :hostnames '("hera" "clio")
-      :cache-control t)))
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-4B
@@ -997,8 +982,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-4B)
-      :hostnames '("hera" "clio")
-      :cache-control t)
+      :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-4B-4bit
@@ -1024,8 +1008,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-4B)
-      :hostnames '("hera" "clio")
-      :cache-control t)))
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-2B
@@ -1044,8 +1027,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-2B)
-      :hostnames '("hera" "clio")
-      :cache-control t)
+      :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-2B-4bit
@@ -1071,8 +1053,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         "--chat-template-kwargs"
         "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-2B)
-      :hostnames '("hera" "clio")
-      :cache-control t)))
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-0.8B
@@ -1091,8 +1072,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :cache-type-k 'q8_0
       :arguments '("--swa-full")
       :fallbacks '(clio/Qwen3.5-0.8B)
-      :hostnames '("hera" "clio")
-      :cache-control t)
+      :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-0.8B-4bit
@@ -1112,7 +1092,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :name 'mlx-community/gpt-oss-20b-MXFP4-Q8
       :hostnames
       '("hera" "clio")
-      :cache-control t
       :engine 'mlx-lm)))
 
    (make-llm-setup-model
@@ -1128,8 +1107,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_gpt-oss-20b-GGUF"
       :hostnames
-      '("hera" "clio")
-      :cache-control t)))
+      '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'gpt-oss-120b-MXFP4-Q8
@@ -1143,7 +1121,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :name 'mlx-community/gpt-oss-120b-MXFP4-Q8
-      :cache-control t
       :engine 'mlx-lm)))
 
    (make-llm-setup-model
@@ -1159,7 +1136,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_gpt-oss-120b-GGUF"
       ;; :draft-model "~/Models/unsloth_gpt-oss-20b-GGUF/gpt-oss-20b-Q8_0.gguf"
-      :cache-control t
       ;; :fallbacks '(hera/claude-sonnet-4-5-20250929-thinking-32000
       ;;              anthropic/claude-sonnet-4-5-20250929)
       )))
@@ -1178,7 +1154,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :name 'lmstudio-community/gpt-oss-safeguard-20b-MLX-MXFP4
       :hostnames
       '("hera" "clio")
-      :cache-control t
       :engine 'mlx-lm)))
 
    (make-llm-setup-model
@@ -1192,8 +1167,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gpt-oss-safeguard-20b-GGUF"
-      :cache-control t)))
+      :model-path "~/Models/unsloth_gpt-oss-safeguard-20b-GGUF")))
 
    (make-llm-setup-model
     :name 'Devstral-2-123B-Instruct-2512
@@ -1205,8 +1179,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Devstral-2-123B-Instruct-2512-GGUF"
-      :cache-control t)))
+      :model-path "~/Models/unsloth_Devstral-2-123B-Instruct-2512-GGUF")))
 
    (make-llm-setup-model
     :name 'Devstral-Small-2-24B-Instruct-2512
@@ -1218,13 +1191,11 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF"
-      :cache-control t)
+      :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF")
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF"
       :hostnames '("clio")
-      :context-length 140000
-      :cache-control t)))
+      :context-length 140000)))
 
    (make-llm-setup-model
     :name 'Nemotron-3-Nano-30B-A3B
@@ -1238,8 +1209,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_Nemotron-3-Nano-30B-A3B-GGUF"
       :hostnames
-      '("hera" "clio")
-      :cache-control t)))
+      '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Nemotron-Cascade-2-30B-A3B
@@ -1253,8 +1223,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :model-path "~/Models/mradermacher_Nemotron-Cascade-2-30B-A3B-GGUF"
       :hostnames
-      '("hera" "clio")
-      :cache-control t)))
+      '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'NVIDIA-Nemotron-3-Super-120B-A12B
@@ -1266,8 +1235,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_NVIDIA-Nemotron-3-Super-120B-A12B-GGUF"
-      :cache-control t)))
+      :model-path "~/Models/unsloth_NVIDIA-Nemotron-3-Super-120B-A12B-GGUF")))
 
    (make-llm-setup-model
     :name 'gemma-2-9b
@@ -1591,8 +1559,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :model-name 'claude-haiku-4-5-20251001
       :name 'claude-haiku-4-5-20251001
-      :provider 'vibe-proxy
-      :cache-control t)
+      :provider 'vibe-proxy)
 
      (make-llm-setup-instance
       :name 'claude-haiku-4-5-20251001
@@ -1610,14 +1577,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :model-name 'claude-sonnet-4-6
       :name 'claude-sonnet-4-6-thinking-32000
-      :provider 'vibe-proxy
-      :cache-control t)
+      :provider 'vibe-proxy)
 
      (make-llm-setup-instance
       :model-name 'claude-sonnet-4-6
       :name 'claude-sonnet-4-6
-      :provider 'vibe-proxy
-      :cache-control t)
+      :provider 'vibe-proxy)
 
      (make-llm-setup-instance
       :name 'claude-sonnet-4-6
@@ -1637,16 +1602,14 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :name 'claude-opus-4-6-thinking-32000
       :provider 'vibe-proxy
       ;; :fallbacks '(hera/Qwen3.5-27B)
-      :fallbacks '(hera/gpt-oss-120b)
-      :cache-control t)
+      :fallbacks '(hera/gpt-oss-120b))
 
      (make-llm-setup-instance
       :model-name 'claude-opus-4-6
       :name 'claude-opus-4-6
       :provider 'vibe-proxy
       ;; :fallbacks '(hera/Qwen3.5-27B-Instruct)
-      :fallbacks '(hera/gpt-oss-120b)
-      :cache-control t)
+      :fallbacks '(hera/gpt-oss-120b))
 
      (make-llm-setup-instance
       :name 'claude-opus-4-6
