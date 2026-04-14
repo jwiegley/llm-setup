@@ -3099,6 +3099,462 @@ These declarations are for HOSTNAME."
           "  :arguments '())\n\n")))
      (display-buffer (current-buffer)))))
 
+;;; llm-setup-sync — discover new and dead models
+
+(defun llm-setup-sync--discover-gguf ()
+  "Discover GGUF model directories in `llm-setup-gguf-models'.
+Return a hash table mapping expanded directory path to short model
+name symbol."
+  (let ((result (make-hash-table :test 'equal)))
+    (when (file-directory-p llm-setup-gguf-models)
+      (dolist (item
+               (directory-files llm-setup-gguf-models t "\\`[^.]"))
+        (when (and (file-directory-p item)
+                   (not
+                    (string= (file-name-nondirectory item) ".locks")))
+          (puthash
+           (expand-file-name item)
+           (intern
+            (llm-setup-short-model-name
+             (llm-setup-full-model-name item)))
+           result))))
+    result))
+
+(defun llm-setup-sync--discover-mlx ()
+  "Discover MLX model directories in `llm-setup-mlx-models'.
+Return a hash table mapping canonical name string (e.g.
+\"mlx-community/Qwen3.5-27B-4bit\") to expanded directory path."
+  (let ((result (make-hash-table :test 'equal)))
+    (when (file-directory-p llm-setup-mlx-models)
+      (dolist (item
+               (directory-files llm-setup-mlx-models t "\\`models--"))
+        (when (file-directory-p item)
+          (let ((canonical (llm-setup-full-model-name item)))
+            (when (string-match-p
+                   (concat
+                    "\\(?:[Mm][Ll][Xx]\\|MXFP\\|" "-[0-9]+bit$\\)")
+                   canonical)
+              (puthash canonical (expand-file-name item) result))))))
+    result))
+
+(defun llm-setup-sync--omlx-get-models ()
+  "Fetch the list of model IDs from the oMLX /v1/models endpoint.
+Return a list of model ID strings, or nil on error."
+  (condition-case err
+      (let ((url-request-method "GET")
+            (url-request-extra-headers
+             `(("Authorization" .
+                ,(concat "Bearer " llm-setup-omlx-api-key))
+               ("Content-Type" . "application/json"))))
+        (with-current-buffer (url-retrieve-synchronously
+                              (concat
+                               llm-setup-omlx-api-base "/v1/models")
+                              t)
+          (goto-char (point-min))
+          (re-search-forward "^$")
+          (let* ((json (json-read))
+                 (data (alist-get 'data json)))
+            (mapcar
+             (lambda (item) (alist-get 'id item))
+             (append data nil)))))
+    (error
+     (message "[llm-setup-sync] oMLX fetch failed: %s" err)
+     nil)))
+
+(defun llm-setup-sync--discover-omlx ()
+  "Discover models from the oMLX API.
+Return a cons (SUCCESS . MODELS) where SUCCESS is t if the API
+responded and MODELS is a list of model ID strings."
+  (let ((models (llm-setup-sync--omlx-get-models)))
+    (if models
+        (cons t models)
+      (cons nil nil))))
+
+(defun llm-setup-sync--known-gguf-paths ()
+  "Extract GGUF model paths from the registry.
+Return a hash table mapping expanded directory path to a list of
+\(model . instance) cons pairs."
+  (let ((result (make-hash-table :test 'equal)))
+    (dolist (mi (llm-setup-instances-list))
+      (cl-destructuring-bind
+       (model . instance) mi
+       (when (eq (llm-setup-instance-provider instance) 'local)
+         (let* ((model-path (llm-setup-instance-model-path instance))
+                (file-path (llm-setup-instance-file-path instance))
+                (dir
+                 (cond
+                  (model-path
+                   (expand-file-name model-path))
+                  (file-path
+                   (expand-file-name
+                    (directory-file-name
+                     (file-name-directory file-path)))))))
+           (when dir
+             (push (cons model instance) (gethash dir result)))))))
+    result))
+
+(defun llm-setup-sync--known-mlx-names ()
+  "Extract MLX instance names from the registry.
+Return a hash table mapping canonical name string to a list of
+\(model . instance) cons pairs."
+  (let ((result (make-hash-table :test 'equal)))
+    (dolist (mi (llm-setup-instances-list))
+      (cl-destructuring-bind
+       (model . instance) mi
+       (when (and (memq
+                   (llm-setup-instance-engine instance)
+                   '(mlx-lm vllm-mlx))
+                  (llm-setup-instance-name instance))
+         (push (cons model instance)
+               (gethash
+                (symbol-name
+                 (llm-setup-instance-name instance))
+                result)))))
+    result))
+
+(defun llm-setup-sync--known-omlx-names ()
+  "Extract oMLX instance names from the registry.
+Return a hash table mapping instance name string to a list of
+\(model . instance) cons pairs."
+  (let ((result (make-hash-table :test 'equal)))
+    (dolist (mi (llm-setup-instances-list))
+      (cl-destructuring-bind
+       (model . instance) mi
+       (when (eq (llm-setup-instance-provider instance) 'omlx)
+         (push (cons model instance)
+               (gethash
+                (symbol-name
+                 (llm-setup-get-instance-name model instance))
+                result)))))
+    result))
+
+(defun llm-setup-sync--compare-gguf (discovered known)
+  "Compare DISCOVERED gguf dirs against KNOWN registry paths.
+Return a plist (:new NEW-LIST :dead DEAD-LIST)."
+  (let (new-list
+        dead-list)
+    ;; New: discovered dirs not in registry
+    (maphash
+     (lambda (dir-path short-name)
+       (unless (gethash dir-path known)
+         (push
+          (list :path dir-path :short-name short-name) new-list)))
+     discovered)
+    ;; Dead: registry paths whose directories no longer exist
+    (maphash
+     (lambda (dir-path mi-list)
+       (unless (file-directory-p dir-path)
+         (dolist (mi mi-list)
+           (push (list
+                  :path dir-path
+                  :model (car mi)
+                  :instance (cdr mi))
+                 dead-list))))
+     known)
+    (list :new (nreverse new-list) :dead (nreverse dead-list))))
+
+(defun llm-setup-sync--compare-mlx (discovered known)
+  "Compare DISCOVERED mlx names against KNOWN registry names.
+Return a plist (:new NEW-LIST :dead DEAD-LIST)."
+  (let (new-list
+        dead-list)
+    ;; New: discovered names not in registry
+    (maphash
+     (lambda (canonical-name dir-path)
+       (unless (gethash canonical-name known)
+         (push (list :name canonical-name :path dir-path) new-list)))
+     discovered)
+    ;; Dead: registry names whose HF cache dirs no longer exist
+    (maphash
+     (lambda (canonical-name mi-list)
+       (let* ((parts (split-string canonical-name "/"))
+              (hf-dir-name
+               (concat "models--" (mapconcat #'identity parts "--")))
+              (hf-dir
+               (expand-file-name hf-dir-name llm-setup-mlx-models)))
+         (unless (file-directory-p hf-dir)
+           (dolist (mi mi-list)
+             (push (list
+                    :name canonical-name
+                    :model (car mi)
+                    :instance (cdr mi))
+                   dead-list)))))
+     known)
+    (list :new (nreverse new-list) :dead (nreverse dead-list))))
+
+(defun llm-setup-sync--compare-omlx (discovered known)
+  "Compare DISCOVERED omlx models against KNOWN registry names.
+DISCOVERED is a cons (SUCCESS . MODELS).
+Return a plist (:new NEW-LIST :dead DEAD-LIST)."
+  (let* ((success (car discovered))
+         (models (cdr discovered))
+         (model-set (make-hash-table :test 'equal))
+         new-list
+         dead-list)
+    (dolist (m models)
+      (puthash m t model-set))
+    ;; New: API models not in registry
+    (dolist (m models)
+      (unless (gethash m known)
+        (push m new-list)))
+    ;; Dead: registry names not in API (only if fetch succeeded)
+    (when success
+      (maphash
+       (lambda (name mi-list)
+         (unless (gethash name model-set)
+           (dolist (mi mi-list)
+             (push (list
+                    :name name
+                    :model (car mi)
+                    :instance (cdr mi))
+                   dead-list))))
+       known))
+    (list :new (nreverse new-list) :dead (nreverse dead-list))))
+
+(defun llm-setup-sync--model-exists-p (short-name)
+  "Return non-nil if SHORT-NAME (symbol) exists in the registry."
+  (cl-some
+   (lambda (m) (eq (llm-setup-model-name m) short-name))
+   llm-setup-models-list))
+
+(defun llm-setup-sync--insert-scaffold-gguf (entry)
+  "Insert a scaffolded declaration for new GGUF model ENTRY."
+  (let* ((path (plist-get entry :path))
+         (short-name (plist-get entry :short-name))
+         (abbrev-path (abbreviate-file-name path))
+         (exists (llm-setup-sync--model-exists-p short-name)))
+    (insert (format "\n;; From %s\n" abbrev-path))
+    (if exists
+        (progn
+          (insert
+           (format ";; Model %s exists — add instance:\n" short-name))
+          (insert
+           (format (concat
+                    "(make-llm-setup-instance\n" " :model-path %S)\n")
+                   abbrev-path)))
+      (insert
+       (format (concat
+                "(make-llm-setup-model\n"
+                " :name '%s\n"
+                " :context-length nil\n"
+                " :temperature 1.0\n"
+                " :min-p 0.0\n"
+                " :top-p 0.9\n"
+                " :instances\n"
+                " (list\n"
+                "  (make-llm-setup-instance\n"
+                "   :model-path %S)))\n")
+               short-name abbrev-path)))))
+
+(defun llm-setup-sync--insert-scaffold-mlx (entry)
+  "Insert a scaffolded declaration for new MLX model ENTRY."
+  (let* ((canonical (plist-get entry :name))
+         (dir-path (plist-get entry :path))
+         (short-name (intern (llm-setup-short-model-name canonical)))
+         (exists (llm-setup-sync--model-exists-p short-name)))
+    (insert (format "\n;; From %s\n" (abbreviate-file-name dir-path)))
+    (if exists
+        (progn
+          (insert
+           (format ";; Model %s exists — add instance:\n" short-name))
+          (insert
+           (format (concat
+                    "(make-llm-setup-instance\n"
+                    " :name '%s\n"
+                    " :engine 'vllm-mlx)\n")
+                   canonical)))
+      (insert
+       (format (concat
+                "(make-llm-setup-model\n"
+                " :name '%s\n"
+                " :context-length nil\n"
+                " :temperature 1.0\n"
+                " :min-p 0.0\n"
+                " :top-p 0.9\n"
+                " :instances\n"
+                " (list\n"
+                "  (make-llm-setup-instance\n"
+                "   :name '%s\n"
+                "   :engine 'vllm-mlx)))\n")
+               short-name canonical)))))
+
+(defun llm-setup-sync--insert-scaffold-omlx (model-id)
+  "Insert a scaffolded declaration for new oMLX MODEL-ID."
+  (let* ((short-name (intern (llm-setup-short-model-name model-id)))
+         (exists (llm-setup-sync--model-exists-p short-name)))
+    (insert (format "\n;; From oMLX API: %s\n" model-id))
+    (if exists
+        (progn
+          (insert
+           (format ";; Model %s exists — add instance:\n" short-name))
+          (insert
+           (format (concat
+                    "(make-llm-setup-instance\n"
+                    " :name '%s\n"
+                    " :provider 'omlx\n"
+                    " :hostnames '(\"hera\"))\n")
+                   model-id)))
+      (insert
+       (format (concat
+                "(make-llm-setup-model\n"
+                " :name '%s\n"
+                " :context-length nil\n"
+                " :temperature 1.0\n"
+                " :min-p 0.0\n"
+                " :top-p 0.9\n"
+                " :instances\n"
+                " (list\n"
+                "  (make-llm-setup-instance\n"
+                "   :name '%s\n"
+                "   :provider 'omlx\n"
+                "   :hostnames '(\"hera\"))))\n")
+               short-name model-id)))))
+
+(defun llm-setup-sync--insert-dead (entry source-label)
+  "Insert a dead-instance report line for ENTRY from SOURCE-LABEL."
+  (let* ((model (plist-get entry :model))
+         (instance (plist-get entry :instance))
+         (model-name (llm-setup-model-name model))
+         (ref (or (plist-get entry :path) (plist-get entry :name))))
+    (insert (format ";; Model: %s\n" model-name))
+    (insert (format ";;   %s: %s\n" source-label ref))
+    (insert
+     (format ";;   Instance provider: %s, engine: %s\n"
+             (llm-setup-instance-provider instance)
+             (llm-setup-instance-engine instance)))
+    (insert "\n")))
+
+(defun llm-setup-sync--insert-report
+    (gguf-results
+     mlx-results
+     omlx-results
+     omlx-success
+     gguf-count
+     mlx-count
+     omlx-count)
+  "Insert the sync report into the current buffer.
+GGUF-RESULTS, MLX-RESULTS, OMLX-RESULTS are plists with :new and
+:dead.  OMLX-SUCCESS indicates whether the API fetch succeeded.
+GGUF-COUNT, MLX-COUNT, OMLX-COUNT are the number of discovered items."
+  (let ((gguf-new (plist-get gguf-results :new))
+        (gguf-dead (plist-get gguf-results :dead))
+        (mlx-new (plist-get mlx-results :new))
+        (mlx-dead (plist-get mlx-results :dead))
+        (omlx-new (plist-get omlx-results :new))
+        (omlx-dead (plist-get omlx-results :dead))
+        (total-new 0)
+        (total-dead 0))
+    (setq total-new
+          (+ (length gguf-new) (length mlx-new) (length omlx-new)))
+    (setq total-dead
+          (+ (length gguf-dead) (length mlx-dead) (length omlx-dead)))
+    (insert
+     (format-time-string
+      ";;; LLM-SETUP Sync Report — %Y-%m-%d %H:%M:%S\n"))
+    (insert ";;\n")
+    (insert
+     (format ";;   GGUF directories: %s (%d dirs)\n"
+             llm-setup-gguf-models
+             gguf-count))
+    (insert
+     (format ";;   MLX HF cache: %s (%d MLX dirs)\n"
+             llm-setup-mlx-models
+             mlx-count))
+    (insert
+     (format ";;   oMLX API: %s (%s)\n"
+             llm-setup-omlx-api-base
+             (if omlx-success
+                 (format "%d models" omlx-count)
+               "UNREACHABLE")))
+    (insert ";;\n")
+    (insert
+     (format ";;   Summary: %d new, %d dead\n\n"
+             total-new
+             total-dead))
+    ;; New models section
+    (insert ";;; ===== NEW MODELS (not in registry)" " =====\n")
+    (when gguf-new
+      (insert
+       (format "\n;;; --- GGUF (%d new) ---\n" (length gguf-new)))
+      (dolist (entry gguf-new)
+        (llm-setup-sync--insert-scaffold-gguf entry)))
+    (when mlx-new
+      (insert
+       (format "\n;;; --- MLX (%d new) ---\n" (length mlx-new)))
+      (dolist (entry mlx-new)
+        (llm-setup-sync--insert-scaffold-mlx entry)))
+    (when omlx-new
+      (insert
+       (format "\n;;; --- oMLX (%d new) ---\n" (length omlx-new)))
+      (dolist (entry omlx-new)
+        (llm-setup-sync--insert-scaffold-omlx entry)))
+    (when (zerop total-new)
+      (insert "\n;; (none)\n"))
+    ;; Dead models section
+    (insert
+     "\n;;; ===== DEAD INSTANCES"
+     " (referencing non-existent models) =====\n")
+    (when gguf-dead
+      (insert
+       (format "\n;;; --- GGUF (%d dead) ---\n\n" (length gguf-dead)))
+      (dolist (entry gguf-dead)
+        (llm-setup-sync--insert-dead entry "model-path")))
+    (when mlx-dead
+      (insert
+       (format "\n;;; --- MLX (%d dead) ---\n\n" (length mlx-dead)))
+      (dolist (entry mlx-dead)
+        (llm-setup-sync--insert-dead entry "instance-name")))
+    (when omlx-dead
+      (insert
+       (format "\n;;; --- oMLX (%d dead) ---\n\n" (length omlx-dead)))
+      (dolist (entry omlx-dead)
+        (llm-setup-sync--insert-dead entry "instance-name")))
+    (when (zerop total-dead)
+      (insert "\n;; (none)\n"))))
+
+;;;###autoload
+(defun llm-setup-sync ()
+  "Discover models from disk and API, compare against the registry.
+Present a report of new and dead models in a buffer."
+  (interactive)
+  (message "[llm-setup-sync] Scanning GGUF directories...")
+  (let*
+      ((discovered-gguf (llm-setup-sync--discover-gguf))
+       (_ (message "[llm-setup-sync] Scanning MLX HF cache..."))
+       (discovered-mlx (llm-setup-sync--discover-mlx))
+       (_ (message "[llm-setup-sync] Querying oMLX API..."))
+       (discovered-omlx (llm-setup-sync--discover-omlx))
+       (omlx-success (car discovered-omlx))
+       (_
+        (message
+         "[llm-setup-sync] Extracting known models from registry..."))
+       (known-gguf (llm-setup-sync--known-gguf-paths))
+       (known-mlx (llm-setup-sync--known-mlx-names))
+       (known-omlx (llm-setup-sync--known-omlx-names))
+       (_ (message "[llm-setup-sync] Comparing..."))
+       (gguf-results
+        (llm-setup-sync--compare-gguf discovered-gguf known-gguf))
+       (mlx-results
+        (llm-setup-sync--compare-mlx discovered-mlx known-mlx))
+       (omlx-results
+        (llm-setup-sync--compare-omlx discovered-omlx known-omlx)))
+    (with-current-buffer (get-buffer-create "*LLM-SETUP Sync*")
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (llm-setup-sync--insert-report
+         gguf-results
+         mlx-results
+         omlx-results
+         omlx-success
+         (hash-table-count discovered-gguf)
+         (hash-table-count discovered-mlx)
+         (length (cdr discovered-omlx))))
+      (emacs-lisp-mode)
+      (setq buffer-read-only t)
+      (goto-char (point-min))
+      (display-buffer (current-buffer))))
+  (message "[llm-setup-sync] Done."))
+
 (provide 'llm-setup)
 
 ;;; llm-setup.el ends here
