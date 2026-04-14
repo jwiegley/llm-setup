@@ -65,6 +65,10 @@
             mkdir -p $out/share/emacs/site-lisp
             cp llm-setup.el llm-setup.elc $out/share/emacs/site-lisp/
           '';
+          meta = {
+            description = "LLM model management for Emacs";
+            license = pkgs.lib.licenses.gpl3Plus;
+          };
         };
 
         checks = {
@@ -82,10 +86,10 @@
               -f package-lint-batch-and-exit llm-setup.el
           '';
 
-          # Docstring convention check (advisory — does not fail the build)
+          # Docstring convention check
           checkdoc = mkCheck "llm-setup-checkdoc" ''
             emacs --batch -L . \
-              -l ${./scripts/run-checkdoc.el} llm-setup.el || true
+              -l ${./scripts/run-checkdoc.el} llm-setup.el
           '';
 
           # Regexp lint
