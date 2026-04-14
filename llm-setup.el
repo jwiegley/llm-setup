@@ -272,7 +272,7 @@ credential_list:
       api_base: https://api-dev.positron.ai/v1
       api_key: os.environ/POSITRON_API_KEY
     credential_info:
-      description: \"API Key for Posistron.ai\"
+      description: \"API Key for Positron.ai\"
 
   - credential_name: omlx_credential
     credential_values:
@@ -453,7 +453,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
 
 (cl-defstruct
  llm-setup-instance
- "Configuration data for a model, and its family of instances."
+ "Deployment configuration for a single model instance."
  name ; alternate name to use with provider
  model-name ; alternate model-name to use
  context-length ; context length to use for instance
@@ -1619,7 +1619,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    for model in llm-setup-models-list when
    (and-let* ((all-chars (llm-setup-model-characteristics model)))
      (cl-subsetp characteristics all-chars))
-   return (llm-setup-model-name model)))
+   collect (llm-setup-model-name model)))
 
 ;; (llm-setup-models-from-characteristics 'high 'local 'thinking)
 
@@ -1697,8 +1697,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
 
 (defun llm-setup-get-context-length (model)
   "Get maximum context length of MODEL."
-  (when-let* ((gguf
-               (expand-file-name (llm-setup-get-gguf-path model))))
+  (when-let* ((path (llm-setup-get-gguf-path model))
+              (gguf (expand-file-name path)))
     (with-temp-buffer
       (when (zerop (call-process "gguf-tools" nil t nil "show" gguf))
         (goto-char (point-min))
@@ -1711,12 +1711,16 @@ Contains a %s placeholder for dynamically generated router fallbacks."
   (let ((url-request-method "GET")
         (url-request-extra-headers
          `(("Authorization" . ,(concat "Bearer " llm-setup-api-key))
-           ("Content-Type" . "application/json"))))
-    (with-current-buffer (url-retrieve-synchronously
-                          (concat (llm-setup-api-base) endpoint) t)
-      (goto-char (point-min))
-      (re-search-forward "^$")
-      (json-read))))
+           ("Content-Type" . "application/json")))
+        (buf
+         (url-retrieve-synchronously
+          (concat (llm-setup-api-base) endpoint) t)))
+    (unwind-protect
+        (with-current-buffer buf
+          (goto-char (point-min))
+          (re-search-forward "^$")
+          (json-read))
+      (kill-buffer buf))))
 
 (defun llm-setup-get-models ()
   "Get list of available models from server."
@@ -1819,7 +1823,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       (llm-setup-model-context-length model)))
 
 (defun llm-setup-get-instance-max-input-tokens (model instance)
-  "Find maximum output tokens for the given MODEL and INSTANCE."
+  "Find maximum input tokens for the given MODEL and INSTANCE."
   (or (llm-setup-instance-max-input-tokens instance)
       (llm-setup-model-max-input-tokens model)))
 
@@ -1828,14 +1832,16 @@ Contains a %s placeholder for dynamically generated router fallbacks."
   (or (llm-setup-instance-max-output-tokens instance)
       (llm-setup-model-max-output-tokens model)))
 
-(defun llm-setup-lookup-fallback-instance (fallback-name)
+(defun llm-setup-lookup-fallback-instance
+    (fallback-name &optional instances)
   "Look up the instance whose name matches FALLBACK-NAME.
+Search INSTANCES if provided, otherwise call `llm-setup-instances-list'.
 Returns a cons cell (MODEL . INSTANCE) or nil if not found."
   (cl-loop
    for
    (model . instance)
    in
-   (llm-setup-instances-list)
+   (or instances (llm-setup-instances-list))
    when
    (eq fallback-name (llm-setup-get-instance-name model instance))
    return
@@ -1855,12 +1861,14 @@ For remote providers, returns \"provider/name\"."
       ;; For remote providers, use the provider name
       (format "%s/%s" provider name))))
 
-(defun llm-setup-format-router-fallbacks ()
+(defun llm-setup-format-router-fallbacks (&optional instances)
   "Collect all instance fallbacks and format as router_settings YAML.
+Search INSTANCES if provided, otherwise call `llm-setup-instances-list'.
 Returns a string suitable for insertion into the LiteLLM config."
-  (let ((fallback-entries nil))
+  (let ((fallback-entries nil)
+        (instances (or instances (llm-setup-instances-list))))
     ;; Collect all fallback mappings
-    (dolist (mi (llm-setup-instances-list))
+    (dolist (mi instances)
       (cl-destructuring-bind
        (model . instance) mi
        (when-let* ((fallbacks (llm-setup-instance-fallbacks instance))
@@ -1901,7 +1909,7 @@ Returns a string suitable for insertion into the LiteLLM config."
                     for
                     fb-mi
                     =
-                    (llm-setup-lookup-fallback-instance fb)
+                    (llm-setup-lookup-fallback-instance fb instances)
                     when
                     fb-mi
                     collect
@@ -1950,10 +1958,28 @@ Optionally read the path on the given HOSTNAME."
       (file-remote-p path 'localname)
     path))
 
+(defun llm-setup--cached-executable-find (exe-name hostname exe-cache)
+  "Find EXE-NAME on HOSTNAME, caching results in EXE-CACHE.
+EXE-CACHE is a hash table keyed by (HOSTNAME . EXE-NAME) cons cells."
+  (let ((key (cons hostname exe-name)))
+    (if (gethash key exe-cache)
+        (let ((val (gethash key exe-cache)))
+          (unless (eq val 'not-found)
+            val))
+      (let ((result
+             (let ((default-directory
+                    (llm-setup-remote-path "~/" hostname)))
+               (executable-find exe-name
+                                (llm-setup-remote-hostname-p
+                                 hostname)))))
+        (puthash key (or result 'not-found) exe-cache)
+        result))))
+
 (defun llm-setup-insert-instance-llama-swap
-    (model instance &optional hostname)
+    (model instance &optional hostname exe-cache)
   "Instance the llama-swap.yaml config for MODEL and INSTANCE.
-Optionally generate for the given HOSTNAME."
+Optionally generate for the given HOSTNAME.  EXE-CACHE, if
+non-nil, is a hash table for caching executable lookups."
   (let* ((engine (llm-setup-instance-engine instance))
          (max-output-tokens
           (llm-setup-get-instance-max-output-tokens model instance))
@@ -2075,11 +2101,16 @@ Optionally generate for the given HOSTNAME."
                    (llm-setup-get-instance-gguf-path instance
                                                      hostname))
                   (exe
-                   (let ((default-directory
-                          (llm-setup-remote-path "~/" hostname)))
-                     (executable-find
-                      llm-setup-llama-server-executable
-                      (llm-setup-remote-hostname-p hostname)))))
+                   (if exe-cache
+                       (llm-setup--cached-executable-find
+                        llm-setup-llama-server-executable
+                        hostname
+                        exe-cache)
+                     (let ((default-directory
+                            (llm-setup-remote-path "~/" hostname)))
+                       (executable-find
+                        llm-setup-llama-server-executable
+                        (llm-setup-remote-hostname-p hostname))))))
         (insert
          leader
          (format-spec
@@ -2098,11 +2129,16 @@ Optionally generate for the given HOSTNAME."
          footer)))
      (mlx-lm
       (when-let* ((exe
-                   (let ((default-directory
-                          (llm-setup-remote-path "~/" hostname)))
-                     (executable-find llm-setup-mlx-lm-executable
-                                      (llm-setup-remote-hostname-p
-                                       hostname)))))
+                   (if exe-cache
+                       (llm-setup--cached-executable-find
+                        llm-setup-mlx-lm-executable
+                        hostname
+                        exe-cache)
+                     (let ((default-directory
+                            (llm-setup-remote-path "~/" hostname)))
+                       (executable-find llm-setup-mlx-lm-executable
+                                        (llm-setup-remote-hostname-p
+                                         hostname))))))
         (insert
          leader
          (format-spec
@@ -2117,11 +2153,16 @@ Optionally generate for the given HOSTNAME."
          footer)))
      (vllm-mlx
       (when-let* ((exe
-                   (let ((default-directory
-                          (llm-setup-remote-path "~/" hostname)))
-                     (executable-find llm-setup-vllm-mlx-executable
-                                      (llm-setup-remote-hostname-p
-                                       hostname)))))
+                   (if exe-cache
+                       (llm-setup--cached-executable-find
+                        llm-setup-vllm-mlx-executable
+                        hostname
+                        exe-cache)
+                     (let ((default-directory
+                            (llm-setup-remote-path "~/" hostname)))
+                       (executable-find llm-setup-vllm-mlx-executable
+                                        (llm-setup-remote-hostname-p
+                                         hostname))))))
         (insert
          leader
          (format-spec
@@ -2178,7 +2219,8 @@ a single exclusive group with swap enabled."
     (erase-buffer)
     (insert llm-setup-llama-swap-prolog)
     (insert "\nmodels:")
-    (let ((emitted-names '()))
+    (let ((emitted-names '())
+          (exe-cache (make-hash-table :test 'equal)))
       (dolist (mi (llm-setup-instances-list))
         (cl-destructuring-bind
          (model . instance) mi
@@ -2190,7 +2232,8 @@ a single exclusive group with swap enabled."
                      (llm-setup-instance-hostnames instance)))
            (let ((pos (point)))
              (llm-setup-insert-instance-llama-swap model instance
-                                                   hostname)
+                                                   hostname
+                                                   exe-cache)
              (when (/= pos (point))
                (push (llm-setup-get-instance-name model instance)
                      emitted-names))))))
@@ -2223,9 +2266,14 @@ a single exclusive group with swap enabled."
     (message "[llama-swap] Stopping llama-swap on %s..." target-host)
     (if (and hostname
              (not (string= hostname llm-setup-default-hostname)))
-        (shell-command
-         (format "ssh %s killall llama-swap 2>/dev/null" hostname))
-      (shell-command "killall llama-swap 2>/dev/null"))
+        (call-process "ssh"
+                      nil
+                      nil
+                      nil
+                      hostname
+                      "killall"
+                      "llama-swap")
+      (call-process "killall" nil nil nil "llama-swap"))
     (message "[llama-swap] Done for %s" target-host)))
 
 (defun llm-setup-insert-instance-litellm (model instance)
@@ -2233,8 +2281,6 @@ a single exclusive group with swap enabled."
   (let* ((hostnames (llm-setup-instance-hostnames instance))
          (provider (llm-setup-instance-provider instance))
          (cache-control (llm-setup-instance-cache-control instance))
-         (_model-name
-          (llm-setup-get-instance-model-name model instance))
          (name (llm-setup-get-instance-name model instance))
          (kind (llm-setup-model-kind model))
          (description (llm-setup-model-description model))
@@ -2336,20 +2382,18 @@ a single exclusive group with swap enabled."
     (erase-buffer)
     (insert llm-setup-litellm-prolog)
     (insert "model_list:")
-    (dolist (mi (llm-setup-instances-list))
-      (cl-destructuring-bind
-       (model . instance)
-       mi
-       (llm-setup-insert-instance-litellm model instance)
-       ;; (unless (string= model (downcase model))
-       ;;   (llm-setup-insert-instance-litellm (downcase model) instance))
-       ))
-    (insert llm-setup-litellm-credentials)
-    (insert (funcall llm-setup-litellm-environment-function))
-    ;; Format the epilog with dynamically generated router fallbacks
-    (insert
-     (format llm-setup-litellm-epilog-spec
-             (llm-setup-format-router-fallbacks)))
+    (let ((instances (llm-setup-instances-list)))
+      (dolist (mi instances)
+        (cl-destructuring-bind
+         (model . instance)
+         mi
+         (llm-setup-insert-instance-litellm model instance)))
+      (insert llm-setup-litellm-credentials)
+      (insert (funcall llm-setup-litellm-environment-function))
+      ;; Format the epilog with dynamically generated router fallbacks
+      (insert
+       (format llm-setup-litellm-epilog-spec
+               (llm-setup-format-router-fallbacks instances))))
     (yaml-mode)
     (current-buffer)))
 
@@ -2358,12 +2402,14 @@ a single exclusive group with swap enabled."
 (defun llm-setup-build-litellm-yaml ()
   "Build LiteLLM config.yaml configuration."
   (message "[litellm] Generating LiteLLM configuration...")
-  (with-temp-buffer
-    (insert
-     (with-current-buffer (llm-setup-generate-litellm-yaml)
-       (buffer-string)))
-    (message "[litellm] Writing to %s..." llm-setup-litellm-path)
-    (write-file llm-setup-litellm-path))
+  (let ((config-buf (llm-setup-generate-litellm-yaml)))
+    (with-temp-buffer
+      (insert
+       (with-current-buffer config-buf
+         (buffer-string)))
+      (message "[litellm] Writing to %s..." llm-setup-litellm-path)
+      (write-file llm-setup-litellm-path))
+    (kill-buffer config-buf))
   (message "[litellm] Restarting LiteLLM service...")
   ;; (shell-command "ssh vulcan sudo systemctl restart litellm.service")
   (shell-command
@@ -2830,7 +2876,17 @@ If HOSTNAME is non-nil, only generate definitions for that host."
   (let ((models-hash (llm-setup-make-models-hash))
         (warnings 0)
         (host-count (length llm-setup-valid-hostnames))
-        (host-idx 0))
+        (host-idx 0)
+        ;; Pre-build a lookup of (host . model-name) → instance
+        (host-model-index (make-hash-table :test 'equal)))
+    (dolist (mi (llm-setup-instances-list))
+      (cl-destructuring-bind
+       (model . instance) mi
+       (dolist (host (llm-setup-instance-hostnames instance))
+         (puthash
+          (cons host (llm-setup-model-name model))
+          instance
+          host-model-index))))
     (message
      "[llm-setup-check] Scanning installed models on %d hosts..."
      host-count)
@@ -2848,35 +2904,29 @@ If HOSTNAME is non-nil, only generate definitions for that host."
           (unless (llm-setup-get-model installed models-hash)
             (warn "Missing model for host %s: %s" host installed)
             (cl-incf warnings))
-          (unless (catch 'found
-                    (dolist (mi (llm-setup-instances-list))
-                      (cl-destructuring-bind
-                       (model . instance) mi
-                       (when (and (member
-                                   host
-                                   (llm-setup-instance-hostnames
-                                    instance))
-                                  (eq
-                                   installed
-                                   (llm-setup-model-name model)))
-                         (throw 'found instance)))))
+          (unless (gethash (cons host installed) host-model-index)
             (warn "Missing instance for host %s: %s" host installed)
             (cl-incf warnings)))))
     (message "[llm-setup-check] Validating %d model definitions..."
              (length llm-setup-models-list))
     (dolist (model llm-setup-models-list)
-      (let ((capabilities (llm-setup-model-capabilities model))
+      (let ((characteristics (llm-setup-model-characteristics model))
+            (capabilities (llm-setup-model-capabilities model))
             (mime-types (llm-setup-model-mime-types model))
             (kind (llm-setup-model-kind model)))
+        (dolist (char characteristics)
+          (unless (memq char llm-setup-all-model-characteristics)
+            (warn "Unknown characteristic: %S" char)
+            (cl-incf warnings)))
         (dolist (cap capabilities)
-          (unless (member cap llm-setup-all-model-capabilities)
+          (unless (memq cap llm-setup-all-model-capabilities)
             (warn "Unknown capability: %S" cap)
             (cl-incf warnings)))
         (dolist (mime mime-types)
           (unless (member mime llm-setup-all-model-mime-types)
             (warn "Unknown mime-type: %S" mime)
             (cl-incf warnings)))
-        (unless (member kind llm-setup-all-model-kinds)
+        (unless (memq kind llm-setup-all-model-kinds)
           (warn "Unknown kind: %S" kind)
           (cl-incf warnings))))
     (let ((instances (llm-setup-instances-list)))
@@ -2904,10 +2954,10 @@ If HOSTNAME is non-nil, only generate definitions for that host."
              (unless (member host llm-setup-valid-hostnames)
                (warn "Unknown hostname: %s" host)
                (cl-incf warnings)))
-           (unless (member provider llm-setup-all-model-providers)
+           (unless (memq provider llm-setup-all-model-providers)
              (warn "Unknown provider: %s" provider)
              (cl-incf warnings))
-           (unless (member engine llm-setup-all-model-engines)
+           (unless (memq engine llm-setup-all-model-engines)
              (warn "Unknown engine: %s" engine)
              (cl-incf warnings))
            (unless (or (null draft-model)
@@ -3141,22 +3191,24 @@ Return a hash table mapping canonical name string (e.g.
   "Fetch the list of model IDs from the oMLX /v1/models endpoint.
 Return a list of model ID strings, or nil on error."
   (condition-case err
-      (let ((url-request-method "GET")
-            (url-request-extra-headers
-             `(("Authorization" .
-                ,(concat "Bearer " llm-setup-omlx-api-key))
-               ("Content-Type" . "application/json"))))
-        (with-current-buffer (url-retrieve-synchronously
-                              (concat
-                               llm-setup-omlx-api-base "/v1/models")
-                              t)
-          (goto-char (point-min))
-          (re-search-forward "^$")
-          (let* ((json (json-read))
-                 (data (alist-get 'data json)))
-            (mapcar
-             (lambda (item) (alist-get 'id item))
-             (append data nil)))))
+      (let* ((url-request-method "GET")
+             (url-request-extra-headers
+              `(("Authorization" .
+                 ,(concat "Bearer " llm-setup-omlx-api-key))
+                ("Content-Type" . "application/json")))
+             (buf
+              (url-retrieve-synchronously
+               (concat llm-setup-omlx-api-base "/v1/models") t)))
+        (unwind-protect
+            (with-current-buffer buf
+              (goto-char (point-min))
+              (re-search-forward "^$")
+              (let* ((json (json-read))
+                     (data (alist-get 'data json)))
+                (mapcar
+                 (lambda (item) (alist-get 'id item))
+                 (append data nil))))
+          (kill-buffer buf)))
     (error
      (message "[llm-setup-sync] oMLX fetch failed: %s" err)
      nil)))
@@ -3170,12 +3222,13 @@ responded and MODELS is a list of model ID strings."
         (cons t models)
       (cons nil nil))))
 
-(defun llm-setup-sync--known-gguf-paths ()
+(defun llm-setup-sync--known-gguf-paths (&optional instances)
   "Extract GGUF model paths from the registry.
+Search INSTANCES if provided, otherwise call `llm-setup-instances-list'.
 Return a hash table mapping expanded directory path to a list of
 \(model . instance) cons pairs."
   (let ((result (make-hash-table :test 'equal)))
-    (dolist (mi (llm-setup-instances-list))
+    (dolist (mi (or instances (llm-setup-instances-list)))
       (cl-destructuring-bind
        (model . instance) mi
        (when (eq (llm-setup-instance-provider instance) 'local)
@@ -3193,12 +3246,13 @@ Return a hash table mapping expanded directory path to a list of
              (push (cons model instance) (gethash dir result)))))))
     result))
 
-(defun llm-setup-sync--known-mlx-names ()
+(defun llm-setup-sync--known-mlx-names (&optional instances)
   "Extract MLX instance names from the registry.
+Search INSTANCES if provided, otherwise call `llm-setup-instances-list'.
 Return a hash table mapping canonical name string to a list of
 \(model . instance) cons pairs."
   (let ((result (make-hash-table :test 'equal)))
-    (dolist (mi (llm-setup-instances-list))
+    (dolist (mi (or instances (llm-setup-instances-list)))
       (cl-destructuring-bind
        (model . instance) mi
        (when (and (memq
@@ -3212,12 +3266,13 @@ Return a hash table mapping canonical name string to a list of
                 result)))))
     result))
 
-(defun llm-setup-sync--known-omlx-names ()
+(defun llm-setup-sync--known-omlx-names (&optional instances)
   "Extract oMLX instance names from the registry.
+Search INSTANCES if provided, otherwise call `llm-setup-instances-list'.
 Return a hash table mapping instance name string to a list of
 \(model . instance) cons pairs."
   (let ((result (make-hash-table :test 'equal)))
-    (dolist (mi (llm-setup-instances-list))
+    (dolist (mi (or instances (llm-setup-instances-list)))
       (cl-destructuring-bind
        (model . instance) mi
        (when (eq (llm-setup-instance-provider instance) 'omlx)
@@ -3311,18 +3366,25 @@ Return a plist (:new NEW-LIST :dead DEAD-LIST)."
        known))
     (list :new (nreverse new-list) :dead (nreverse dead-list))))
 
-(defun llm-setup-sync--model-exists-p (short-name)
-  "Return non-nil if SHORT-NAME (symbol) exists in the registry."
-  (cl-some
-   (lambda (m) (eq (llm-setup-model-name m) short-name))
-   llm-setup-models-list))
+(defun llm-setup-sync--model-exists-p
+    (short-name &optional models-hash)
+  "Return non-nil if SHORT-NAME (symbol) exists in the registry.
+MODELS-HASH, if provided, is a hash table from `llm-setup-make-models-hash'."
+  (if models-hash
+      (gethash short-name models-hash)
+    (cl-some
+     (lambda (m) (eq (llm-setup-model-name m) short-name))
+     llm-setup-models-list)))
 
-(defun llm-setup-sync--insert-scaffold-gguf (entry)
-  "Insert a scaffolded declaration for new GGUF model ENTRY."
+(defun llm-setup-sync--insert-scaffold-gguf
+    (entry &optional models-hash)
+  "Insert a scaffolded declaration for new GGUF model ENTRY.
+MODELS-HASH is passed to `llm-setup-sync--model-exists-p'."
   (let* ((path (plist-get entry :path))
          (short-name (plist-get entry :short-name))
          (abbrev-path (abbreviate-file-name path))
-         (exists (llm-setup-sync--model-exists-p short-name)))
+         (exists
+          (llm-setup-sync--model-exists-p short-name models-hash)))
     (insert (format "\n;; From %s\n" abbrev-path))
     (if exists
         (progn
@@ -3346,12 +3408,15 @@ Return a plist (:new NEW-LIST :dead DEAD-LIST)."
                 "   :model-path %S)))\n")
                short-name abbrev-path)))))
 
-(defun llm-setup-sync--insert-scaffold-mlx (entry)
-  "Insert a scaffolded declaration for new MLX model ENTRY."
+(defun llm-setup-sync--insert-scaffold-mlx
+    (entry &optional models-hash)
+  "Insert a scaffolded declaration for new MLX model ENTRY.
+MODELS-HASH is passed to `llm-setup-sync--model-exists-p'."
   (let* ((canonical (plist-get entry :name))
          (dir-path (plist-get entry :path))
          (short-name (intern (llm-setup-short-model-name canonical)))
-         (exists (llm-setup-sync--model-exists-p short-name)))
+         (exists
+          (llm-setup-sync--model-exists-p short-name models-hash)))
     (insert (format "\n;; From %s\n" (abbreviate-file-name dir-path)))
     (if exists
         (progn
@@ -3378,10 +3443,13 @@ Return a plist (:new NEW-LIST :dead DEAD-LIST)."
                 "   :engine 'vllm-mlx)))\n")
                short-name canonical)))))
 
-(defun llm-setup-sync--insert-scaffold-omlx (model-id)
-  "Insert a scaffolded declaration for new oMLX MODEL-ID."
+(defun llm-setup-sync--insert-scaffold-omlx
+    (model-id &optional models-hash)
+  "Insert a scaffolded declaration for new oMLX MODEL-ID.
+MODELS-HASH is passed to `llm-setup-sync--model-exists-p'."
   (let* ((short-name (intern (llm-setup-short-model-name model-id)))
-         (exists (llm-setup-sync--model-exists-p short-name)))
+         (exists
+          (llm-setup-sync--model-exists-p short-name models-hash)))
     (insert (format "\n;; From oMLX API: %s\n" model-id))
     (if exists
         (progn
@@ -3431,11 +3499,14 @@ Return a plist (:new NEW-LIST :dead DEAD-LIST)."
      omlx-success
      gguf-count
      mlx-count
-     omlx-count)
+     omlx-count
+     &optional
+     models-hash)
   "Insert the sync report into the current buffer.
 GGUF-RESULTS, MLX-RESULTS, OMLX-RESULTS are plists with :new and
 :dead.  OMLX-SUCCESS indicates whether the API fetch succeeded.
-GGUF-COUNT, MLX-COUNT, OMLX-COUNT are the number of discovered items."
+GGUF-COUNT, MLX-COUNT, OMLX-COUNT are the number of discovered
+items.  MODELS-HASH is passed to scaffold functions."
   (let ((gguf-new (plist-get gguf-results :new))
         (gguf-dead (plist-get gguf-results :dead))
         (mlx-new (plist-get mlx-results :new))
@@ -3477,17 +3548,17 @@ GGUF-COUNT, MLX-COUNT, OMLX-COUNT are the number of discovered items."
       (insert
        (format "\n;;; --- GGUF (%d new) ---\n" (length gguf-new)))
       (dolist (entry gguf-new)
-        (llm-setup-sync--insert-scaffold-gguf entry)))
+        (llm-setup-sync--insert-scaffold-gguf entry models-hash)))
     (when mlx-new
       (insert
        (format "\n;;; --- MLX (%d new) ---\n" (length mlx-new)))
       (dolist (entry mlx-new)
-        (llm-setup-sync--insert-scaffold-mlx entry)))
+        (llm-setup-sync--insert-scaffold-mlx entry models-hash)))
     (when omlx-new
       (insert
        (format "\n;;; --- oMLX (%d new) ---\n" (length omlx-new)))
       (dolist (entry omlx-new)
-        (llm-setup-sync--insert-scaffold-omlx entry)))
+        (llm-setup-sync--insert-scaffold-omlx entry models-hash)))
     (when (zerop total-new)
       (insert "\n;; (none)\n"))
     ;; Dead models section
@@ -3528,9 +3599,11 @@ Present a report of new and dead models in a buffer."
        (_
         (message
          "[llm-setup-sync] Extracting known models from registry..."))
-       (known-gguf (llm-setup-sync--known-gguf-paths))
-       (known-mlx (llm-setup-sync--known-mlx-names))
-       (known-omlx (llm-setup-sync--known-omlx-names))
+       (instances (llm-setup-instances-list))
+       (models-hash (llm-setup-make-models-hash))
+       (known-gguf (llm-setup-sync--known-gguf-paths instances))
+       (known-mlx (llm-setup-sync--known-mlx-names instances))
+       (known-omlx (llm-setup-sync--known-omlx-names instances))
        (_ (message "[llm-setup-sync] Comparing..."))
        (gguf-results
         (llm-setup-sync--compare-gguf discovered-gguf known-gguf))
@@ -3548,7 +3621,8 @@ Present a report of new and dead models in a buffer."
          omlx-success
          (hash-table-count discovered-gguf)
          (hash-table-count discovered-mlx)
-         (length (cdr discovered-omlx))))
+         (length (cdr discovered-omlx))
+         models-hash))
       (emacs-lisp-mode)
       (setq buffer-read-only t)
       (goto-char (point-min))
