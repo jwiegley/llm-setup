@@ -469,6 +469,222 @@ Contains a %s placeholder for dynamically generated router fallbacks."
   (list
 
    (make-llm-setup-model
+    :name 'all-MiniLM-L6-v2
+    :kind 'embedding
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'sentence-transformers/all-MiniLM-L6-v2
+      :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'bge-base-en-v1.5
+    :kind 'embedding
+    :instances
+    (list
+     (make-llm-setup-instance :name 'BAAI/bge-base-en-v1.5 :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'bge-large-en-v1.5
+    :kind 'embedding
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'BAAI/bge-large-en-v1.5
+      :engine 'mlx-lm
+      :hostnames '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'bge-m3
+    :context-length 8192
+    :kind 'embedding
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/gpustack_bge-m3-GGUF"
+      :hostnames '("hera" "clio")
+      :arguments
+      '("--embedding"
+        "--pooling"
+        "mean"
+        "--batch-size"
+        "8192"
+        "--ubatch-size"
+        "4096"))
+
+     (make-llm-setup-instance
+      :name 'bge-m3-mlx-fp16
+      :provider 'omlx
+      :hostnames '("hera"))))
+
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--bge-m3-mlx-fp16
+   (make-llm-setup-model
+    :name 'bge-m3-mlx-fp16
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/bge-m3-mlx-fp16
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'bge-reranker-v2-m3
+    :kind 'reranker
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/gpustack_bge-reranker-v2-m3-GGUF"
+      :hostnames '("hera" "clio")
+      :arguments
+      '("--reranking" "--batch-size" "8192" "--ubatch-size" "4096"))))
+
+   (make-llm-setup-model
+    :name 'Bonsai-8B
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/prism-ml_Bonsai-8B-gguf"
+      :hostnames '("hera" "clio")
+      :promptdeploy-remote t)))
+
+   (make-llm-setup-model
+    :name 'chatglm-6b
+    :context-length 16384
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance :name 'zai-org/chatglm-6b :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'chatglm2-6b
+    :context-length 16384
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance :name 'zai-org/chatglm2-6b :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'chinese-alpaca-2-7b
+    :context-length 16384
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'hfl/chinese-alpaca-2-7b
+      :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'claude-haiku
+    :supports-function-calling t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-name 'claude-haiku-4-5-20251001
+      :name 'claude-haiku-4-5-20251001
+      :provider 'vibe-proxy)
+
+     (make-llm-setup-instance
+      :name 'claude-haiku-4-5-20251001
+      :provider 'positron_anthropic)
+
+     (make-llm-setup-instance
+      :name 'claude-haiku-4-5-20251001
+      :provider 'anthropic)))
+
+   (make-llm-setup-model
+    :name 'claude-opus
+    :supports-function-calling t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-name 'claude-opus-4-6
+      :name 'claude-opus-4-6-thinking-32000
+      :provider 'vibe-proxy
+      ;; :fallbacks '(hera/Qwen3.5-27B)
+      :fallbacks '(hera/Qwen3.5-27B))
+
+     (make-llm-setup-instance
+      :model-name 'claude-opus-4-6
+      :name 'claude-opus-4-6
+      :provider 'vibe-proxy
+      ;; :fallbacks '(hera/Qwen3.5-27B-Instruct)
+      :fallbacks '(hera/Qwen3.5-27B-Instruct))
+
+     (make-llm-setup-instance
+      :name 'claude-opus-4-6
+      :provider 'positron_anthropic)
+
+     (make-llm-setup-instance :name 'claude-opus-4-6 :provider 'anthropic)))
+
+   (make-llm-setup-model
+    :name 'claude-sonnet
+    :supports-function-calling t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-name 'claude-sonnet-4-6
+      :name 'claude-sonnet-4-6-thinking-32000
+      :provider 'vibe-proxy)
+
+     (make-llm-setup-instance
+      :model-name 'claude-sonnet-4-6
+      :name 'claude-sonnet-4-6
+      :provider 'vibe-proxy)
+
+     (make-llm-setup-instance
+      :name 'claude-sonnet-4-6
+      :provider 'positron_anthropic)
+
+     (make-llm-setup-instance
+      :name 'claude-sonnet-4-6
+      :provider 'anthropic)))
+
+   ;; From ~/.cache/huggingface/hub/models--appautomaton--cohere-asr-mlx
+   (make-llm-setup-model
+    :name 'cohere-asr-mlx
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'appautomaton/cohere-asr-mlx
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'cohere-transcribe-03-2026-mlx-8bit
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/cohere-transcribe-03-2026-mlx-8bit
+      :engine 'mlx-lm
+      :hostnames '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'compound-beta
+    :instances
+    (list
+     (make-llm-setup-instance :provider 'groq)))
+
+   (make-llm-setup-model
     :name 'DeepSeek-R1-0528
     :context-length 163840
     :temperature 0.6
@@ -502,48 +718,84 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :promptdeploy-remote t)))
 
    (make-llm-setup-model
-    :name 'Kimi-K2.5
+    :name 'Devstral-2-123B-Instruct-2512
     :context-length 262144
     :temperature 1.0
-    :min-p 0.01
-    :top-p 0.9
-    :top-k 20
-    :supports-function-calling t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :context-length 98304
-      :max-output-tokens 32768
-      :model-path "~/Models/unsloth_Kimi-K2.5-GGUF"
-      :promptdeploy-remote t)))
-
-   (make-llm-setup-model
-    :name 'SERA-32B
-    :context-length 40960
-    :temperature 0.7
     :min-p 0.0
-    :top-p 0.8
-    :top-k 20
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/noctrex_SERA-32B-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'Llama-4-Scout-17B-16E-Instruct
-    :context-length 10485760
-    :temperature 0.6
-    :min-p 0.01
     :top-p 0.9
     :supports-function-calling t
+    :promptdeploy-only '("opencode")
     :instances
     (list
      (make-llm-setup-instance
-      :name 'meta-llama/llama-4-scout-17b-16e-instruct
-      :provider 'groq)))
+      :model-path "~/Models/unsloth_Devstral-2-123B-Instruct-2512-GGUF")))
+
+   (make-llm-setup-model
+    :name 'Devstral-Small-2-24B-Instruct-2512
+    :context-length 262144
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :promptdeploy-only '("opencode")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF")
+
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF"
+      :hostnames '("clio")
+      :context-length 140000)))
+
+   (make-llm-setup-model
+    :name 'gemini-2.5-pro
+    :description "Gemini 2.5 Pro (Positron)"
+    :supports-function-calling t
+    :instances
+    (list (make-llm-setup-instance :provider 'positron_gemini)))
+
+   (make-llm-setup-model
+    :name 'gemini-3-pro-preview
+    :description "Gemini 3 Pro (Positron)"
+    :supports-function-calling t
+    :instances
+    (list (make-llm-setup-instance :provider 'positron_gemini)))
+
+   (make-llm-setup-model
+    :name 'gemma-2-9b
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list (make-llm-setup-instance :name 'google/gemma-2-9b :engine 'mlx-lm)))
+
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--gemma-4-31b-8bit
+   (make-llm-setup-model
+    :name 'gemma-4-31b-8bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/gemma-4-31b-8bit
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'gemma-4-31B-it
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'gemma-4-31b-8bit
+      :provider 'omlx)))
 
    (make-llm-setup-model
     :name 'GLM-4.7-Flash
@@ -576,6 +828,498 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :model-path "~/Models/unsloth_GLM-5.1-GGUF"
       :promptdeploy-remote t)))
 
+   ;; From ~/.cache/huggingface/hub/models--spicyneuron--GLM-5.1-MLX-2.9bit
+   (make-llm-setup-model
+    :name 'GLM-5.1-MLX-2.9bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'spicyneuron/GLM-5.1-MLX-2.9bit
+      :engine 'vllm-mlx)))
+
+   ;; From ~/.cache/huggingface/hub/models--Nishant2414--GLM-5.1-MLX-4.8bit
+   (make-llm-setup-model
+    :name 'GLM-5.1-MLX-4.8bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Nishant2414/GLM-5.1-MLX-4.8bit
+      :engine 'vllm-mlx)))
+
+   ;; From ~/.cache/huggingface/hub/models--inferencerlabs--GLM-5.1-MLX-4.8bit-INF
+   (make-llm-setup-model
+    :name 'GLM-5.1-MLX-4.8bit-INF
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'inferencerlabs/GLM-5.1-MLX-4.8bit-INF
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'gpt-5.1
+    :description "ChatGPT model"
+    :supports-function-calling t
+    :instances
+    (list
+     (make-llm-setup-instance :provider 'positron_openai)
+
+     (make-llm-setup-instance :provider 'openai)))
+
+   (make-llm-setup-model
+    :name 'gpt-5.2
+    :description "ChatGPT 5.2 (Positron)"
+    :supports-function-calling t
+    :instances
+    (list (make-llm-setup-instance :provider 'positron_openai)))
+
+   (make-llm-setup-model
+    :name 'gpt-5.2-codex
+    :description "ChatGPT 5.2 Codex (Positron)"
+    :supports-function-calling t
+    :instances
+    (list (make-llm-setup-instance :provider 'positron_openai)))
+
+   (make-llm-setup-model
+    :name 'gpt-5.3-codex
+    :description "ChatGPT 5.3 Codex (Positron)"
+    :supports-function-calling t
+    :instances
+    (list (make-llm-setup-instance :provider 'positron_openai)))
+
+   (make-llm-setup-model
+    :name 'gpt-oss-120b
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :supports-reasoning t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_gpt-oss-120b-GGUF"
+      ;; :draft-model "~/Models/unsloth_gpt-oss-20b-GGUF/gpt-oss-20b-Q8_0.gguf"
+      ;; :fallbacks '(hera/claude-sonnet-4-5-20250929-thinking-32000
+      ;;              anthropic/claude-sonnet-4-5-20250929)
+      :promptdeploy-remote t)
+
+     (make-llm-setup-instance
+      :name 'gpt-oss-120b-MXFP4-Q8
+      :provider 'omlx
+      :hostnames '("hera"))))
+
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--gpt-oss-120b-MXFP4-Q8
+   (make-llm-setup-model
+    :name 'gpt-oss-120b-MXFP4-Q8
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/gpt-oss-120b-MXFP4-Q8
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'gpt-oss-20b
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :supports-reasoning t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_gpt-oss-20b-GGUF"
+      :hostnames '("hera" "clio"))
+
+     (make-llm-setup-instance
+      :name 'gpt-oss-20b-MXFP4-Q8
+      :provider 'omlx
+      :hostnames '("hera"))))
+
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--gpt-oss-20b-MXFP4-Q8
+   (make-llm-setup-model
+    :name 'gpt-oss-20b-MXFP4-Q8
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/gpt-oss-20b-MXFP4-Q8
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'gpt-oss-safeguard-20b
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :supports-reasoning t
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_gpt-oss-safeguard-20b-GGUF")))
+
+   (make-llm-setup-model
+    :name 'gpt-oss-safeguard-20b-MLX-MXFP4
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :supports-reasoning t
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'lmstudio-community/gpt-oss-safeguard-20b-MLX-MXFP4
+      :hostnames '("hera" "clio")
+      :engine 'mlx-lm)))
+
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-6bit
+   (make-llm-setup-model
+    :name 'Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-6bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-6bit
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'Kimi-K2.5
+    :context-length 262144
+    :temperature 1.0
+    :min-p 0.01
+    :top-p 0.9
+    :top-k 20
+    :supports-function-calling t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :context-length 98304
+      :max-output-tokens 32768
+      :model-path "~/Models/unsloth_Kimi-K2.5-GGUF"
+      :promptdeploy-remote t)))
+
+   ;; From ~/.cache/huggingface/hub/models--spicyneuron--Kimi-K2.5-MLX-2.8bit
+   (make-llm-setup-model
+    :name 'Kimi-K2.5-MLX-2.8bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'spicyneuron/Kimi-K2.5-MLX-2.8bit
+      :engine 'vllm-mlx)))
+
+   ;; From oMLX API: Kimi-K2.5-MLX-2.8bit
+   (make-llm-setup-model
+    :name 'Kimi-K2.5-MLX-2.8bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Kimi-K2.5-MLX-2.8bit
+      :provider 'omlx
+      :hostnames '("hera"))))
+
+   (make-llm-setup-model
+    :name 'Leanstral-2603
+    :context-length 262144
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :supports-reasoning t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/jackcloudman_Leanstral-2603-GGUF")))
+
+   (make-llm-setup-model
+    :name 'LFM2.5-350M
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/LiquidAI_LFM2.5-350M-GGUF"
+      :hostnames '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'Llama-3.1-8B
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'meta-llama/Llama-3.1-8B
+      :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'Llama-3.1-8B-Instruct
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'meta-llama/Llama-3.1-8B-Instruct
+      :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'Llama-3.2-1B
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'meta-llama/Llama-3.2-1B
+      :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'llama-3.3-70b
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'llama-3.3-70b-instruct-good-tp2
+      :provider 'positron)
+
+     (make-llm-setup-instance
+      :name 'llama-3.3-70b-versatile
+      :provider 'groq)))
+
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--Llama-4-Maverick-17B-128E-Instruct-6bit
+   (make-llm-setup-model
+    :name 'Llama-4-Maverick-17B-128E-Instruct-6bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/Llama-4-Maverick-17B-128E-Instruct-6bit
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'Llama-4-Scout-17B-16E-Instruct
+    :context-length 10485760
+    :temperature 0.6
+    :min-p 0.01
+    :top-p 0.9
+    :supports-function-calling t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'meta-llama/llama-4-scout-17b-16e-instruct
+      :provider 'groq)))
+
+   (make-llm-setup-model
+    :name 'Llama-Guard-4-12B
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'meta-llama/Llama-Guard-4-12B
+      :provider 'groq)))
+
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--MiniMax-M2.7-4bit-mxfp4
+   (make-llm-setup-model
+    :name 'MiniMax-M2.7-4bit-mxfp4
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/MiniMax-M2.7-4bit-mxfp4
+      :engine 'vllm-mlx)))
+
+   ;; From oMLX API: MiniMax-M2.7-4bit-mxfp4
+   (make-llm-setup-model
+    :name 'MiniMax-M2.7-4bit-mxfp4
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'MiniMax-M2.7-4bit-mxfp4
+      :provider 'omlx
+      :hostnames '("hera"))))
+
+   (make-llm-setup-model
+    :name 'Mistral-7B-Instruct-v0.2
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mistralai/Mistral-7B-Instruct-v0.2
+      :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'Mistral-7B-Instruct-v0.3
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mistralai/Mistral-7B-Instruct-v0.3
+      :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'Mixtral-8x7B-Instruct-v0.1
+    :context-length 131072
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mistralai/Mixtral-8x7B-Instruct-v0.1
+      :engine 'mlx-lm)))
+
+   ;; From ~/.cache/huggingface/hub/models--Jackrong--MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
+   (make-llm-setup-model
+    :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Jackrong/MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
+      :engine 'vllm-mlx)))
+
+   ;; From oMLX API: MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
+   (make-llm-setup-model
+    :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
+      :provider 'omlx
+      :hostnames '("hera"))))
+
+   (make-llm-setup-model
+    :name 'Nemotron-3-Nano-30B-A3B
+    :context-length 1048576
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_Nemotron-3-Nano-30B-A3B-GGUF"
+      :hostnames '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'Nemotron-Cascade-2-30B-A3B
+    :context-length 262144
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/mradermacher_Nemotron-Cascade-2-30B-A3B-GGUF"
+      :hostnames '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'nomic-embed-text-v2-moe
+    :context-length 512
+    :kind 'embedding
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/nomic-ai_nomic-embed-text-v2-moe-GGUF"
+      :hostnames '("hera" "clio")
+      :arguments
+      '("--embedding"
+        "--pooling"
+        "mean"
+        "--batch-size"
+        "8192"
+        "--ubatch-size"
+        "4096"))))
+
+   (make-llm-setup-model
+    :name 'NV-Embed-v2
+    :kind 'embedding
+    :instances
+    (list
+     (make-llm-setup-instance :name 'nvidia/NV-Embed-v2 :engine 'mlx-lm)))
+
+   (make-llm-setup-model
+    :name 'NVIDIA-Nemotron-3-Super-120B-A12B
+    :context-length 1048576
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :supports-function-calling t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/unsloth_NVIDIA-Nemotron-3-Super-120B-A12B-GGUF")))
+
    (make-llm-setup-model
     :name 'Phi-4-reasoning-plus
     :context-length 32768
@@ -590,6 +1334,17 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio")
       :arguments
       '("--flash-attn" "on"))))
+
+   (make-llm-setup-model
+    :name 'Qwen.Qwen3-Reranker-8B
+    :kind 'reranker
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/DevQuasar_Qwen.Qwen3-Reranker-8B-GGUF"
+      :hostnames '("hera" "clio")
+      :arguments
+      '("--reranking" "--batch-size" "4096" "--ubatch-size" "2048"))))
 
    (make-llm-setup-model
     :name 'Qwen3-30B-A3B
@@ -624,7 +1379,38 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :promptdeploy-remote t)))
 
    (make-llm-setup-model
-    :name 'Qwen3.5-397B-A17B
+    :name 'Qwen3-Embedding-8B
+    :context-length 32767
+    :kind 'embedding
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/Qwen_Qwen3-Embedding-8B-GGUF"
+      :hostnames '("hera" "clio")
+      :arguments
+      '("--embedding"
+        "--pooling"
+        "last"
+        "--batch-size"
+        "8192"
+        "--ubatch-size"
+        "2048"))))
+
+   (make-llm-setup-model
+    :name 'Qwen3-Reranker-4B-mxfp8
+    :kind 'reranker
+    :instances
+    (list
+     ;; From ~/.cache/huggingface/hub/models--mlx-community--Qwen3-Reranker-4B-mxfp8
+     ;; Model Qwen3-Reranker-4B-mxfp8 exists — add instance:
+     (make-llm-setup-instance
+      :name 'mlx-community/Qwen3-Reranker-4B-mxfp8
+      :engine 'vllm-mlx)
+
+     (make-llm-setup-instance :provider 'omlx :hostnames '("hera"))))
+
+   (make-llm-setup-model
+    :name 'Qwen3.5-0.8B
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
@@ -632,16 +1418,20 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
-      :name 'mlx-community/Qwen3.5-397B-A17B-4bit
-      :engine 'vllm-mlx)
+      :max-output-tokens 131072
+      :model-path "~/Models/unsloth_Qwen3.5-0.8B-GGUF"
+      :arguments '("--no-prefill-assistant")
+      :cache-type-k 'q8_0
+      :fallbacks '(clio/Qwen3.5-0.8B)
+      :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
-      :name 'Qwen3.5-397B-A17B-unsloth-mlx-4bit
-      :provider 'omlx
-      :hostnames '("hera"))))
+      :name 'mlx-community/Qwen3.5-0.8B-4bit
+      :engine 'vllm-mlx)))
 
    (make-llm-setup-model
     :name 'Qwen3.5-122B-A10B
@@ -656,29 +1446,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-122B-A10B-4bit
-      :engine 'vllm-mlx)))
-
-   (make-llm-setup-model
-    :name 'Qwen3.5-35B-A3B
-    :context-length 262144
-    :temperature 0.6
-    :min-p 0.0
-    :top-p 0.9
-    :top-k 20
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :max-output-tokens 131072
-      :model-path "~/Models/unsloth_Qwen3.5-35B-A3B-GGUF"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-35B-A3B)
-      :hostnames '("hera" "clio"))
-
-     (make-llm-setup-instance
-      :name 'mlx-community/Qwen3.5-35B-A3B-4bit
       :engine 'vllm-mlx)))
 
    (make-llm-setup-model
@@ -720,6 +1487,19 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :provider 'omlx
       :hostnames '("hera"))))
 
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit
+   (make-llm-setup-model
+    :name 'Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit
+      :engine 'vllm-mlx)))
+
    (make-llm-setup-model
     :name 'Qwen3.5-27B-Instruct
     :context-length 262144
@@ -743,105 +1523,18 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :fallbacks '(clio/Qwen3.5-27B-Instruct)
       :hostnames '("hera" "clio"))))
 
+   ;; From ~/.cache/huggingface/hub/models--Brooooooklyn--Qwen3.5-27B-unsloth-mlx
    (make-llm-setup-model
-    :name 'Qwen3.5-9B
-    :context-length 262144
-    :temperature 0.6
+    :name 'Qwen3.5-27B-unsloth-mlx
+    :context-length nil
+    :temperature 1.0
     :min-p 0.0
     :top-p 0.9
-    :top-k 20
-    :supports-function-calling t
-    :supports-reasoning t
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
-      :max-output-tokens 131072
-      :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-9B)
-      :hostnames '("hera" "clio"))
-
-     (make-llm-setup-instance
-      :name 'mlx-community/Qwen3.5-9B-4bit
-      :engine 'vllm-mlx)
-
-     (make-llm-setup-instance
-      :name 'Qwen3.5-9B-unsloth-mlx
-      :provider 'omlx
-      :hostnames '("hera"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3.5-9B-Instruct
-    :context-length 262144
-    :temperature 0.6
-    :min-p 0.0
-    :top-p 0.9
-    :top-k 20
-    :supports-function-calling t
-    :supports-reasoning t
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :max-output-tokens 131072
-      :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
-      :parallel 1
-      :cache-type-k 'q8_0
-      :arguments
-      '("--no-prefill-assistant"
-        "--chat-template-kwargs"
-        "'{\"enable_thinking\":false}'")
-      :fallbacks '(clio/Qwen3.5-9B-Instruct)
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3.5-4B
-    :context-length 262144
-    :temperature 0.6
-    :min-p 0.0
-    :top-p 0.9
-    :top-k 20
-    :supports-function-calling t
-    :supports-reasoning t
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :max-output-tokens 131072
-      :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-4B)
-      :hostnames '("hera" "clio"))
-
-     (make-llm-setup-instance
-      :name 'mlx-community/Qwen3.5-4B-4bit
+      :name 'Brooooooklyn/Qwen3.5-27B-unsloth-mlx
       :engine 'vllm-mlx)))
-
-   (make-llm-setup-model
-    :name 'Qwen3.5-4B-Instruct
-    :context-length 262144
-    :temperature 0.6
-    :min-p 0.0
-    :top-p 0.9
-    :top-k 20
-    :supports-function-calling t
-    :supports-reasoning nil
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :max-output-tokens 131072
-      :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
-      :cache-type-k 'q8_0
-      :arguments
-      '("--no-prefill-assistant"
-        "--chat-template-kwargs"
-        "'{\"enable_thinking\":false}'")
-      :fallbacks '(clio/Qwen3.5-4B)
-      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-2B
@@ -891,7 +1584,90 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
-    :name 'Qwen3.5-0.8B
+    :name 'Qwen3.5-35B-A3B
+    :context-length 262144
+    :temperature 0.6
+    :min-p 0.0
+    :top-p 0.9
+    :top-k 20
+    :supports-function-calling t
+    :supports-reasoning t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :max-output-tokens 131072
+      :model-path "~/Models/unsloth_Qwen3.5-35B-A3B-GGUF"
+      :arguments '("--no-prefill-assistant")
+      :cache-type-k 'q8_0
+      :fallbacks '(clio/Qwen3.5-35B-A3B)
+      :hostnames '("hera" "clio"))
+
+     (make-llm-setup-instance
+      :name 'mlx-community/Qwen3.5-35B-A3B-4bit
+      :engine 'vllm-mlx)))
+
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--Qwen3.5-35B-A3B-8bit
+   (make-llm-setup-model
+    :name 'Qwen3.5-35B-A3B-8bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/Qwen3.5-35B-A3B-8bit
+      :engine 'vllm-mlx)))
+
+   ;; From oMLX API: Qwen3.5-35B-A3B-8bit
+   (make-llm-setup-model
+    :name 'Qwen3.5-35B-A3B-8bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Qwen3.5-35B-A3B-8bit
+      :provider 'omlx
+      :hostnames '("hera"))))
+
+   (make-llm-setup-model
+    :name 'Qwen3.5-397B-A17B
+    :context-length 262144
+    :temperature 0.6
+    :min-p 0.0
+    :top-p 0.9
+    :top-k 20
+    :supports-function-calling t
+    :supports-reasoning t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/Qwen3.5-397B-A17B-4bit
+      :engine 'vllm-mlx)
+
+     (make-llm-setup-instance
+      :name 'Qwen3.5-397B-A17B-unsloth-mlx-4bit
+      :provider 'omlx
+      :hostnames '("hera"))))
+
+   ;; From ~/.cache/huggingface/hub/models--jackzampolin--Qwen3.5-397B-A17B-unsloth-mlx-4bit
+   (make-llm-setup-model
+    :name 'Qwen3.5-397B-A17B-unsloth-mlx-4bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'jackzampolin/Qwen3.5-397B-A17B-unsloth-mlx-4bit
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'Qwen3.5-4B
     :context-length 262144
     :temperature 0.6
     :min-p 0.0
@@ -904,205 +1680,150 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :max-output-tokens 131072
-      :model-path "~/Models/unsloth_Qwen3.5-0.8B-GGUF"
+      :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-0.8B)
+      :fallbacks '(clio/Qwen3.5-4B)
       :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
-      :name 'mlx-community/Qwen3.5-0.8B-4bit
+      :name 'mlx-community/Qwen3.5-4B-4bit
       :engine 'vllm-mlx)))
 
    (make-llm-setup-model
-    :name 'gpt-oss-20b
-    :context-length 131072
-    :temperature 1.0
+    :name 'Qwen3.5-4B-Instruct
+    :context-length 262144
+    :temperature 0.6
     :min-p 0.0
     :top-p 0.9
+    :top-k 20
     :supports-function-calling t
-    :supports-reasoning t
+    :supports-reasoning nil
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gpt-oss-20b-GGUF"
+      :max-output-tokens 131072
+      :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
+      :cache-type-k 'q8_0
+      :arguments
+      '("--no-prefill-assistant"
+        "--chat-template-kwargs"
+        "'{\"enable_thinking\":false}'")
+      :fallbacks '(clio/Qwen3.5-4B)
+      :hostnames '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'Qwen3.5-9B
+    :context-length 262144
+    :temperature 0.6
+    :min-p 0.0
+    :top-p 0.9
+    :top-k 20
+    :supports-function-calling t
+    :supports-reasoning t
+    :promptdeploy-only '("droid")
+    :instances
+    (list
+     (make-llm-setup-instance
+      :max-output-tokens 131072
+      :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
+      :arguments '("--no-prefill-assistant")
+      :cache-type-k 'q8_0
+      :fallbacks '(clio/Qwen3.5-9B)
       :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
-      :name 'gpt-oss-20b-MXFP4-Q8
+      :name 'mlx-community/Qwen3.5-9B-4bit
+      :engine 'vllm-mlx)
+
+     (make-llm-setup-instance
+      :name 'Qwen3.5-9B-unsloth-mlx
+      :provider 'omlx
+      :hostnames '("hera"))))
+
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--Qwen3.5-9B-8bit
+   (make-llm-setup-model
+    :name 'Qwen3.5-9B-8bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/Qwen3.5-9B-8bit
+      :engine 'vllm-mlx)))
+
+   ;; From oMLX API: Qwen3.5-9B-8bit
+   (make-llm-setup-model
+    :name 'Qwen3.5-9B-8bit
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Qwen3.5-9B-8bit
       :provider 'omlx
       :hostnames '("hera"))))
 
    (make-llm-setup-model
-    :name 'gpt-oss-120b
-    :context-length 131072
-    :temperature 1.0
+    :name 'Qwen3.5-9B-Instruct
+    :context-length 262144
+    :temperature 0.6
     :min-p 0.0
     :top-p 0.9
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gpt-oss-120b-GGUF"
-      ;; :draft-model "~/Models/unsloth_gpt-oss-20b-GGUF/gpt-oss-20b-Q8_0.gguf"
-      ;; :fallbacks '(hera/claude-sonnet-4-5-20250929-thinking-32000
-      ;;              anthropic/claude-sonnet-4-5-20250929)
-      :promptdeploy-remote t)
-
-     (make-llm-setup-instance
-      :name 'gpt-oss-120b-MXFP4-Q8
-      :provider 'omlx
-      :hostnames '("hera"))))
-
-   (make-llm-setup-model
-    :name 'gpt-oss-safeguard-20b-MLX-MXFP4
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
+    :top-k 20
     :supports-function-calling t
     :supports-reasoning t
     :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
-      :name 'lmstudio-community/gpt-oss-safeguard-20b-MLX-MXFP4
-      :hostnames '("hera" "clio")
-      :engine 'mlx-lm)))
+      :max-output-tokens 131072
+      :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
+      :parallel 1
+      :cache-type-k 'q8_0
+      :arguments
+      '("--no-prefill-assistant"
+        "--chat-template-kwargs"
+        "'{\"enable_thinking\":false}'")
+      :fallbacks '(clio/Qwen3.5-9B-Instruct)
+      :hostnames '("hera" "clio"))))
 
+   ;; From ~/.cache/huggingface/hub/models--mlx-community--Qwen3.5-9B-MLX-4bit
    (make-llm-setup-model
-    :name 'gpt-oss-safeguard-20b
-    :context-length 131072
+    :name 'Qwen3.5-9B-MLX-4bit
+    :context-length nil
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
-    :supports-function-calling t
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'mlx-community/Qwen3.5-9B-MLX-4bit
+      :engine 'vllm-mlx)))
+
+   ;; From ~/.cache/huggingface/hub/models--Brooooooklyn--Qwen3.5-9B-unsloth-mlx
+   (make-llm-setup-model
+    :name 'Qwen3.5-9B-unsloth-mlx
+    :context-length nil
+    :temperature 1.0
+    :min-p 0.0
+    :top-p 0.9
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Brooooooklyn/Qwen3.5-9B-unsloth-mlx
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'r1-1776
     :supports-reasoning t
-    :promptdeploy-only '("droid")
     :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gpt-oss-safeguard-20b-GGUF")))
-
-   (make-llm-setup-model
-    :name 'Devstral-2-123B-Instruct-2512
-    :context-length 262144
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :supports-function-calling t
-    :promptdeploy-only '("opencode")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Devstral-2-123B-Instruct-2512-GGUF")))
-
-   (make-llm-setup-model
-    :name 'Devstral-Small-2-24B-Instruct-2512
-    :context-length 262144
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :supports-function-calling t
-    :promptdeploy-only '("opencode")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF")
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF"
-      :hostnames '("clio")
-      :context-length 140000)))
-
-   (make-llm-setup-model
-    :name 'Nemotron-3-Nano-30B-A3B
-    :context-length 1048576
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :supports-function-calling t
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Nemotron-3-Nano-30B-A3B-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'Nemotron-Cascade-2-30B-A3B
-    :context-length 262144
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :supports-function-calling t
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/mradermacher_Nemotron-Cascade-2-30B-A3B-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'NVIDIA-Nemotron-3-Super-120B-A12B
-    :context-length 1048576
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :supports-function-calling t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_NVIDIA-Nemotron-3-Super-120B-A12B-GGUF")))
-
-   (make-llm-setup-model
-    :name 'gemma-2-9b
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list (make-llm-setup-instance :name 'google/gemma-2-9b :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'gemma-4-31B-it
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'gemma-4-31b-8bit
-      :provider 'omlx)))
-
-   (make-llm-setup-model
-    :name 'LFM2.5-350M
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/LiquidAI_LFM2.5-350M-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'Bonsai-8B
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/prism-ml_Bonsai-8B-gguf"
-      :hostnames '("hera" "clio")
-      :promptdeploy-remote t)))
+    (list (make-llm-setup-instance :provider 'perplexity)))
 
    (make-llm-setup-model
     :name 'Seed-OSS-36B-Instruct
@@ -1116,390 +1837,22 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :name 'ByteDance-Seed/Seed-OSS-36B-Instruct
       :engine 'mlx-lm)))
 
-   (make-llm-setup-model
-    :name 'chinese-alpaca-2-7b
-    :context-length 16384
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'hfl/chinese-alpaca-2-7b
-      :engine 'mlx-lm)))
+;;; --- oMLX (5 new) ---
 
    (make-llm-setup-model
-    :name 'chatglm-6b
-    :context-length 16384
-    :temperature 1.0
+    :name 'SERA-32B
+    :context-length 40960
+    :temperature 0.7
     :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance :name 'zai-org/chatglm-6b :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'chatglm2-6b
-    :context-length 16384
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance :name 'zai-org/chatglm2-6b :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'Llama-3.1-8B
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'meta-llama/Llama-3.1-8B
-      :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'Llama-3.1-8B-Instruct
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'meta-llama/Llama-3.1-8B-Instruct
-      :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'Llama-3.2-1B
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'meta-llama/Llama-3.2-1B
-      :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'Mistral-7B-Instruct-v0.2
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mistralai/Mistral-7B-Instruct-v0.2
-      :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'Mistral-7B-Instruct-v0.3
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mistralai/Mistral-7B-Instruct-v0.3
-      :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'Mixtral-8x7B-Instruct-v0.1
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :promptdeploy-only '("droid")
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mistralai/Mixtral-8x7B-Instruct-v0.1
-      :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'Leanstral-2603
-    :context-length 262144
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
+    :top-p 0.8
+    :top-k 20
     :supports-function-calling t
     :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/jackcloudman_Leanstral-2603-GGUF")))
-
-   (make-llm-setup-model
-    :name 'Qwen.Qwen3-Reranker-8B
-    :kind 'reranker
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/DevQuasar_Qwen.Qwen3-Reranker-8B-GGUF"
-      :hostnames '("hera" "clio")
-      :arguments
-      '("--reranking" "--batch-size" "4096" "--ubatch-size" "2048"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3-Reranker-4B-mxfp8
-    :kind 'reranker
-    :instances
-    (list
-     ;; From ~/.cache/huggingface/hub/models--mlx-community--Qwen3-Reranker-4B-mxfp8
-     ;; Model Qwen3-Reranker-4B-mxfp8 exists — add instance:
-     (make-llm-setup-instance
-      :name 'mlx-community/Qwen3-Reranker-4B-mxfp8
-      :engine 'vllm-mlx)
-
-     (make-llm-setup-instance :provider 'omlx :hostnames '("hera"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3-Embedding-8B
-    :context-length 32767
-    :kind 'embedding
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/Qwen_Qwen3-Embedding-8B-GGUF"
-      :hostnames '("hera" "clio")
-      :arguments
-      '("--embedding"
-        "--pooling"
-        "last"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"))))
-
-   (make-llm-setup-model
-    :name 'bge-m3
-    :context-length 8192
-    :kind 'embedding
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/gpustack_bge-m3-GGUF"
-      :hostnames '("hera" "clio")
-      :arguments
-      '("--embedding"
-        "--pooling"
-        "mean"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "4096"))
-
-     (make-llm-setup-instance
-      :name 'bge-m3-mlx-fp16
-      :provider 'omlx
-      :hostnames '("hera"))))
-
-   (make-llm-setup-model
-    :name 'bge-reranker-v2-m3
-    :kind 'reranker
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/gpustack_bge-reranker-v2-m3-GGUF"
-      :hostnames '("hera" "clio")
-      :arguments
-      '("--reranking" "--batch-size" "8192" "--ubatch-size" "4096"))))
-
-   (make-llm-setup-model
-    :name 'nomic-embed-text-v2-moe
-    :context-length 512
-    :kind 'embedding
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/nomic-ai_nomic-embed-text-v2-moe-GGUF"
-      :hostnames '("hera" "clio")
-      :arguments
-      '("--embedding"
-        "--pooling"
-        "mean"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "4096"))))
-
-   (make-llm-setup-model
-    :name 'bge-base-en-v1.5
-    :kind 'embedding
-    :instances
-    (list
-     (make-llm-setup-instance :name 'BAAI/bge-base-en-v1.5 :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'bge-large-en-v1.5
-    :kind 'embedding
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'BAAI/bge-large-en-v1.5
-      :engine 'mlx-lm
+      :model-path "~/Models/noctrex_SERA-32B-GGUF"
       :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'cohere-transcribe-03-2026-mlx-8bit
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/cohere-transcribe-03-2026-mlx-8bit
-      :engine 'mlx-lm
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'whisper-large-v3-mlx
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/whisper-large-v3-mlx
-      :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'NV-Embed-v2
-    :kind 'embedding
-    :instances
-    (list
-     (make-llm-setup-instance :name 'nvidia/NV-Embed-v2 :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'all-MiniLM-L6-v2
-    :kind 'embedding
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'sentence-transformers/all-MiniLM-L6-v2
-      :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'gemini-2.5-pro
-    :description "Gemini 2.5 Pro (Positron)"
-    :supports-function-calling t
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_gemini)))
-
-   (make-llm-setup-model
-    :name 'gemini-3-pro-preview
-    :description "Gemini 3 Pro (Positron)"
-    :supports-function-calling t
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_gemini)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.3-codex
-    :description "ChatGPT 5.3 Codex (Positron)"
-    :supports-function-calling t
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_openai)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.2
-    :description "ChatGPT 5.2 (Positron)"
-    :supports-function-calling t
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_openai)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.2-codex
-    :description "ChatGPT 5.2 Codex (Positron)"
-    :supports-function-calling t
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_openai)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.1
-    :description "ChatGPT model"
-    :supports-function-calling t
-    :instances
-    (list
-     (make-llm-setup-instance :provider 'positron_openai)
-
-     (make-llm-setup-instance :provider 'openai)))
-
-   (make-llm-setup-model
-    :name 'claude-haiku
-    :supports-function-calling t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-name 'claude-haiku-4-5-20251001
-      :name 'claude-haiku-4-5-20251001
-      :provider 'vibe-proxy)
-
-     (make-llm-setup-instance
-      :name 'claude-haiku-4-5-20251001
-      :provider 'positron_anthropic)
-
-     (make-llm-setup-instance
-      :name 'claude-haiku-4-5-20251001
-      :provider 'anthropic)))
-
-   (make-llm-setup-model
-    :name 'claude-sonnet
-    :supports-function-calling t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-name 'claude-sonnet-4-6
-      :name 'claude-sonnet-4-6-thinking-32000
-      :provider 'vibe-proxy)
-
-     (make-llm-setup-instance
-      :model-name 'claude-sonnet-4-6
-      :name 'claude-sonnet-4-6
-      :provider 'vibe-proxy)
-
-     (make-llm-setup-instance
-      :name 'claude-sonnet-4-6
-      :provider 'positron_anthropic)
-
-     (make-llm-setup-instance :name 'claude-sonnet-4-6 :provider 'anthropic)))
-
-   (make-llm-setup-model
-    :name 'claude-opus
-    :supports-function-calling t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-name 'claude-opus-4-6
-      :name 'claude-opus-4-6-thinking-32000
-      :provider 'vibe-proxy
-      ;; :fallbacks '(hera/Qwen3.5-27B)
-      :fallbacks '(hera/Qwen3.5-27B))
-
-     (make-llm-setup-instance
-      :model-name 'claude-opus-4-6
-      :name 'claude-opus-4-6
-      :provider 'vibe-proxy
-      ;; :fallbacks '(hera/Qwen3.5-27B-Instruct)
-      :fallbacks '(hera/Qwen3.5-27B-Instruct))
-
-     (make-llm-setup-instance
-      :name 'claude-opus-4-6
-      :provider 'positron_anthropic)
-
-     (make-llm-setup-instance :name 'claude-opus-4-6 :provider 'anthropic)))
-
-   (make-llm-setup-model
-    :name 'r1-1776
-    :supports-reasoning t
-    :instances
-    (list (make-llm-setup-instance :provider 'perplexity)))
 
    (make-llm-setup-model
     :name 'sonar-deep-research
@@ -1518,363 +1871,56 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list (make-llm-setup-instance :provider 'perplexity)))
 
    (make-llm-setup-model
-    :name 'compound-beta
-    :instances (list (make-llm-setup-instance :provider 'groq)))
-
-   (make-llm-setup-model
-    :name 'llama-3.3-70b
+    :name 'whisper-large-v3-mlx
     :instances
     (list
      (make-llm-setup-instance
-      :name 'llama-3.3-70b-instruct-good-tp2
-      :provider 'positron)
-
-     (make-llm-setup-instance
-      :name 'llama-3.3-70b-versatile
-      :provider 'groq)))
-
-   (make-llm-setup-model
-    :name 'Llama-Guard-4-12B
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'meta-llama/Llama-Guard-4-12B
-      :provider 'groq)))
-
-   ;; From ~/.cache/huggingface/hub/models--Brooooooklyn--Qwen3.5-27B-unsloth-mlx
-   (make-llm-setup-model
-    :name 'Qwen3.5-27B-unsloth-mlx
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Brooooooklyn/Qwen3.5-27B-unsloth-mlx
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--Brooooooklyn--Qwen3.5-9B-unsloth-mlx
-   (make-llm-setup-model
-    :name 'Qwen3.5-9B-unsloth-mlx
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Brooooooklyn/Qwen3.5-9B-unsloth-mlx
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--Jackrong--MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
-   (make-llm-setup-model
-    :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Jackrong/MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--Nishant2414--GLM-5.1-MLX-4.8bit
-   (make-llm-setup-model
-    :name 'GLM-5.1-MLX-4.8bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Nishant2414/GLM-5.1-MLX-4.8bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--appautomaton--cohere-asr-mlx
-   (make-llm-setup-model
-    :name 'cohere-asr-mlx
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'appautomaton/cohere-asr-mlx
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--inferencerlabs--GLM-5.1-MLX-4.8bit-INF
-   (make-llm-setup-model
-    :name 'GLM-5.1-MLX-4.8bit-INF
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'inferencerlabs/GLM-5.1-MLX-4.8bit-INF
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--jackzampolin--Qwen3.5-397B-A17B-unsloth-mlx-4bit
-   (make-llm-setup-model
-    :name 'Qwen3.5-397B-A17B-unsloth-mlx-4bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'jackzampolin/Qwen3.5-397B-A17B-unsloth-mlx-4bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-6bit
-   (make-llm-setup-model
-    :name 'Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-6bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-6bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--Llama-4-Maverick-17B-128E-Instruct-6bit
-   (make-llm-setup-model
-    :name 'Llama-4-Maverick-17B-128E-Instruct-6bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/Llama-4-Maverick-17B-128E-Instruct-6bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--MiniMax-M2.7-4bit-mxfp4
-   (make-llm-setup-model
-    :name 'MiniMax-M2.7-4bit-mxfp4
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/MiniMax-M2.7-4bit-mxfp4
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit
-   (make-llm-setup-model
-    :name 'Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--Qwen3.5-35B-A3B-8bit
-   (make-llm-setup-model
-    :name 'Qwen3.5-35B-A3B-8bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/Qwen3.5-35B-A3B-8bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--Qwen3.5-9B-8bit
-   (make-llm-setup-model
-    :name 'Qwen3.5-9B-8bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/Qwen3.5-9B-8bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--Qwen3.5-9B-MLX-4bit
-   (make-llm-setup-model
-    :name 'Qwen3.5-9B-MLX-4bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/Qwen3.5-9B-MLX-4bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--bge-m3-mlx-fp16
-   (make-llm-setup-model
-    :name 'bge-m3-mlx-fp16
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/bge-m3-mlx-fp16
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--gemma-4-31b-8bit
-   (make-llm-setup-model
-    :name 'gemma-4-31b-8bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/gemma-4-31b-8bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--gpt-oss-120b-MXFP4-Q8
-   (make-llm-setup-model
-    :name 'gpt-oss-120b-MXFP4-Q8
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/gpt-oss-120b-MXFP4-Q8
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--gpt-oss-20b-MXFP4-Q8
-   (make-llm-setup-model
-    :name 'gpt-oss-20b-MXFP4-Q8
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/gpt-oss-20b-MXFP4-Q8
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--spicyneuron--GLM-5.1-MLX-2.9bit
-   (make-llm-setup-model
-    :name 'GLM-5.1-MLX-2.9bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'spicyneuron/GLM-5.1-MLX-2.9bit
-      :engine 'vllm-mlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--spicyneuron--Kimi-K2.5-MLX-2.8bit
-   (make-llm-setup-model
-    :name 'Kimi-K2.5-MLX-2.8bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'spicyneuron/Kimi-K2.5-MLX-2.8bit
-      :engine 'vllm-mlx)))
-
-;;; --- oMLX (5 new) ---
-
-   ;; From oMLX API: Kimi-K2.5-MLX-2.8bit
-   (make-llm-setup-model
-    :name 'Kimi-K2.5-MLX-2.8bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Kimi-K2.5-MLX-2.8bit
-      :provider 'omlx
-      :hostnames '("hera"))))
-
-   ;; From oMLX API: MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
-   (make-llm-setup-model
-    :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
-      :provider 'omlx
-      :hostnames '("hera"))))
-
-   ;; From oMLX API: MiniMax-M2.7-4bit-mxfp4
-   (make-llm-setup-model
-    :name 'MiniMax-M2.7-4bit-mxfp4
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'MiniMax-M2.7-4bit-mxfp4
-      :provider 'omlx
-      :hostnames '("hera"))))
-
-   ;; From oMLX API: Qwen3.5-35B-A3B-8bit
-   (make-llm-setup-model
-    :name 'Qwen3.5-35B-A3B-8bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.5-35B-A3B-8bit
-      :provider 'omlx
-      :hostnames '("hera"))))
-
-   ;; From oMLX API: Qwen3.5-9B-8bit
-   (make-llm-setup-model
-    :name 'Qwen3.5-9B-8bit
-    :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.5-9B-8bit
-      :provider 'omlx
-      :hostnames '("hera")))))
+      :name 'mlx-community/whisper-large-v3-mlx
+      :engine 'mlx-lm))))
   "List of configured models."
   :type '(repeat sexp)
   :group 'llm-setup)
+
+(defun llm-setup-sort ()
+  "Sort models in `llm-setup-models-list' by name.
+Operates on the current buffer, which should contain the source of
+`llm-setup.el'.  Sorts the `make-llm-setup-model' entries
+alphabetically by the `:name' field (case-insensitive)."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (unless (re-search-forward
+             "^(defcustom llm-setup-models-list\n  (list" nil t)
+      (error "Cannot find llm-setup-models-list defcustom"))
+    (let ((list-start (point)))
+      (backward-char 5)                ; back to opening paren of (list
+      (forward-sexp)                   ; skip past the entire (list ...)
+      (let ((list-end (1- (point))))   ; exclude closing paren of (list)
+        (save-restriction
+          (narrow-to-region list-start list-end)
+          (goto-char (point-min))
+          (sort-subr
+           nil
+           ;; NEXTRECFUN — move to start of next record
+           (lambda ()
+             (if (re-search-forward
+                  "^   \\(;; \\|(make-llm-setup-model\\)" nil t)
+                 (goto-char (match-beginning 0))
+               (goto-char (point-max))))
+           ;; ENDRECFUN — move to end of current record
+           (lambda ()
+             (when (looking-at "   ;; ")
+               (forward-line 1)
+               (while (looking-at "   ;; ")
+                 (forward-line 1)))
+             (forward-sexp))
+           ;; STARTKEYFUN — extract :name value as sort key
+           (lambda ()
+             (save-excursion
+               (when (re-search-forward ":name '\\(\\S-+\\)" nil t)
+                 (downcase (match-string 1)))))
+           nil
+           #'string<))))))
 
 (defun llm-setup-models-from-characteristics (&rest characteristics)
   "Return all models that provides the full list of CHARACTERISTICS."
