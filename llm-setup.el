@@ -1837,8 +1837,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :name 'ByteDance-Seed/Seed-OSS-36B-Instruct
       :engine 'mlx-lm)))
 
-;;; --- oMLX (5 new) ---
-
    (make-llm-setup-model
     :name 'SERA-32B
     :context-length 40960
@@ -3975,7 +3973,6 @@ Return the count of entries added."
       ;; MLX new entries
       (dolist (entry mlx-new)
         (let* ((canonical (plist-get entry :name))
-               (dir-path (plist-get entry :path))
                (short-name (intern (llm-setup-short-model-name canonical))))
           (if (or (model-live-p short-name)
                   (gethash short-name newly-created))
@@ -3988,8 +3985,7 @@ Return the count of entries added."
                 canonical))
             (llm-setup-sync--insert-model-entry
              (format
-              (concat "\n\n   ;; From %s\n"
-                      "   (make-llm-setup-model\n"
+              (concat "\n\n   (make-llm-setup-model\n"
                       "    :name '%s\n"
                       "    :context-length nil\n"
                       "    :temperature 1.0\n"
@@ -4000,7 +3996,7 @@ Return the count of entries added."
                       "     (make-llm-setup-instance\n"
                       "      :name '%s\n"
                       "      :engine 'vllm-mlx)))")
-              (abbreviate-file-name dir-path) short-name canonical))
+              short-name canonical))
             (puthash short-name t newly-created))
           (cl-incf added)))
       ;; oMLX new entries
@@ -4018,8 +4014,7 @@ Return the count of entries added."
                 model-id))
             (llm-setup-sync--insert-model-entry
              (format
-              (concat "\n\n   ;; From oMLX API: %s\n"
-                      "   (make-llm-setup-model\n"
+              (concat "\n\n   (make-llm-setup-model\n"
                       "    :name '%s\n"
                       "    :context-length nil\n"
                       "    :temperature 1.0\n"
@@ -4031,7 +4026,7 @@ Return the count of entries added."
                       "      :name '%s\n"
                       "      :provider 'omlx\n"
                       "      :hostnames '(\"hera\"))))")
-              model-id short-name model-id))
+              short-name model-id))
             (puthash short-name t newly-created))
           (cl-incf added))))
     added))
@@ -4043,6 +4038,22 @@ Return the count of entries added."
       (goto-char (point-min))
       (re-search-forward "^(defcustom llm-setup-models-list\n" nil t)
       (setq llm-setup-models-list (eval (read (current-buffer)) t)))))
+
+(defun llm-setup-sync--normalize-blank-lines ()
+  "Collapse multiple consecutive blank lines to one in the defcustom body."
+  (save-excursion
+    (goto-char (point-min))
+    (when (re-search-forward
+           "^(defcustom llm-setup-models-list\n  (list" nil t)
+      (let ((body-start (point)))
+        (backward-char 5)
+        (forward-sexp)
+        (let ((body-end (point)))
+          (goto-char body-start)
+          (while (re-search-forward "\n\n\\(\n+\\)" body-end t)
+            (let ((excess (- (match-end 0) (match-beginning 1))))
+              (replace-match "\n\n" nil t)
+              (cl-decf body-end excess))))))))
 
 (defun llm-setup-sync--apply-changes
     (gguf-results mlx-results omlx-results models-hash source-buf)
@@ -4083,9 +4094,10 @@ Return (ADDED . REMOVED) counts."
             (let ((added (llm-setup-sync--insert-new
                           gguf-new mlx-new omlx-new
                           models-hash fully-dead-names)))
-              ;; Sort
+              ;; Sort and normalize whitespace
               (when (or (> added 0) (> removed 0))
-                (llm-setup-sort))
+                (llm-setup-sort)
+                (llm-setup-sync--normalize-blank-lines))
               (cons added removed))))))))
 
 ;;;###autoload
