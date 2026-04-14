@@ -317,6 +317,13 @@ credential_list:
       api_key: os.environ/POSITRON_API_KEY
     credential_info:
       description: \"API Key for Posistron.ai\"
+
+  - credential_name: omlx_credential
+    credential_values:
+      api_base: http://hera.lan:8000/v1
+      api_key: \"dummy-key\"
+    credential_info:
+      description: \"API Key for oMLX on Hera\"
 "
   "Function for generating credentials for LiteLLM's config.yaml file."
   :type 'function
@@ -412,7 +419,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     positron_gemini
     perplexity
     groq
-    openrouter))
+    openrouter
+    omlx))
 
 (defconst llm-setup-all-model-engines
   '(llama-cpp koboldcpp mlx-lm vllm-mlx))
@@ -776,7 +784,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-397B-A17B-4bit
-      :engine 'vllm-mlx)))
+      :engine 'vllm-mlx)
+
+     (make-llm-setup-instance
+      :name 'Qwen3.5-397B-A17B-unsloth-mlx-4bit
+      :provider 'omlx
+      :hostnames '("hera"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-397B-A17B-1M
@@ -871,7 +884,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-27B-4bit
-      :engine 'vllm-mlx)))
+      :engine 'vllm-mlx)
+
+     (make-llm-setup-instance
+      :name 'Qwen3.5-27B-unsloth-mlx
+      :provider 'omlx
+      :hostnames '("hera"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-27B-Instruct
@@ -917,7 +935,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
 
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-9B-4bit
-      :engine 'vllm-mlx)))
+      :engine 'vllm-mlx)
+
+     (make-llm-setup-instance
+      :name 'Qwen3.5-9B-unsloth-mlx
+      :provider 'omlx
+      :hostnames '("hera"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-9B-Instruct
@@ -1056,22 +1079,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :engine 'vllm-mlx)))
 
    (make-llm-setup-model
-    :name 'gpt-oss-20b-MXFP4-Q8
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/gpt-oss-20b-MXFP4-Q8
-      :hostnames
-      '("hera" "clio")
-      :engine 'mlx-lm)))
-
-   (make-llm-setup-model
     :name 'gpt-oss-20b
     :context-length 131072
     :temperature 1.0
@@ -1083,22 +1090,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_gpt-oss-20b-GGUF"
-      :hostnames
-      '("hera" "clio"))))
+      :hostnames '("hera" "clio"))
 
-   (make-llm-setup-model
-    :name 'gpt-oss-120b-MXFP4-Q8
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
      (make-llm-setup-instance
-      :name 'mlx-community/gpt-oss-120b-MXFP4-Q8
-      :engine 'mlx-lm)))
+      :name 'gpt-oss-20b-MXFP4-Q8
+      :provider 'omlx
+      :hostnames '("hera"))))
 
    (make-llm-setup-model
     :name 'gpt-oss-120b
@@ -1115,7 +1112,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       ;; :draft-model "~/Models/unsloth_gpt-oss-20b-GGUF/gpt-oss-20b-Q8_0.gguf"
       ;; :fallbacks '(hera/claude-sonnet-4-5-20250929-thinking-32000
       ;;              anthropic/claude-sonnet-4-5-20250929)
-      )))
+      )
+
+     (make-llm-setup-instance
+      :name 'gpt-oss-120b-MXFP4-Q8
+      :provider 'omlx
+      :hostnames '("hera"))))
 
    (make-llm-setup-model
     :name 'gpt-oss-safeguard-20b-MLX-MXFP4
@@ -1249,8 +1251,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_gemma-4-31B-it-GGUF"
-      :hostnames
-      '("hera" "clio"))))
+      :hostnames '("hera" "clio"))
+
+     (make-llm-setup-instance
+      :name 'gemma-4-31b-8bit
+      :provider 'omlx
+      :hostnames '("hera"))))
 
    ;; (make-llm-setup-model
    ;;  :name 'Trinity-Large-Thinking
@@ -1435,6 +1441,13 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       '("--reranking" "--batch-size" "4096" "--ubatch-size" "2048"))))
 
    (make-llm-setup-model
+    :name 'Qwen3-Reranker-4B-mxfp8
+    :kind 'reranker
+    :instances
+    (list
+     (make-llm-setup-instance :provider 'omlx :hostnames '("hera"))))
+
+   (make-llm-setup-model
     :name 'Qwen3-Embedding-8B
     :context-length 32767
     :kind 'embedding
@@ -1468,7 +1481,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
         "--batch-size"
         "8192"
         "--ubatch-size"
-        "4096"))))
+        "4096"))
+
+     (make-llm-setup-instance
+      :name 'bge-m3-mlx-fp16
+      :provider 'omlx
+      :hostnames '("hera"))))
 
    (make-llm-setup-model
     :name 'bge-reranker-v2-m3
@@ -1953,7 +1971,7 @@ For local/vibe-proxy providers, returns \"host/name\".
 For remote providers, returns \"provider/name\"."
   (let ((provider (llm-setup-instance-provider instance))
         (name (llm-setup-get-instance-name model instance)))
-    (if (memq provider '(local vibe-proxy))
+    (if (memq provider '(local vibe-proxy omlx))
         ;; For local instances, use the first hostname
         (format "%s/%s"
                 (car (llm-setup-instance-hostnames instance))
@@ -1972,7 +1990,7 @@ Returns a string suitable for insertion into the LiteLLM config."
        (when-let* ((fallbacks (llm-setup-instance-fallbacks instance))
                    (provider (llm-setup-instance-provider instance)))
          (let ((hostnames
-                (if (memq provider '(local vibe-proxy))
+                (if (memq provider '(local vibe-proxy omlx))
                     (llm-setup-instance-hostnames instance)
                   (list provider))))
            ;; For each host where this instance is available
@@ -2310,7 +2328,7 @@ Optionally generate for the given HOSTNAME."
          (supports-response-schema
           (llm-setup-model-supports-response-schema model)))
     (dolist (host
-             (if (memq provider '(local vibe-proxy))
+             (if (memq provider '(local vibe-proxy omlx))
                  hostnames
                (list provider)))
       (insert
@@ -2335,6 +2353,8 @@ Optionally generate for the given HOSTNAME."
                  "openai")
                 ((eq 'positron provider)
                  "openai")
+                ((eq 'omlx provider)
+                 "openai")
                 ((string-match
                   "positron_\\(.+\\)" (symbol-name provider))
                  (match-string 1 (symbol-name provider)))
@@ -2346,6 +2366,8 @@ Optionally generate for the given HOSTNAME."
                  (concat host "_llama_swap"))
                 ((eq 'vibe-proxy provider)
                  (concat host "_vibe_proxy"))
+                ((eq 'omlx provider)
+                 "omlx")
                 (t
                  provider))
                (if (eq kind 'embedding)
