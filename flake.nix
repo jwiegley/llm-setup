@@ -21,7 +21,7 @@
           (pkgs.emacsPackagesFor pkgs.emacs-nox).emacsWithPackages
             (epkgs: [
               epkgs.package-lint
-              epkgs.elisp-autofmt
+              epkgs.format-all
               epkgs.relint
             ]);
 
@@ -98,9 +98,6 @@
               -l relint \
               -f relint-batch llm-setup.el
           '';
-
-          # NOTE: elisp-autofmt format check cannot run in the Nix sandbox
-          # (subprocess pipe issues). Formatting is enforced by lefthook pre-commit.
         };
 
         devShells.default = pkgs.mkShell {

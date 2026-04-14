@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Check that Emacs Lisp files are properly formatted with elisp-autofmt.
+# Check that Emacs Lisp files are properly formatted with format-all.
 # Usage: check-format.sh [file ...]
 set -uo pipefail
 
@@ -12,10 +12,11 @@ for file in "$@"; do
   tmp=$(mktemp "${TMPDIR:-/tmp}/elfmt-XXXXXX.el")
   TMPS+=("$tmp")
   cp "$file" "$tmp"
-  emacs --batch -L . -l elisp-autofmt \
+  emacs --batch -L . -l format-all \
     --eval "(progn
               (find-file (car command-line-args-left))
-              (elisp-autofmt-buffer)
+              (format-all-ensure-formatter)
+              (format-all-buffer)
               (save-buffer))" \
     "$tmp" 2>/dev/null
   if ! diff -q "$file" "$tmp" >/dev/null 2>&1; then

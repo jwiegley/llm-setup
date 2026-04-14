@@ -46,8 +46,8 @@ through Nix:
 nix develop
 ```
 
-This gives you Emacs (with package-lint, elisp-autofmt, and relint),
-lefthook for pre-commit hooks, and everything needed to run the checks.
+This gives you Emacs (with `package-lint` and `relint`), `lefthook` for
+`pre-commit` hooks, and everything needed to run the checks.
 
 For day-to-day use, `llm-setup.el` loads into your Emacs session like any other
 package. The typical workflow is:
@@ -73,7 +73,7 @@ All checks run via `nix flake check`, which covers:
 - **package-lint** for package header and dependency conventions
 - **checkdoc** for docstring style
 - **relint** for regexp correctness
-- **Format check** via elisp-autofmt
+- **Format check** via `indent-region`
 
 Pre-commit hooks (via lefthook) run the same checks in parallel on
 staged files.
