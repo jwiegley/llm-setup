@@ -1917,7 +1917,7 @@ alphabetically by the `:name' field (case-insensitive)."
            ;; STARTKEYFUN — extract :name value as sort key
            (lambda ()
              (save-excursion
-               (when (re-search-forward ":name '\\(\\S-+\\)" nil t)
+               (when (re-search-forward ":name '\\([^ \t\n]+\\)" nil t)
                  (downcase (match-string 1)))))
            nil
            #'string<))))))
