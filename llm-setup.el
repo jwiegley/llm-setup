@@ -3774,10 +3774,327 @@ items.  MODELS-HASH is passed to scaffold functions."
     (when (zerop total-dead)
       (insert "\n;; (none)\n"))))
 
+(defun llm-setup-sync--source-file ()
+  "Return the path to the `llm-setup.el' source file."
+  (or (locate-library "llm-setup.el" t)
+      (error "Cannot locate llm-setup.el source file")))
+
+(defun llm-setup-sync--find-model-region (model-name)
+  "Find the source region of MODEL-NAME in the current buffer.
+Return (BEG . END) including preceding comments and blank line,
+or nil if not found."
+  (save-excursion
+    (goto-char (point-min))
+    (when (re-search-forward
+           "^(defcustom llm-setup-models-list\n  (list" nil t)
+      (let ((body-start (point)))
+        (backward-char 5)
+        (forward-sexp)
+        (let ((body-end (point))
+              (target (symbol-name model-name)))
+          (goto-char body-start)
+          (catch 'found
+            (while (re-search-forward "(make-llm-setup-model" body-end t)
+              (goto-char (match-beginning 0))
+              (let* ((sexp-start (point))
+                     (sexp-end (save-excursion (forward-sexp) (point))))
+                (save-excursion
+                  (goto-char sexp-start)
+                  (when (re-search-forward ":name '\\([^ \t\n]+\\)" sexp-end t)
+                    (when (string= (match-string 1) target)
+                      (let ((entry-start sexp-start))
+                        (save-excursion
+                          (goto-char sexp-start)
+                          (forward-line -1)
+                          (while (looking-at "\\s-*;; ")
+                            (setq entry-start (line-beginning-position))
+                            (forward-line -1))
+                          (when (looking-at "^$")
+                            (setq entry-start (line-beginning-position))))
+                        (throw 'found (cons entry-start sexp-end))))))
+                (goto-char sexp-end)))))))))
+
+(defun llm-setup-sync--instance-search-key (instance)
+  "Return a search string that uniquely identifies INSTANCE in source."
+  (let ((name (llm-setup-instance-name instance))
+        (model-path (llm-setup-instance-model-path instance)))
+    (cond
+     (model-path
+      (format ":model-path %S" (abbreviate-file-name model-path)))
+     (name (format ":name '%s" name))
+     (t (error "Cannot identify instance: no name or model-path")))))
+
+(defun llm-setup-sync--find-instance-region (model-name instance)
+  "Find the source region of INSTANCE within MODEL-NAME's entry.
+Return (BEG . END) or nil."
+  (let ((model-region (llm-setup-sync--find-model-region model-name)))
+    (when model-region
+      (save-excursion
+        (goto-char (car model-region))
+        (when (re-search-forward "(make-llm-setup-model"
+                                 (cdr model-region) t)
+          (let ((model-sexp-end
+                 (save-excursion
+                   (goto-char (match-beginning 0))
+                   (forward-sexp)
+                   (point)))
+                (search-key (llm-setup-sync--instance-search-key instance)))
+            (when (search-forward search-key model-sexp-end t)
+              (when (re-search-backward "(make-llm-setup-instance"
+                                        (car model-region) t)
+                (let ((inst-start (point)))
+                  (save-excursion
+                    (forward-line -1)
+                    (when (looking-at "^\\s-*$")
+                      (setq inst-start (line-beginning-position))))
+                  (forward-sexp)
+                  (cons inst-start (point)))))))))))
+
+(defun llm-setup-sync--remove-dead (all-dead)
+  "Remove ALL-DEAD entries from the defcustom in the current buffer.
+ALL-DEAD is a list of plists each with :model and :instance keys.
+Return the count of entries removed."
+  (let ((dead-by-model (make-hash-table))
+        (removed 0)
+        regions-to-delete)
+    ;; Group dead entries by model name
+    (dolist (entry all-dead)
+      (let ((name (llm-setup-model-name (plist-get entry :model))))
+        (puthash name (cons entry (gethash name dead-by-model))
+                 dead-by-model)))
+    ;; Determine what to delete for each model
+    (maphash
+     (lambda (model-name dead-instances)
+       (let* ((model (plist-get (car dead-instances) :model))
+              (total (length (llm-setup-model-instances model)))
+              (dead-count (length dead-instances)))
+         (if (>= dead-count total)
+             ;; All instances dead: remove whole model
+             (let ((region (llm-setup-sync--find-model-region model-name)))
+               (when region
+                 (push region regions-to-delete)))
+           ;; Some instances dead: remove specific instances
+           (dolist (entry dead-instances)
+             (let ((region (llm-setup-sync--find-instance-region
+                            model-name
+                            (plist-get entry :instance))))
+               (when region
+                 (push region regions-to-delete)))))))
+     dead-by-model)
+    ;; Delete from bottom to top to preserve positions
+    (setq regions-to-delete
+          (sort regions-to-delete (lambda (a b) (> (car a) (car b)))))
+    (dolist (region regions-to-delete)
+      (delete-region (car region) (cdr region))
+      (cl-incf removed))
+    removed))
+
+(defun llm-setup-sync--insert-model-entry (text)
+  "Insert TEXT as a new model entry at the end of the defcustom list."
+  (save-excursion
+    (goto-char (point-min))
+    (re-search-forward "^(defcustom llm-setup-models-list\n  (list" nil t)
+    (backward-char 5)
+    (forward-sexp)
+    (backward-char 1)
+    (insert text)))
+
+(defun llm-setup-sync--add-instance-to-model (model-name instance-text)
+  "Add INSTANCE-TEXT to MODEL-NAME's instances list in current buffer."
+  (save-excursion
+    (goto-char (point-min))
+    (when (re-search-forward
+           "^(defcustom llm-setup-models-list\n  (list" nil t)
+      (let ((body-start (point)))
+        (backward-char 5)
+        (forward-sexp)
+        (let ((body-end (point))
+              (target (symbol-name model-name)))
+          (goto-char body-start)
+          (catch 'done
+            (while (re-search-forward "(make-llm-setup-model" body-end t)
+              (goto-char (match-beginning 0))
+              (let* ((sexp-start (point))
+                     (sexp-end (save-excursion (forward-sexp) (point))))
+                (save-excursion
+                  (goto-char sexp-start)
+                  (when (re-search-forward ":name '\\([^ \t\n]+\\)" sexp-end t)
+                    (when (string= (match-string 1) target)
+                      (goto-char sexp-start)
+                      (when (re-search-forward ":instances" sexp-end t)
+                        (when (re-search-forward "(list" sexp-end t)
+                          (goto-char (match-beginning 0))
+                          (forward-sexp)
+                          (backward-char 1)
+                          (insert instance-text)
+                          (throw 'done t))))))
+                (goto-char sexp-end)))))))))
+
+(defun llm-setup-sync--insert-new
+    (gguf-new mlx-new omlx-new models-hash fully-dead-names)
+  "Insert new entries into the defcustom in the current buffer.
+GGUF-NEW, MLX-NEW, OMLX-NEW are lists of new entries.
+MODELS-HASH is the pre-edit model lookup.
+FULLY-DEAD-NAMES is a hash of model names fully removed.
+Return the count of entries added."
+  (let ((added 0)
+        (newly-created (make-hash-table)))
+    (cl-flet
+        ((model-live-p
+           (name)
+           (and (llm-setup-sync--model-exists-p name models-hash)
+                (not (gethash name fully-dead-names)))))
+      ;; GGUF new entries
+      (dolist (entry gguf-new)
+        (let* ((path (plist-get entry :path))
+               (short-name (plist-get entry :short-name))
+               (abbrev-path (abbreviate-file-name path)))
+          (if (or (model-live-p short-name)
+                  (gethash short-name newly-created))
+              (llm-setup-sync--add-instance-to-model
+               short-name
+               (format
+                (concat "\n     (make-llm-setup-instance\n"
+                        "      :model-path %S)")
+                abbrev-path))
+            (llm-setup-sync--insert-model-entry
+             (format
+              (concat "\n\n   (make-llm-setup-model\n"
+                      "    :name '%s\n"
+                      "    :context-length nil\n"
+                      "    :temperature 1.0\n"
+                      "    :min-p 0.0\n"
+                      "    :top-p 0.9\n"
+                      "    :instances\n"
+                      "    (list\n"
+                      "     (make-llm-setup-instance\n"
+                      "      :model-path %S)))")
+              short-name abbrev-path))
+            (puthash short-name t newly-created))
+          (cl-incf added)))
+      ;; MLX new entries
+      (dolist (entry mlx-new)
+        (let* ((canonical (plist-get entry :name))
+               (dir-path (plist-get entry :path))
+               (short-name (intern (llm-setup-short-model-name canonical))))
+          (if (or (model-live-p short-name)
+                  (gethash short-name newly-created))
+              (llm-setup-sync--add-instance-to-model
+               short-name
+               (format
+                (concat "\n     (make-llm-setup-instance\n"
+                        "      :name '%s\n"
+                        "      :engine 'vllm-mlx)")
+                canonical))
+            (llm-setup-sync--insert-model-entry
+             (format
+              (concat "\n\n   ;; From %s\n"
+                      "   (make-llm-setup-model\n"
+                      "    :name '%s\n"
+                      "    :context-length nil\n"
+                      "    :temperature 1.0\n"
+                      "    :min-p 0.0\n"
+                      "    :top-p 0.9\n"
+                      "    :instances\n"
+                      "    (list\n"
+                      "     (make-llm-setup-instance\n"
+                      "      :name '%s\n"
+                      "      :engine 'vllm-mlx)))")
+              (abbreviate-file-name dir-path) short-name canonical))
+            (puthash short-name t newly-created))
+          (cl-incf added)))
+      ;; oMLX new entries
+      (dolist (model-id omlx-new)
+        (let ((short-name (intern (llm-setup-short-model-name model-id))))
+          (if (or (model-live-p short-name)
+                  (gethash short-name newly-created))
+              (llm-setup-sync--add-instance-to-model
+               short-name
+               (format
+                (concat "\n     (make-llm-setup-instance\n"
+                        "      :name '%s\n"
+                        "      :provider 'omlx\n"
+                        "      :hostnames '(\"hera\"))")
+                model-id))
+            (llm-setup-sync--insert-model-entry
+             (format
+              (concat "\n\n   ;; From oMLX API: %s\n"
+                      "   (make-llm-setup-model\n"
+                      "    :name '%s\n"
+                      "    :context-length nil\n"
+                      "    :temperature 1.0\n"
+                      "    :min-p 0.0\n"
+                      "    :top-p 0.9\n"
+                      "    :instances\n"
+                      "    (list\n"
+                      "     (make-llm-setup-instance\n"
+                      "      :name '%s\n"
+                      "      :provider 'omlx\n"
+                      "      :hostnames '(\"hera\"))))")
+              model-id short-name model-id))
+            (puthash short-name t newly-created))
+          (cl-incf added))))
+    added))
+
+(defun llm-setup-sync--eval-models-list (source-buf)
+  "Re-evaluate `llm-setup-models-list' from SOURCE-BUF."
+  (with-current-buffer source-buf
+    (save-excursion
+      (goto-char (point-min))
+      (re-search-forward "^(defcustom llm-setup-models-list\n" nil t)
+      (setq llm-setup-models-list (eval (read (current-buffer)) t)))))
+
+(defun llm-setup-sync--apply-changes
+    (gguf-results mlx-results omlx-results models-hash source-buf)
+  "Apply sync to SOURCE-BUF using GGUF-RESULTS, MLX-RESULTS, OMLX-RESULTS.
+Remove dead entries, insert new ones from the three result lists,
+and sort.  MODELS-HASH is the pre-edit model lookup.
+Return (ADDED . REMOVED) counts."
+  (let* ((gguf-new (plist-get gguf-results :new))
+         (gguf-dead (plist-get gguf-results :dead))
+         (mlx-new (plist-get mlx-results :new))
+         (mlx-dead (plist-get mlx-results :dead))
+         (omlx-new (plist-get omlx-results :new))
+         (omlx-dead (plist-get omlx-results :dead))
+         (all-dead (append gguf-dead mlx-dead omlx-dead))
+         (all-new-count (+ (length gguf-new) (length mlx-new)
+                           (length omlx-new)))
+         (all-dead-count (length all-dead)))
+    (if (and (zerop all-new-count) (zerop all-dead-count))
+        (cons 0 0)
+      (with-current-buffer source-buf
+        ;; Compute fully-dead model names
+        (let ((fully-dead-names (make-hash-table))
+              (dead-by-model (make-hash-table)))
+          (dolist (entry all-dead)
+            (let ((name (llm-setup-model-name (plist-get entry :model))))
+              (puthash name (cons entry (gethash name dead-by-model))
+                       dead-by-model)))
+          (maphash
+           (lambda (name entries)
+             (let ((model (plist-get (car entries) :model)))
+               (when (>= (length entries)
+                         (length (llm-setup-model-instances model)))
+                 (puthash name t fully-dead-names))))
+           dead-by-model)
+          ;; Remove dead entries
+          (let ((removed (llm-setup-sync--remove-dead all-dead)))
+            ;; Insert new entries
+            (let ((added (llm-setup-sync--insert-new
+                          gguf-new mlx-new omlx-new
+                          models-hash fully-dead-names)))
+              ;; Sort
+              (when (or (> added 0) (> removed 0))
+                (llm-setup-sort))
+              (cons added removed))))))))
+
 ;;;###autoload
 (defun llm-setup-sync ()
-  "Discover models from disk and API, compare against the registry.
-Present a report of new and dead models in a buffer."
+  "Discover models, apply change to source, and verify.
+Scans GGUF directories, MLX HF cache, and oMLX API.  Compares
+against the registry, generates a report, removes dead entries and
+inserts new ones in the source file, then runs
+`llm-setup-check-instances' to confirm."
   (interactive)
   (message "[llm-setup-sync] Scanning GGUF directories...")
   (let* ((discovered-gguf (llm-setup-sync--discover-gguf))
@@ -3800,6 +4117,7 @@ Present a report of new and dead models in a buffer."
          (mlx-results (llm-setup-sync--compare-mlx discovered-mlx known-mlx))
          (omlx-results
           (llm-setup-sync--compare-omlx discovered-omlx known-omlx)))
+    ;; Generate report buffer
     (with-current-buffer (get-buffer-create "*LLM-SETUP Sync*")
       (let ((inhibit-read-only t))
         (erase-buffer)
@@ -3812,10 +4130,38 @@ Present a report of new and dead models in a buffer."
                                        (length (cdr discovered-omlx))
                                        models-hash))
       (emacs-lisp-mode)
-      (setq buffer-read-only t)
-      (goto-char (point-min))
-      (display-buffer (current-buffer))))
-  (message "[llm-setup-sync] Done."))
+      (goto-char (point-min)))
+    ;; Apply changes to source file
+    (message "[llm-setup-sync] Applying changes to source...")
+    (let* ((source-buf
+            (find-file-noselect (llm-setup-sync--source-file)))
+           (result
+            (llm-setup-sync--apply-changes gguf-results
+                                           mlx-results
+                                           omlx-results
+                                           models-hash
+                                           source-buf))
+           (added (car result))
+           (removed (cdr result)))
+      ;; Re-eval the models list from modified source
+      (when (or (> added 0) (> removed 0))
+        (llm-setup-sync--eval-models-list source-buf))
+      ;; Run validation
+      (message "[llm-setup-sync] Running check-instances...")
+      (let ((warnings (llm-setup-check-instances)))
+        ;; Append results to report
+        (with-current-buffer (get-buffer-create "*LLM-SETUP Sync*")
+          (let ((inhibit-read-only t))
+            (goto-char (point-max))
+            (insert
+             (format "\n;;; Applied: %d added, %d removed\n" added removed))
+            (insert
+             (format ";;; check-instances: %d warning(s)\n" warnings)))
+          (setq buffer-read-only t)
+          (goto-char (point-min))
+          (display-buffer (current-buffer)))
+        (message "[llm-setup-sync] Done. %d added, %d removed, %d warning(s)"
+                 added removed warnings)))))
 
 (provide 'llm-setup)
 
