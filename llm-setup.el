@@ -103,74 +103,30 @@ startPort: 9400
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-llama-swap-epilog "
-groups:
-  always_on:
-    swap: false
-    exclusive: false
-    members:
-      - Devstral-2-123B-Instruct-2512
-      - Devstral-Small-2-24B-Instruct-2512
-      - Qwen3-Coder-Next
-      - gpt-oss-20b
-      - mlx-community/gpt-oss-20b-MXFP4-Q8
-      - gpt-oss-safeguard-20b
-      - lmstudio-community/gpt-oss-safeguard-20b-MLX-MXFP4
-      - gpt-oss-120b
-      - Qwen3.5-27B
-      - Qwen3.5-27B-Instruct
-      - Qwen3.5-9B
-      - Qwen3.5-9B-Instruct
-      - Qwen3.5-4B
-      - Qwen3.5-4B-Instruct
-      - Qwen3.5-2B
-      - Qwen3.5-2B-Instruct
-      - Qwen3.5-0.8B
-      - Qwen3.5-35B-A3B
-      - Qwen3.5-397B-A17B
-      - bge-m3
-
-  # Only one of these can be loaded at a time
-  large_models:
-    swap: true
-    exclusive: false
-    members:
-      - GLM-5.1
-      - Kimi-K2.5
-      - Llama-4-Maverick-17B-128E-Instruct
-      - Llama-4-Scout-17B-16E-Instruct
-      - Phi-4-reasoning-plus
-      - mlx-community/gpt-oss-120b-MXFP4-Q8
-
-  # Only one of these can be loaded at a time
-  embeddings:
-    swap: true
-    exclusive: false
-    members:
-      - NV-Embed-v2
-      - Qwen3-Embedding-8B
-      - all-MiniLM-L6-v2
-      - bge-base-en-v1.5
-      - bge-large-en-v1.5
-      - nomic-embed-text-v2-moe
-
-  # Only one of these can be loaded at a time
-  rerankings:
-    swap: true
-    exclusive: false
-    members:
-      - Qwen.Qwen3-Reranker-8B
-      - bge-reranker-v2-m3
-
-  # Only one of these can be loaded at a time
-  stt:
-    swap: true
-    exclusive: false
-    members:
-      - whisper-large-v3-mlx
-"
-  "Epilog for beginning of llama-swap.yaml file."
-  :type 'string
+(defcustom llm-setup-llama-swap-always-on-models
+  '(Devstral-2-123B-Instruct-2512
+    Devstral-Small-2-24B-Instruct-2512
+    Qwen3-Coder-Next
+    gpt-oss-20b
+    mlx-community/gpt-oss-20b-MXFP4-Q8
+    gpt-oss-safeguard-20b
+    lmstudio-community/gpt-oss-safeguard-20b-MLX-MXFP4
+    gpt-oss-120b
+    Qwen3.5-27B
+    Qwen3.5-27B-Instruct
+    Qwen3.5-9B
+    Qwen3.5-9B-Instruct
+    Qwen3.5-4B
+    Qwen3.5-4B-Instruct
+    Qwen3.5-2B
+    Qwen3.5-2B-Instruct
+    Qwen3.5-0.8B
+    Qwen3.5-35B-A3B
+    bge-m3)
+  "Model instance names that should remain resident in memory.
+These are placed in the always_on group with swap disabled.
+All other models go into a single exclusive group."
+  :type '(repeat symbol)
   :group 'llm-setup)
 
 (defcustom llm-setup-litellm-path
@@ -364,6 +320,7 @@ router_settings:%s
   #     time_period: 1mo
 
 general_settings:
+  background_health_checks: false
   store_model_in_db: true
   store_prompts_in_spend_logs: true
   maximum_spend_logs_retention_period: \"90d\"
@@ -373,6 +330,12 @@ general_settings:
   "Epilog for LiteLLM's config.yaml file.
 Contains a %s placeholder for dynamically generated router fallbacks."
   :type 'string
+  :group 'llm-setup)
+
+(defcustom llm-setup-promptdeploy-path
+  "~/src/promptdeploy/models.yaml"
+  "Pathname to promptdeploy models.yaml file."
+  :type 'file
   :group 'llm-setup)
 
 (defsubst llm-setup-api-base ()
@@ -395,6 +358,10 @@ Contains a %s placeholder for dynamically generated router fallbacks."
   (expand-file-name "lmstudio/models" llm-setup-xdg-local))
 (defvar llm-setup-ollama-models
   (expand-file-name "ollama/models" llm-setup-xdg-local))
+(defvar llm-setup-omlx-api-base "http://hera.lan:8000"
+  "Base URL for the oMLX server.")
+(defvar llm-setup-omlx-api-key "dummy-key"
+  "API key for the oMLX server.")
 
 (defconst llm-setup-all-model-characteristics
   '(high medium low remote local thinking instruct coding rewrite))
@@ -480,6 +447,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
  (supports-reasoning nil) ; t if model supports reasoning
  (supports-response-schema nil) ; t if model supports response schema
  aliases ; model alias names
+ (promptdeploy-only nil) ; list of deploy targets, nil = all
  instances ; model instances
  )
 
@@ -510,6 +478,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
  (cache-reuse nil) ; integer: min chunk size for cache reuse
  (slot-save-path nil) ; path for saving/restoring slot KV cache
  (slot-prompt-similarity nil) ; float: min prompt similarity to reuse slot
+ (promptdeploy-remote nil) ; if t, include in litellm/llama-cpp-remote
  )
 
 (defcustom llm-setup-models-list
@@ -545,7 +514,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :context-length 12000
-      :model-path "~/Models/unsloth_DeepSeek-V3.2-GGUF")))
+      :model-path "~/Models/unsloth_DeepSeek-V3.2-GGUF"
+      :promptdeploy-remote t)))
 
    (make-llm-setup-model
     :name 'Kimi-K2.5
@@ -560,7 +530,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
      (make-llm-setup-instance
       :context-length 98304
       :max-output-tokens 32768
-      :model-path "~/Models/unsloth_Kimi-K2.5-GGUF")))
+      :model-path "~/Models/unsloth_Kimi-K2.5-GGUF"
+      :promptdeploy-remote t)))
 
    (make-llm-setup-model
     :name 'SERA-32B
@@ -588,12 +559,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :instances
     (list
      (make-llm-setup-instance
-      :context-length 1048576
-      :model-path "~/Models/unsloth_Llama-4-Scout-17B-16E-Instruct-GGUF"
-      :cache-type-k 'q4_1
-      :cache-type-v 'q4_1)
-
-     (make-llm-setup-instance
       :name 'meta-llama/llama-4-scout-17b-16e-instruct
       :provider 'groq)))
 
@@ -616,20 +581,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    ;;    :provider 'openrouter)))
 
    (make-llm-setup-model
-    :name 'GLM-4.7-REAP-218B-A32B
-    :context-length 202752
-    :temperature 0.7
-    :min-p 0.01
-    :top-p 0.9
-    :top-k 40
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-4.7-REAP-218B-A32B-GGUF")))
-
-   (make-llm-setup-model
     :name 'GLM-4.7-Flash
     :context-length 202752
     :temperature 0.7
@@ -638,41 +589,13 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-k 40
     :supports-function-calling t
     :supports-reasoning t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_GLM-4.7-Flash-GGUF"
       :arguments
       '("--repeat-penalty" "1.0"))))
-
-   (make-llm-setup-model
-    :name 'GLM-4.7-Flash-REAP-23B-A3B
-    :context-length 202752
-    :temperature 0.7
-    :min-p 0.01
-    :top-p 0.9
-    :top-k 40
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-4.7-Flash-REAP-23B-A3B-GGUF"
-      :hostnames
-      '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'GLM-5
-    :context-length 262144
-    :temperature 1.0
-    :top-p 0.9
-    :top-k 40
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-5-GGUF")))
 
    (make-llm-setup-model
     :name 'GLM-5.1
@@ -685,20 +608,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-5.1-GGUF")))
-
-   (make-llm-setup-model
-    :name 'MiniMax-M2-REAP-162B-A10B
-    :context-length 262144
-    :temperature 1.0
-    :top-p 0.9
-    :top-k 40
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/bartowski_cerebras_MiniMax-M2-REAP-162B-A10B-GGUF")))
+      :model-path "~/Models/unsloth_GLM-5.1-GGUF"
+      :promptdeploy-remote t)))
 
    (make-llm-setup-model
     :name 'Phi-4-reasoning-plus
@@ -747,23 +658,8 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :max-output-tokens 131072
       :model-path "~/Models/unsloth_Qwen3-Coder-Next-GGUF"
       :hostnames
-      '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3-Coder-Next-REAP-40B-A3B
-    :context-length 262144
-    :temperature 1.0
-    :min-p 0.01
-    :top-p 0.9
-    :top-k 40
-    :supports-function-calling t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :max-output-tokens 131072
-      :model-path "~/Models/mradermacher_Qwen3-Coder-Next-REAP-40B-A3B-GGUF"
-      :hostnames
-      '("hera" "clio"))))
+      '("hera" "clio")
+      :promptdeploy-remote t)))
 
    (make-llm-setup-model
     :name 'Qwen3.5-397B-A17B
@@ -777,12 +673,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :instances
     (list
      (make-llm-setup-instance
-      :max-output-tokens 81920
-      :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0)
-
-     (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-397B-A17B-4bit
       :engine 'vllm-mlx)
 
@@ -790,23 +680,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :name 'Qwen3.5-397B-A17B-unsloth-mlx-4bit
       :provider 'omlx
       :hostnames '("hera"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3.5-397B-A17B-1M
-    :context-length 1048576
-    :temperature 0.6
-    :min-p 0.0
-    :top-p 0.9
-    :top-k 20
-    :supports-function-calling t
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :max-output-tokens 81920
-      :model-path "~/Models/unsloth_Qwen3.5-397B-A17B-GGUF"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0)))
 
    (make-llm-setup-model
     :name 'Qwen3.5-122B-A10B
@@ -819,13 +692,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :supports-reasoning t
     :instances
     (list
-     (make-llm-setup-instance
-      :max-output-tokens 131072
-      :model-path "~/Models/unsloth_Qwen3.5-122B-A10B-GGUF"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-35B-A3B))
-
      (make-llm-setup-instance
       :name 'mlx-community/Qwen3.5-122B-A10B-4bit
       :engine 'vllm-mlx)))
@@ -871,6 +737,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :parallel 1
       :cache-type-k 'q8_0
       :fallbacks '(clio/Qwen3.5-27B)
+      :promptdeploy-remote t
       :hostnames '("hera"))
 
      (make-llm-setup-instance
@@ -923,6 +790,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -951,6 +819,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -974,6 +843,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -997,6 +867,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-k 20
     :supports-function-calling t
     :supports-reasoning nil
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1019,6 +890,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1042,6 +914,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1064,6 +937,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-k 20
     :supports-function-calling t
     :supports-reasoning t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1112,7 +986,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       ;; :draft-model "~/Models/unsloth_gpt-oss-20b-GGUF/gpt-oss-20b-Q8_0.gguf"
       ;; :fallbacks '(hera/claude-sonnet-4-5-20250929-thinking-32000
       ;;              anthropic/claude-sonnet-4-5-20250929)
-      )
+      :promptdeploy-remote t)
 
      (make-llm-setup-instance
       :name 'gpt-oss-120b-MXFP4-Q8
@@ -1127,6 +1001,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1143,6 +1018,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1155,6 +1031,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :min-p 0.0
     :top-p 0.9
     :supports-function-calling t
+    :promptdeploy-only '("opencode")
     :instances
     (list
      (make-llm-setup-instance
@@ -1167,6 +1044,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :min-p 0.0
     :top-p 0.9
     :supports-function-calling t
+    :promptdeploy-only '("opencode")
     :instances
     (list
      (make-llm-setup-instance
@@ -1183,6 +1061,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :min-p 0.0
     :top-p 0.9
     :supports-function-calling t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1197,6 +1076,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :min-p 0.0
     :top-p 0.9
     :supports-function-calling t
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1222,24 +1102,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
       :name 'google/gemma-2-9b
       :engine 'mlx-lm)))
-
-   (make-llm-setup-model
-    :name 'gemma-4-26B-A4B-it
-    :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gemma-4-26B-A4B-it-GGUF"
-      :hostnames
-      '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'gemma-4-31B-it
@@ -1249,10 +1117,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :top-p 0.9
     :instances
     (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gemma-4-31B-it-GGUF"
-      :hostnames '("hera" "clio"))
-
      (make-llm-setup-instance
       :name 'gemma-4-31b-8bit
       :provider 'omlx
@@ -1275,6 +1139,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1288,12 +1153,14 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
       :model-path "~/Models/prism-ml_Bonsai-8B-gguf"
       :hostnames
-      '("hera" "clio"))))
+      '("hera" "clio")
+      :promptdeploy-remote t)))
 
    (make-llm-setup-model
     :name 'Seed-OSS-36B-Instruct
@@ -1313,6 +1180,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1325,6 +1193,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1337,6 +1206,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1349,6 +1219,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1361,6 +1232,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1373,6 +1245,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1385,6 +1258,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1397,6 +1271,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -1409,6 +1284,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     :temperature 1.0
     :min-p 0.0
     :top-p 0.9
+    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -2257,23 +2133,70 @@ Optionally generate for the given HOSTNAME."
             (?a . ,args)))
          footer))))))
 
+(defun llm-setup--generate-llama-swap-groups (emitted-names)
+  "Generate llama-swap groups YAML from EMITTED-NAMES.
+Models in `llm-setup-llama-swap-always-on-models' are placed in
+the always_on group with swap disabled.  All other models go into
+a single exclusive group with swap enabled."
+  (let ((always-on
+         (cl-remove-if-not
+          (lambda (name)
+            (memq name llm-setup-llama-swap-always-on-models))
+          emitted-names))
+        (exclusive
+         (cl-remove-if
+          (lambda (name)
+            (memq name llm-setup-llama-swap-always-on-models))
+          emitted-names)))
+    (concat
+     "\ngroups:"
+     "\n  always_on:"
+     "\n    swap: false"
+     "\n    exclusive: false"
+     "\n    members:"
+     (if always-on
+         (mapconcat (lambda (name)
+                      (format "\n      - %s" (symbol-name name)))
+                    always-on
+                    "")
+       " []")
+     (when exclusive
+       (concat
+        "\n  exclusive_models:"
+        "\n    swap: true"
+        "\n    exclusive: false"
+        "\n    members:"
+        (mapconcat (lambda (name)
+                     (format "\n      - %s" (symbol-name name)))
+                   exclusive
+                   "")))
+     "\n")))
+
 (defun llm-setup-generate-llama-swap-yaml (hostname)
   "Build llama-swap.yaml configuration for HOSTNAME."
   (with-current-buffer (get-buffer-create "*llama-swap.yaml*")
     (erase-buffer)
     (insert llm-setup-llama-swap-prolog)
     (insert "\nmodels:")
-    (dolist (mi (llm-setup-instances-list))
-      (cl-destructuring-bind
-       (model . instance) mi
-       (when (and (memq
-                   (llm-setup-instance-provider instance)
-                   '(local vibe-proxy))
-                  (member
-                   hostname (llm-setup-instance-hostnames instance)))
-         (llm-setup-insert-instance-llama-swap model instance
-                                               hostname))))
-    (insert llm-setup-llama-swap-epilog)
+    (let ((emitted-names '()))
+      (dolist (mi (llm-setup-instances-list))
+        (cl-destructuring-bind
+         (model . instance) mi
+         (when (and (memq
+                     (llm-setup-instance-provider instance)
+                     '(local vibe-proxy))
+                    (member
+                     hostname
+                     (llm-setup-instance-hostnames instance)))
+           (let ((pos (point)))
+             (llm-setup-insert-instance-llama-swap model instance
+                                                   hostname)
+             (when (/= pos (point))
+               (push (llm-setup-get-instance-name model instance)
+                     emitted-names))))))
+      (insert
+       (llm-setup--generate-llama-swap-groups
+        (nreverse emitted-names))))
     (yaml-mode)
     (current-buffer)))
 
@@ -2447,30 +2370,403 @@ Optionally generate for the given HOSTNAME."
    "sudo systemctl --user -M litellm@ restart litellm.service")
   (message "[litellm] Done"))
 
+;;; promptdeploy models.yaml generation
+
+(defun llm-setup--promptdeploy-litellm-match-p (model instance)
+  "Return non-nil if MODEL INSTANCE should appear in litellm provider."
+  (let ((provider (llm-setup-instance-provider instance)))
+    (and (not
+          (memq (llm-setup-model-kind model) '(embedding reranker)))
+         (or (eq provider 'vibe-proxy)
+             (eq provider 'omlx)
+             (and (eq provider 'local)
+                  (llm-setup-instance-promptdeploy-remote
+                   instance))))))
+
+(defun llm-setup--promptdeploy-remote-match-p (model instance)
+  "Return non-nil if MODEL INSTANCE should appear in llama-cpp-remote."
+  (let ((provider (llm-setup-instance-provider instance)))
+    (and (not
+          (memq (llm-setup-model-kind model) '(embedding reranker)))
+         (eq provider 'local)
+         (llm-setup-instance-promptdeploy-remote instance))))
+
+(defun llm-setup--promptdeploy-local-match-p (model instance)
+  "Return non-nil if MODEL INSTANCE should appear in llama-cpp-local."
+  (let ((provider (llm-setup-instance-provider instance)))
+    (and (not
+          (memq (llm-setup-model-kind model) '(embedding reranker)))
+         (eq provider 'local))))
+
+(defconst llm-setup-promptdeploy-provider-defs
+  (list
+   (list
+    :key "claude-max"
+    :header
+    (concat
+     "  claude-max:\n"
+     "    display_name: \"Claude Max\"\n"
+     "    base_url: \"http://localhost:8317\"\n"
+     "    api_key: \"dummy-not-used\"\n"
+     "    droid:\n"
+     "      provider_type: anthropic\n"
+     "    only: [droid]\n")
+    :match-providers '(vibe-proxy)
+    :default-max-output-tokens nil
+    :include-limits nil)
+   (list
+    :key "positron-anthropic"
+    :header
+    (concat
+     "  positron-anthropic:\n"
+     "    display_name: \"Positron\"\n"
+     "    base_url: \"https://api.anthropic.com\"\n"
+     "    api_key: \"${ANTHROPIC_API_KEY}\"\n"
+     "    droid:\n"
+     "      provider_type: anthropic\n"
+     "    only: [droid]\n")
+    :match-providers '(positron_anthropic)
+    :default-max-output-tokens 32768
+    :include-limits nil)
+   (list
+    :key "positron-google"
+    :header
+    (concat
+     "  positron-google:\n"
+     "    display_name: \"Positron\"\n"
+     "    base_url: "
+     "\"https://generativelanguage.googleapis.com/v1beta/\"\n"
+     "    api_key: \"${GEMINI_API_KEY}\"\n"
+     "    droid:\n"
+     "      provider_type: generic-chat-completion-api\n"
+     "      no_image_support: true\n"
+     "    only: [droid]\n")
+    :match-providers '(positron_gemini)
+    :default-max-output-tokens 32000
+    :include-limits nil)
+   (list
+    :key "positron-openai"
+    :header
+    (concat
+     "  positron-openai:\n"
+     "    display_name: \"Positron\"\n"
+     "    base_url: \"https://api.openai.com/v1\"\n"
+     "    api_key: \"${OPENAI_API_KEY}\"\n"
+     "    droid:\n"
+     "      provider_type: openai\n"
+     "    only: [droid]\n")
+    :match-providers '(positron_openai)
+    :default-max-output-tokens 32000
+    :include-limits nil)
+   (list
+    :key "litellm"
+    :header
+    (concat
+     "  litellm:\n"
+     "    display_name: \"LiteLLM\"\n"
+     "    base_url: \"https://litellm.vulcan.lan/v1/\"\n"
+     "    api_key: \"${LITELLM_API_KEY}\"\n"
+     "    droid:\n"
+     "      provider_type: generic-chat-completion-api\n"
+     "      no_image_support: true\n"
+     "      extra_args:\n"
+     "        min_p: 0\n"
+     "        temperature: 1\n"
+     "        top_p: 1\n"
+     "      extra_headers:\n"
+     "        x-litellm-tags: droid\n"
+     "    opencode:\n"
+     "      npm: \"@ai-sdk/openai-compatible\"\n"
+     "      name: \"LiteLLM\"\n"
+     "      timeout: false\n"
+     "    only: [droid, opencode-vulcan]\n")
+    :match-fn #'llm-setup--promptdeploy-litellm-match-p
+    :name-prefix "hera/"
+    :default-max-output-tokens 65536
+    :include-limits t
+    :default-output-limit 65536)
+   (list
+    :key "llama-cpp-remote"
+    :header
+    (concat
+     "  llama-cpp-remote:\n"
+     "    display_name: \"Llama.cpp\"\n"
+     "    base_url: \"https://10.7.0.1/v1/\"\n"
+     "    api_key: \"dummy-api-key\"\n"
+     "    droid:\n"
+     "      provider_type: generic-chat-completion-api\n"
+     "      no_image_support: true\n"
+     "    only: [droid]\n")
+    :match-fn #'llm-setup--promptdeploy-remote-match-p
+    :default-max-output-tokens 128000
+    :include-limits nil)
+   (list
+    :key "omlx"
+    :header
+    (concat
+     "  omlx:\n"
+     "    display_name: \"oMLX\"\n"
+     "    base_url: \"http://hera.lan:8000/v1\"\n"
+     "    api_key: \"dummy-key\"\n"
+     "    droid:\n"
+     "      provider_type: generic-chat-completion-api\n"
+     "      no_image_support: true\n"
+     "    opencode:\n"
+     "      npm: \"@ai-sdk/openai-compatible\"\n"
+     "      name: \"oMLX\"\n"
+     "      timeout: false\n"
+     "    except: [opencode-vulcan]\n")
+    :match-providers '(omlx)
+    :default-max-output-tokens 128000
+    :include-limits t
+    :default-output-limit 65536)
+   (list
+    :key "llama-cpp-local"
+    :header
+    (concat
+     "  llama-cpp-local:\n"
+     "    display_name: \"Llama.cpp\"\n"
+     "    base_url: \"http://127.0.0.1:8080/v1\"\n"
+     "    api_key: \"not-needed\"\n"
+     "    droid:\n"
+     "      provider_type: generic-chat-completion-api\n"
+     "      no_image_support: true\n"
+     "    opencode:\n"
+     "      npm: \"@ai-sdk/openai-compatible\"\n"
+     "      name: \"Llama-Swap\"\n"
+     "      timeout: false\n"
+     "    except: [opencode-vulcan]\n")
+    :match-fn #'llm-setup--promptdeploy-local-match-p
+    :default-max-output-tokens 128000
+    :include-limits t
+    :default-output-limit 65536))
+  "Provider definitions for promptdeploy models.yaml generation.
+Each entry is a plist with:
+  :key - provider name in YAML
+  :header - static YAML for provider (before models:)
+  :match-providers - list of llm-setup provider symbols to match
+  :match-fn - predicate (model instance) for complex matching
+  :name-prefix - optional prefix for model keys
+  :default-max-output-tokens - default value, or nil to use model value
+  :include-limits - whether to emit context_limit and output_limit
+  :default-output-limit - default output_limit value")
+
+(defun llm-setup--promptdeploy-display-name (name is-omlx)
+  "Generate promptdeploy display name from instance NAME symbol.
+If IS-OMLX is non-nil, append \"(MLX)\" suffix."
+  (let* ((s (symbol-name name))
+         (is-mlx
+          (or is-omlx
+              (string-match-p
+               "\\(?:MLX\\|MXFP\\|-[0-9]+bit$\\|-unsloth-mlx\\)" s)))
+         (is-thinking (string-match-p "-thinking-[0-9]+" s))
+         ;; Strip org prefix
+         (s (replace-regexp-in-string "\\`.+/" "" s))
+         ;; Remove MLX/quantization suffixes
+         (s
+          (replace-regexp-in-string
+           "-\\(?:unsloth-\\)?mlx\\(?:-[0-9]+bit\\)?$" "" s))
+         (s (replace-regexp-in-string "-MXFP[0-9]*-Q[0-9]+$" "" s))
+         (s (replace-regexp-in-string "-MLX-MXFP[0-9]+$" "" s))
+         (s (replace-regexp-in-string "-[0-9]+bit$" "" s))
+         ;; Remove thinking-NNNNN suffix
+         (s (replace-regexp-in-string "-thinking-[0-9]+$" "" s))
+         ;; Remove architecture/expert suffixes: -A17B, -A3B, -16E
+         (s (replace-regexp-in-string "-A[0-9]+B$" "" s))
+         (s (replace-regexp-in-string "-[0-9]+E$" "" s))
+         ;; Remove date suffixes: -2512, -20251001
+         (s (replace-regexp-in-string "-[0-9]\\{4,\\}$" "" s))
+         ;; Remove -it suffix (gemma style)
+         (s (replace-regexp-in-string "-it$" "" s))
+         ;; Track and remove -Instruct suffix
+         (has-instruct (string-match-p "-Instruct$" s))
+         (s (replace-regexp-in-string "-Instruct$" "" s))
+         (result
+          (cond
+           ;; gpt-oss-safeguard-XXX
+           ((string-match "\\`gpt-oss-safeguard-\\(.+\\)" s)
+            (concat "GPT-OSS Safeguard " (upcase (match-string 1 s))))
+           ;; gpt-oss-XXX
+           ((string-match "\\`gpt-oss-\\(.+\\)" s)
+            (concat "GPT-OSS " (upcase (match-string 1 s))))
+           ;; gpt-N.M[-codex]
+           ((string-match "\\`gpt-\\([0-9.]+\\)\\(-codex\\)?$" s)
+            (format "ChatGPT %s%s"
+                    (match-string 1 s)
+                    (if (match-string 2 s)
+                        " Codex"
+                      "")))
+           ;; claude-TYPE-MAJOR-MINOR
+           ((string-match
+             "\\`claude-\\([a-z]+\\)-\\([0-9]+\\)-\\([0-9]+\\)" s)
+            (format "Claude %s %s.%s"
+                    (capitalize (match-string 1 s))
+                    (match-string 2 s)
+                    (match-string 3 s)))
+           ;; General transformation
+           (t
+            (llm-setup--promptdeploy-general-display-name s)))))
+    (concat
+     result
+     (if has-instruct
+         " Instruct"
+       "")
+     (if is-mlx
+         " (MLX)"
+       "")
+     (if is-thinking
+         " (Thinking)"
+       ""))))
+
+(defun llm-setup--promptdeploy-general-display-name (s)
+  "Convert name S to a general-purpose display name."
+  (let* ( ;; Insert space at lowercase-to-digit boundaries
+         (s
+          (replace-regexp-in-string
+           "\\([a-z]\\)\\([0-9]\\)" "\\1 \\2" s))
+         ;; Insert space at ALLCAPS-to-digit boundaries
+         (s
+          (replace-regexp-in-string
+           "\\([A-Z]\\{2,\\}\\)\\([0-9]\\)" "\\1 \\2" s))
+         ;; Replace hyphens with spaces
+         (s (replace-regexp-in-string "-" " " s)))
+    (mapconcat (lambda (w)
+                 (cond
+                  ((string-match-p "\\`[0-9]" w)
+                   (upcase w))
+                  ((member
+                    (downcase w)
+                    '("glm" "lfm" "sera" "nvidia" "mlx" "nv"))
+                   (upcase w))
+                  (t
+                   (capitalize w))))
+               (split-string s)
+               " ")))
+
+(defun llm-setup--promptdeploy-instance-match-p
+    (model instance provider-def)
+  "Return non-nil if MODEL INSTANCE matches PROVIDER-DEF."
+  (let ((match-fn (plist-get provider-def :match-fn))
+        (match-providers (plist-get provider-def :match-providers)))
+    (cond
+     (match-fn
+      (funcall match-fn model instance))
+     (match-providers
+      (and (not
+            (memq (llm-setup-model-kind model) '(embedding reranker)))
+           (memq
+            (llm-setup-instance-provider instance)
+            match-providers))))))
+
+(defun llm-setup-insert-promptdeploy-model
+    (model instance provider-def)
+  "Insert a promptdeploy model entry for MODEL INSTANCE.
+PROVIDER-DEF is the provider plist from the provider defs."
+  (let* ((name (llm-setup-get-instance-name model instance))
+         (prefix (or (plist-get provider-def :name-prefix) ""))
+         (key (concat prefix (symbol-name name)))
+         (provider (llm-setup-instance-provider instance))
+         (is-omlx (eq provider 'omlx))
+         (display-name
+          (llm-setup--promptdeploy-display-name name is-omlx))
+         (default-max
+          (plist-get provider-def :default-max-output-tokens))
+         (max-output
+          (or default-max
+              (llm-setup-get-instance-max-output-tokens
+               model instance)))
+         (include-limits (plist-get provider-def :include-limits))
+         (context-limit
+          (when include-limits
+            (llm-setup-get-instance-context-length model instance)))
+         (output-limit
+          (when include-limits
+            (plist-get provider-def :default-output-limit)))
+         (promptdeploy-only
+          (llm-setup-model-promptdeploy-only model)))
+    (insert (format "      %s:\n" key))
+    (insert (format "        display_name: %S\n" display-name))
+    (when max-output
+      (insert (format "        max_output_tokens: %d\n" max-output)))
+    (when context-limit
+      (insert (format "        context_limit: %d\n" context-limit)))
+    (when output-limit
+      (insert (format "        output_limit: %d\n" output-limit)))
+    (when promptdeploy-only
+      (insert
+       (format "        only: [%s]\n"
+               (mapconcat #'identity promptdeploy-only ", "))))))
+
+(defun llm-setup-generate-promptdeploy-yaml ()
+  "Build promptdeploy models.yaml configuration."
+  (with-current-buffer (get-buffer-create
+                        "*promptdeploy-models.yaml*")
+    (erase-buffer)
+    (insert "providers:\n")
+    (dolist (provider-def llm-setup-promptdeploy-provider-defs)
+      (let ((header (plist-get provider-def :header))
+            (has-models nil))
+        ;; Check if any models match this provider
+        (dolist (mi (llm-setup-instances-list))
+          (cl-destructuring-bind
+           (model . instance) mi
+           (when (llm-setup--promptdeploy-instance-match-p
+                  model instance provider-def)
+             (setq has-models t))))
+        (when has-models
+          (insert "\n" header)
+          (insert "    models:\n")
+          (dolist (mi (llm-setup-instances-list))
+            (cl-destructuring-bind
+             (model . instance) mi
+             (when (llm-setup--promptdeploy-instance-match-p
+                    model instance provider-def)
+               (llm-setup-insert-promptdeploy-model
+                model instance provider-def)))))))
+    (yaml-mode)
+    (current-buffer)))
+
+;; (display-buffer (llm-setup-generate-promptdeploy-yaml))
+
+(defun llm-setup-build-promptdeploy-yaml ()
+  "Build promptdeploy models.yaml configuration."
+  (message "[promptdeploy] Generating models.yaml...")
+  (with-temp-buffer
+    (insert
+     (with-current-buffer (llm-setup-generate-promptdeploy-yaml)
+       (buffer-string)))
+    (message "[promptdeploy] Writing to %s..."
+             llm-setup-promptdeploy-path)
+    (write-file (expand-file-name llm-setup-promptdeploy-path)))
+  (message "[promptdeploy] Done"))
+
 (defun llm-setup-reset ()
   "Reset all of the configuration files related to LLMs."
   (interactive)
   (message "[llm-setup-reset] Starting reset process...")
   ;; First check that everything is sane
-  (message "[llm-setup-reset] Step 1/5: Checking instances...")
+  (message "[llm-setup-reset] Step 1/6: Checking instances...")
   (unless (= 0 (llm-setup-check-instances))
     (error "Failed to check installed and defined instances"))
-  (message "[llm-setup-reset] Step 1/5: Instance check complete")
+  (message "[llm-setup-reset] Step 1/6: Instance check complete")
   ;; Update llama-swap configurations on all machines that run models
   (message
-   "[llm-setup-reset] Step 2/5: Building llama-swap.yaml for %s..."
+   "[llm-setup-reset] Step 2/6: Building llama-swap.yaml for %s..."
    llm-setup-default-hostname)
   (llm-setup-build-llama-swap-yaml)
   (message
-   "[llm-setup-reset] Step 3/5: Building llama-swap.yaml for clio...")
+   "[llm-setup-reset] Step 3/6: Building llama-swap.yaml for clio...")
   (llm-setup-build-llama-swap-yaml "clio")
   ;; (llm-setup-build-llama-swap-yaml "vulcan")
   ;; Update LiteLLM to refer to all local and remote models
-  (message
-   "[llm-setup-reset] Step 4/5: Building LiteLLM config and restarting service...")
+  (message "[llm-setup-reset] Step 4/6: Building LiteLLM config...")
   (llm-setup-build-litellm-yaml)
+  ;; Update promptdeploy models.yaml
+  (message
+   "[llm-setup-reset] Step 5/6: Building promptdeploy models.yaml...")
+  (llm-setup-build-promptdeploy-yaml)
   ;; Update GPTel with instance list, to remain in sync with LiteLLM
-  (message "[llm-setup-reset] Step 5/5: Updating GPTel backends...")
+  (message "[llm-setup-reset] Step 6/6: Updating GPTel backends...")
   (setq
    gptel-model llm-setup-default-instance-name
    gptel-backend (gptel-backends-make-litellm))
