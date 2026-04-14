@@ -374,7 +374,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     openrouter
     omlx))
 
-(defconst llm-setup-all-model-engines '(llama-cpp koboldcpp omlx))
+(defconst llm-setup-all-model-engines '(llama-cpp koboldcpp mlx-lm vllm-mlx omlx))
 
 ;;; Models have several names:
 ;;
