@@ -528,7 +528,7 @@ Contains a %s placeholder for dynamically generated router fallbacks."
     (list
      (make-llm-setup-instance
       :name 'mlx-community/bge-m3-mlx-fp16
-      :engine 'vllm-mlx)))
+      :engine 'omlx)))
 
    (make-llm-setup-model
     :name 'bge-reranker-v2-m3
@@ -2149,11 +2149,13 @@ For local/vibe-proxy providers, returns \"host/name\".
 For remote providers, returns \"provider/name\"."
   (let ((provider (llm-setup-instance-provider instance))
         (name (llm-setup-get-instance-name model instance)))
-    (if (memq provider '(local vibe-proxy omlx))
-        ;; For local instances, use the first hostname
-        (format "%s/%s" (car (llm-setup-instance-hostnames instance)) name)
-      ;; For remote providers, use the provider name
-      (format "%s/%s" provider name))))
+    (cond
+     ((eq provider 'omlx)
+      (format "%s/omlx/%s" (car (llm-setup-instance-hostnames instance)) name))
+     ((memq provider '(local vibe-proxy))
+      (format "%s/%s" (car (llm-setup-instance-hostnames instance)) name))
+     (t
+      (format "%s/%s" provider name)))))
 
 (defun llm-setup-format-router-fallbacks (&optional instances)
   "Collect all instance fallbacks and format as router_settings YAML.
@@ -2560,8 +2562,12 @@ a single exclusive group with swap enabled."
              (if (memq provider '(local vibe-proxy omlx))
                  hostnames
                (list provider)))
-      (insert
-       (format "
+      (let ((model-name-prefix
+             (if (eq provider 'omlx)
+                 (format "%s/omlx" host)
+               (format "%s" host))))
+        (insert
+         (format "
   - model_name: %s/%s
     litellm_params:
       model: %s/%s
@@ -2574,7 +2580,7 @@ a single exclusive group with swap enabled."
       supports_reasoning: %s
       supports_response_schema: %s
 "
-               host name
+               model-name-prefix name
                (cond
                 ((eq 'local provider)
                  "openai")
@@ -2631,7 +2637,7 @@ a single exclusive group with swap enabled."
                  "false")
                (if supports-response-schema
                    "true"
-                 "false"))))))
+                 "false")))))))
 
 (defun llm-setup-generate-litellm-yaml ()
   "Build LiteLLM config.yaml configuration."
