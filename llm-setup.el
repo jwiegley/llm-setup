@@ -421,10 +421,10 @@ Contains a %s placeholder for dynamically generated router fallbacks."
   context-length ; model context length
   max-input-tokens ; number of tokens to accept
   max-output-tokens ; number of tokens to predict
-  temperature ; model temperature
-  min-p ; minimum p
-  top-p ; top p
-  top-k ; top k
+  (temperature 1.0) ; model temperature
+  (min-p 0.01) ; minimum p
+  (top-p 0.9) ; top p
+  (top-k 20) ; top k
   (kind 'text-generation) ; nil, or symbol from model-kinds
   (supports-system-message t) ; t if model supports system messages
   (supports-function-calling nil) ; t if model supports function calling
@@ -495,9 +495,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'bge-m3-mlx-fp16
     :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -518,9 +515,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Bonsai-8B
     :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :promptdeploy-only '("droid")
     :instances
     (list
@@ -596,6 +590,15 @@ Contains a %s placeholder for dynamically generated router fallbacks."
       :provider 'anthropic)))
 
    (make-llm-setup-model
+    :name 'cohere-transcribe-03-2026-mlx-fp16
+    :context-length nil
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'cohere-transcribe-03-2026-mlx-fp16
+      :provider 'omlx)))
+
+   (make-llm-setup-model
     :name 'compound-beta
     :instances
     (list
@@ -628,9 +631,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Devstral-2-123B-Instruct-2512
     :context-length 262144
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :supports-function-calling t
     :promptdeploy-only '("opencode")
     :instances
@@ -641,9 +641,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Devstral-Small-2-24B-Instruct-2512
     :context-length 262144
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :supports-function-calling t
     :promptdeploy-only '("opencode")
     :instances
@@ -673,9 +670,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'gemma-4-31B-it
     :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -702,7 +696,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'GLM-5.1
     :context-length 200000
-    :temperature 1.0
     :top-p 0.9
     :top-k 40
     :supports-function-calling t
@@ -747,9 +740,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'gpt-oss-120b
     :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :instances
@@ -769,9 +759,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'gpt-oss-20b
     :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :instances
@@ -788,9 +775,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'gpt-oss-safeguard-20b
     :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :promptdeploy-only '("droid")
@@ -802,7 +786,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Kimi-K2.5
     :context-length 262144
-    :temperature 1.0
     :min-p 0.01
     :top-p 0.9
     :top-k 20
@@ -819,9 +802,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Kimi-K2.5-MLX-2.8bit
     :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -832,9 +812,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Leanstral-2603
     :context-length 262144
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :supports-function-calling t
     :supports-reasoning t
     :instances
@@ -845,9 +822,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'LFM2.5-350M
     :context-length 131072
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :promptdeploy-only '("droid")
     :instances
     (list
@@ -892,9 +866,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'MiniMax-M2.7-4bit-mxfp4
     :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -906,9 +877,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
     :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -919,9 +887,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Nemotron-3-Nano-30B-A3B
     :context-length 1048576
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :supports-function-calling t
     :promptdeploy-only '("droid")
     :instances
@@ -933,9 +898,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Nemotron-Cascade-2-30B-A3B
     :context-length 262144
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :supports-function-calling t
     :promptdeploy-only '("droid")
     :instances
@@ -965,9 +927,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'NVIDIA-Nemotron-3-Super-120B-A12B
     :context-length 1048576
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :supports-function-calling t
     :instances
     (list
@@ -1019,7 +978,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Qwen3-Coder-Next
     :context-length 262144
-    :temperature 1.0
     :min-p 0.01
     :top-p 0.9
     :top-k 40
@@ -1205,9 +1163,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Qwen3.5-35B-A3B-8bit
     :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -1305,9 +1260,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
    (make-llm-setup-model
     :name 'Qwen3.5-9B-8bit
     :context-length nil
-    :temperature 1.0
-    :min-p 0.0
-    :top-p 0.9
     :instances
     (list
      (make-llm-setup-instance
@@ -2554,9 +2506,8 @@ PROVIDER-DEF is the provider plist from the provider defs."
   (llm-setup-build-promptdeploy-yaml)
   ;; Update GPTel with instance list, to remain in sync with LiteLLM
   (message "[llm-setup-reset] Step 6/6: Updating GPTel backends...")
-  (setq
-   gptel-model llm-setup-default-instance-name
-   gptel-backend (gptel-backends-make-litellm))
+  (setq gptel-model llm-setup-default-instance-name
+        gptel-backend (gptel-backends-make-litellm))
   (message "[llm-setup-reset] Complete!"))
 
 (defun llm-setup-get-instance-gptel-backend
@@ -2584,32 +2535,17 @@ If HOSTNAME is non-nil, only generate definitions for that host."
   "Return the GPTel backends for all defined instances.
 If HOSTNAME is non-nil, only generate definitions for that host."
   (cl-loop
-   for
-   (model . instance)
-   in
-   (llm-setup-instances-list)
-   for
-   backends
-   =
-   (llm-setup-get-instance-gptel-backend model instance hostname)
-   when
-   backends
-   nconc
-   backends))
+   for (model . instance) in (llm-setup-instances-list)
+   for backends = (llm-setup-get-instance-gptel-backend model instance hostname)
+   when backends nconc backends))
 
 ;; (inspect (llm-setup-gptel-backends))
 
 (defun llm-setup-lookup-instance (model)
   "Return the instance whole model matches the symbol MODEL."
   (cl-loop
-   for
-   (m . instance)
-   in
-   (llm-setup-instances-list)
-   when
-   (eq model m)
-   return
-   instance))
+   for (m . instance) in (llm-setup-instances-list)
+   when (eq model m) return instance))
 
 (defun llm-setup-check-instances ()
   "Check all model and instances definitions."
@@ -2705,9 +2641,7 @@ If HOSTNAME is non-nil, only generate definitions for that host."
     (message "[llm-setup-check] Validation complete: %d warning(s)" warnings)
     warnings))
 
-(cl-defun
-    llm-setup-run-mlx
-    (model &key (port 8081))
+(cl-defun llm-setup-run-mlx (model &key (port 8081))
   "Start mlx-lm with a specific MODEL on the given PORT."
   (interactive (list
                 (read-string "Model: ")
@@ -2721,9 +2655,7 @@ If HOSTNAME is non-nil, only generate definitions for that host."
     (set-process-query-on-exit-flag proc nil)
     (message "Started mlx-lm with model %s on port %d" model port)))
 
-(cl-defun
-    llm-setup-run-vllm-mlx
-    (model &key (port 8081))
+(cl-defun llm-setup-run-vllm-mlx (model &key (port 8081))
   "Start vllm-mlx with a specific MODEL on the given PORT."
   (interactive (list
                 (read-string "Model: ")
@@ -2737,9 +2669,7 @@ If HOSTNAME is non-nil, only generate definitions for that host."
     (set-process-query-on-exit-flag proc nil)
     (message "Started vllm-mlx with model %s on port %d" model port)))
 
-(cl-defun
-    llm-setup-run-llama-cpp
-    (model &key (port 8081))
+(cl-defun llm-setup-run-llama-cpp (model &key (port 8081))
   "Start llama.cpp with a specific MODEL on the given PORT."
   (interactive (list
                 (read-string "Model: ")
@@ -3165,8 +3095,7 @@ MODELS-HASH is passed to `llm-setup-sync--model-exists-p'."
            (format (concat
                     "(make-llm-setup-instance\n"
                     " :name '%s\n"
-                    " :provider 'omlx\n"
-                    " :hostnames '(\"hera\"))\n")
+                    " :provider 'omlx)\n")
                    model-id)))
       (insert
        (format (concat
@@ -3180,8 +3109,7 @@ MODELS-HASH is passed to `llm-setup-sync--model-exists-p'."
                 " (list\n"
                 "  (make-llm-setup-instance\n"
                 "   :name '%s\n"
-                "   :provider 'omlx\n"
-                "   :hostnames '(\"hera\"))))\n")
+                "   :provider 'omlx)))\n")
                short-name model-id)))))
 
 (defun llm-setup-sync--insert-dead (entry source-label)
@@ -3515,8 +3443,7 @@ Return the count of entries added."
                (format
                 (concat "\n     (make-llm-setup-instance\n"
                         "      :name '%s\n"
-                        "      :provider 'omlx\n"
-                        "      :hostnames '(\"hera\"))")
+                        "      :provider 'omlx)")
                 model-id))
             (llm-setup-sync--insert-model-entry
              (format
@@ -3530,8 +3457,7 @@ Return the count of entries added."
                       "    (list\n"
                       "     (make-llm-setup-instance\n"
                       "      :name '%s\n"
-                      "      :provider 'omlx\n"
-                      "      :hostnames '(\"hera\"))))")
+                      "      :provider 'omlx)))")
               short-name model-id))
             (puthash short-name t newly-created))
           (cl-incf added))))
