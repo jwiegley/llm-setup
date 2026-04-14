@@ -2267,7 +2267,12 @@ If IS-OMLX is non-nil, append \"(MLX)\" suffix."
 PROVIDER-DEF is the provider plist from the provider defs."
   (let* ((name (llm-setup-get-instance-name model instance))
          (prefix (or (plist-get provider-def :name-prefix) ""))
-         (key (concat prefix (symbol-name name)))
+         (key (concat prefix
+                      (if (and (eq (llm-setup-instance-provider instance) 'omlx)
+                               (not (string-empty-p prefix)))
+                          "omlx/"
+                        "")
+                      (symbol-name name)))
          (provider (llm-setup-instance-provider instance))
          (is-omlx (eq provider 'omlx))
          (display-name (llm-setup--promptdeploy-display-name name is-omlx))
