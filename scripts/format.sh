@@ -5,14 +5,17 @@ set -euo pipefail
 
 files=("$@")
 if [ ${#files[@]} -eq 0 ]; then
+  shopt -s nullglob
   files=(*.el)
+  shopt -u nullglob
 fi
 
 for file in "${files[@]}"; do
   emacs --batch -L . -l elisp-autofmt \
     --eval "(progn
-              (find-file \"$file\")
+              (find-file (car command-line-args-left))
               (elisp-autofmt-buffer)
-              (save-buffer))" 2>/dev/null
+              (save-buffer))" \
+    "$file" 2>/dev/null
   echo "Formatted: $file"
 done
