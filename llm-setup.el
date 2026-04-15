@@ -145,7 +145,6 @@
   (supports-reasoning nil) ; t if model supports reasoning
   (supports-response-schema nil) ; t if model supports response schema
   aliases ; model alias names
-  (promptdeploy-only nil) ; list of deploy targets, nil = all
   instances ; model instances
   )
 
@@ -176,7 +175,6 @@
   (cache-reuse nil) ; integer: min chunk size for cache reuse
   (slot-save-path nil) ; path for saving/restoring slot KV cache
   (slot-prompt-similarity nil) ; float: min prompt similarity to reuse slot
-  (promptdeploy-remote nil) ; if t, include in litellm/llama-cpp-remote
   )
 
 (defcustom llm-setup-models-list
@@ -191,28 +189,14 @@
      (make-llm-setup-instance
       :model-path "~/Models/gpustack_bge-m3-GGUF"
       :hostnames '("hera" "clio")
-      :arguments
-      '("--embedding"
-        "--pooling"
-        "mean"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "4096"))
+      :arguments '("--embedding"
+                   "--pooling" "mean"
+                   "--batch-size" "8192"
+                   "--ubatch-size" "4096"))
 
      (make-llm-setup-instance
       :name 'bge-m3-mlx-fp16
       :provider 'omlx)))
-
-   ;; From ~/.cache/huggingface/hub/models--mlx-community--bge-m3-mlx-fp16
-   (make-llm-setup-model
-    :name 'bge-m3-mlx-fp16
-    :context-length nil
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'mlx-community/bge-m3-mlx-fp16
-      :engine 'omlx)))
 
    (make-llm-setup-model
     :name 'bge-reranker-v2-m3
@@ -222,19 +206,18 @@
      (make-llm-setup-instance
       :model-path "~/Models/gpustack_bge-reranker-v2-m3-GGUF"
       :hostnames '("hera" "clio")
-      :arguments
-      '("--reranking" "--batch-size" "8192" "--ubatch-size" "4096"))))
+      :arguments '("--reranking"
+                   "--batch-size" "8192"
+                   "--ubatch-size" "4096"))))
 
    (make-llm-setup-model
     :name 'Bonsai-8B
     :context-length 131072
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
       :model-path "~/Models/prism-ml_Bonsai-8B-gguf"
-      :hostnames '("hera" "clio")
-      :promptdeploy-remote t)))
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'claude-haiku
@@ -261,21 +244,21 @@
       :model-name 'claude-opus-4-6
       :name 'claude-opus-4-6-thinking-32000
       :provider 'vibe-proxy
-      ;; :fallbacks '(hera/Qwen3.5-27B)
       :fallbacks '(hera/Qwen3.5-27B))
 
      (make-llm-setup-instance
       :model-name 'claude-opus-4-6
       :name 'claude-opus-4-6
       :provider 'vibe-proxy
-      ;; :fallbacks '(hera/Qwen3.5-27B-Instruct)
       :fallbacks '(hera/Qwen3.5-27B-Instruct))
 
      (make-llm-setup-instance
       :name 'claude-opus-4-6
       :provider 'positron_anthropic)
 
-     (make-llm-setup-instance :name 'claude-opus-4-6 :provider 'anthropic)))
+     (make-llm-setup-instance
+      :name 'claude-opus-4-6
+      :provider 'anthropic)))
 
    (make-llm-setup-model
     :name 'claude-sonnet
@@ -300,19 +283,12 @@
       :provider 'anthropic)))
 
    (make-llm-setup-model
-    :name 'cohere-transcribe-03-2026-mlx-fp16
-    :context-length nil
+    :name 'cohere-transcribe-03-2026
     :instances
     (list
      (make-llm-setup-instance
       :name 'cohere-transcribe-03-2026-mlx-fp16
       :provider 'omlx)))
-
-   (make-llm-setup-model
-    :name 'compound-beta
-    :instances
-    (list
-     (make-llm-setup-instance :provider 'groq)))
 
    (make-llm-setup-model
     :name 'DeepSeek-R1-0528
@@ -332,12 +308,10 @@
     (list
      (make-llm-setup-instance
       :context-length 12000
-      :model-path "~/Models/unsloth_DeepSeek-V3.2-GGUF"
-      :promptdeploy-remote t)))
+      :model-path "~/Models/unsloth_DeepSeek-V3.2-GGUF")))
 
    (make-llm-setup-model
     :name 'Devstral-2-123B-Instruct-2512
-    :promptdeploy-only '("opencode")
     :instances
     (list
      (make-llm-setup-instance
@@ -345,7 +319,6 @@
 
    (make-llm-setup-model
     :name 'Devstral-Small-2-24B-Instruct-2512
-    :promptdeploy-only '("opencode")
     :instances
     (list
      (make-llm-setup-instance
@@ -357,16 +330,20 @@
       :context-length 140000)))
 
    (make-llm-setup-model
-    :name 'gemini-2.5-pro
-    :description "Gemini 2.5 Pro (Positron)"
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_gemini)))
-
-   (make-llm-setup-model
     :name 'gemini-3-pro-preview
     :description "Gemini 3 Pro (Positron)"
     :instances
-    (list (make-llm-setup-instance :provider 'positron_gemini)))
+    (list
+     (make-llm-setup-instance
+      :provider 'positron_gemini)))
+
+   (make-llm-setup-model
+    :name 'gemini-3.1-pro-preview
+    :description "Gemini 3.1 Pro (Positron)"
+    :instances
+    (list
+     (make-llm-setup-instance
+      :provider 'positron_gemini)))
 
    (make-llm-setup-model
     :name 'gemma-4-31B-it
@@ -382,7 +359,6 @@
     :context-length 202752
     :temperature 0.7
     :supports-reasoning t
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -397,29 +373,7 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-5.1-GGUF"
-      :promptdeploy-remote t)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.1
-    :description "ChatGPT model"
-    :instances
-    (list
-     (make-llm-setup-instance :provider 'positron_openai)
-
-     (make-llm-setup-instance :provider 'openai)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.2
-    :description "ChatGPT 5.2 (Positron)"
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_openai)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.2-codex
-    :description "ChatGPT 5.2 Codex (Positron)"
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_openai)))
+      :model-path "~/Models/unsloth_GLM-5.1-GGUF")))
 
    (make-llm-setup-model
     :name 'gpt-5.3-codex
@@ -434,11 +388,7 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gpt-oss-120b-GGUF"
-      ;; :draft-model "~/Models/unsloth_gpt-oss-20b-GGUF/gpt-oss-20b-Q8_0.gguf"
-      ;; :fallbacks '(hera/claude-sonnet-4-5-20250929-thinking-32000
-      ;;              anthropic/claude-sonnet-4-5-20250929)
-      :promptdeploy-remote t)
+      :model-path "~/Models/unsloth_gpt-oss-120b-GGUF")
 
      (make-llm-setup-instance
       :name 'gpt-oss-120b-MXFP4-Q8
@@ -462,7 +412,6 @@
     :name 'gpt-oss-safeguard-20b
     :context-length 131072
     :supports-reasoning t
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -475,15 +424,8 @@
      (make-llm-setup-instance
       :context-length 98304
       :max-output-tokens 32768
-      :model-path "~/Models/unsloth_Kimi-K2.5-GGUF"
-      :promptdeploy-remote t)))
+      :model-path "~/Models/unsloth_Kimi-K2.5-GGUF")
 
-   ;; From oMLX API: Kimi-K2.5-MLX-2.8bit
-   (make-llm-setup-model
-    :name 'Kimi-K2.5-MLX-2.8bit
-    :context-length nil
-    :instances
-    (list
      (make-llm-setup-instance
       :name 'Kimi-K2.5-MLX-2.8bit
       :provider 'omlx)))
@@ -499,7 +441,6 @@
    (make-llm-setup-model
     :name 'LFM2.5-350M
     :context-length 131072
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -519,37 +460,15 @@
       :provider 'groq)))
 
    (make-llm-setup-model
-    :name 'Llama-4-Scout-17B-16E-Instruct
-    :context-length 10485760
-    :temperature 0.6
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'meta-llama/llama-4-scout-17b-16e-instruct
-      :provider 'groq)))
-
-   (make-llm-setup-model
-    :name 'Llama-Guard-4-12B
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'meta-llama/Llama-Guard-4-12B
-      :provider 'groq)))
-
-   ;; From oMLX API: MiniMax-M2.7-4bit-mxfp4
-   (make-llm-setup-model
-    :name 'MiniMax-M2.7-4bit-mxfp4
-    :context-length nil
+    :name 'MiniMax-M2.7
     :instances
     (list
      (make-llm-setup-instance
       :name 'MiniMax-M2.7-4bit-mxfp4
       :provider 'omlx)))
 
-   ;; From oMLX API: MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
    (make-llm-setup-model
-    :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
-    :context-length nil
+    :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled
     :instances
     (list
      (make-llm-setup-instance
@@ -559,7 +478,6 @@
    (make-llm-setup-model
     :name 'Nemotron-3-Nano-30B-A3B
     :context-length 1048576
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -568,7 +486,6 @@
 
    (make-llm-setup-model
     :name 'Nemotron-Cascade-2-30B-A3B
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -584,14 +501,10 @@
      (make-llm-setup-instance
       :model-path "~/Models/nomic-ai_nomic-embed-text-v2-moe-GGUF"
       :hostnames '("hera" "clio")
-      :arguments
-      '("--embedding"
-        "--pooling"
-        "mean"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "4096"))))
+      :arguments '("--embedding"
+                   "--pooling" "mean"
+                   "--batch-size" "8192"
+                   "--ubatch-size" "4096"))))
 
    (make-llm-setup-model
     :name 'NVIDIA-Nemotron-3-Super-120B-A12B
@@ -610,9 +523,7 @@
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_Phi-4-reasoning-plus-GGUF"
-      :hostnames '("hera" "clio")
-      :arguments
-      '("--flash-attn" "on"))))
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen.Qwen3-Reranker-8B
@@ -622,8 +533,9 @@
      (make-llm-setup-instance
       :model-path "~/Models/DevQuasar_Qwen.Qwen3-Reranker-8B-GGUF"
       :hostnames '("hera" "clio")
-      :arguments
-      '("--reranking" "--batch-size" "4096" "--ubatch-size" "2048"))))
+      :arguments '("--reranking"
+                   "--batch-size" "4096"
+                   "--ubatch-size" "2048"))))
 
    (make-llm-setup-model
     :name 'Qwen3-30B-A3B
@@ -643,8 +555,7 @@
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_Qwen3-Coder-Next-GGUF"
-      :hostnames '("hera" "clio")
-      :promptdeploy-remote t)))
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3-Embedding-8B
@@ -655,14 +566,10 @@
      (make-llm-setup-instance
       :model-path "~/Models/Qwen_Qwen3-Embedding-8B-GGUF"
       :hostnames '("hera" "clio")
-      :arguments
-      '("--embedding"
-        "--pooling"
-        "last"
-        "--batch-size"
-        "8192"
-        "--ubatch-size"
-        "2048"))))
+      :arguments '("--embedding"
+                   "--pooling" "last"
+                   "--batch-size" "8192"
+                   "--ubatch-size" "2048"))))
 
    (make-llm-setup-model
     :name 'Qwen3-Reranker-4B-mxfp8
@@ -676,7 +583,6 @@
     :name 'Qwen3.5-0.8B
     :temperature 0.6
     :supports-reasoning t
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -695,15 +601,12 @@
      (make-llm-setup-instance
       :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q8_K_XL.gguf"
       :arguments '("--no-prefill-assistant")
-      :parallel 1
       :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-27B)
-      :promptdeploy-remote t)
+      :fallbacks '(clio/Qwen3.5-27B))
 
      (make-llm-setup-instance
       :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
       :arguments '("--no-prefill-assistant")
-      :parallel 1
       :cache-type-k 'q8_0
       :fallbacks '(clio/Qwen3.5-27B)
       :hostnames '("clio"))
@@ -723,10 +626,8 @@
       :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
       :parallel 2
       :cache-type-k 'q8_0
-      :arguments
-      '("--no-prefill-assistant"
-        "--chat-template-kwargs"
-        "'{\"enable_thinking\":false}'")
+      :arguments '("--no-prefill-assistant"
+                   "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-27B-Instruct)
       :hostnames '("hera" "clio"))))
 
@@ -734,7 +635,6 @@
     :name 'Qwen3.5-2B
     :temperature 0.6
     :supports-reasoning t
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -748,16 +648,13 @@
     :name 'Qwen3.5-2B-Instruct
     :temperature 0.6
     :supports-reasoning t
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_Qwen3.5-2B-GGUF"
       :cache-type-k 'q8_0
-      :arguments
-      '("--no-prefill-assistant"
-        "--chat-template-kwargs"
-        "'{\"enable_thinking\":false}'")
+      :arguments '("--no-prefill-assistant"
+                   "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-2B)
       :hostnames '("hera" "clio"))))
 
@@ -772,14 +669,8 @@
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
       :fallbacks '(clio/Qwen3.5-35B-A3B)
-      :hostnames '("hera" "clio"))))
+      :hostnames '("hera" "clio"))
 
-   ;; From oMLX API: Qwen3.5-35B-A3B-8bit
-   (make-llm-setup-model
-    :name 'Qwen3.5-35B-A3B-8bit
-    :context-length nil
-    :instances
-    (list
      (make-llm-setup-instance
       :name 'Qwen3.5-35B-A3B-8bit
       :provider 'omlx)))
@@ -798,7 +689,6 @@
     :name 'Qwen3.5-4B
     :temperature 0.6
     :supports-reasoning t
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -812,16 +702,13 @@
     :name 'Qwen3.5-4B-Instruct
     :temperature 0.6
     :supports-reasoning nil
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
       :cache-type-k 'q8_0
-      :arguments
-      '("--no-prefill-assistant"
-        "--chat-template-kwargs"
-        "'{\"enable_thinking\":false}'")
+      :arguments '("--no-prefill-assistant"
+                   "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-4B)
       :hostnames '("hera" "clio"))))
 
@@ -829,7 +716,6 @@
     :name 'Qwen3.5-9B
     :temperature 0.6
     :supports-reasoning t
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -851,7 +737,6 @@
     :name 'Qwen3.5-9B-Instruct
     :temperature 0.6
     :supports-reasoning t
-    :promptdeploy-only '("droid")
     :instances
     (list
      (make-llm-setup-instance
@@ -859,16 +744,9 @@
       :parallel 1
       :cache-type-k 'q8_0
       :arguments '("--no-prefill-assistant"
-                   "--chat-template-kwargs"
-                   "'{\"enable_thinking\":false}'")
+                   "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-9B-Instruct)
       :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'r1-1776
-    :supports-reasoning t
-    :instances
-    (list (make-llm-setup-instance :provider 'perplexity)))
 
    (make-llm-setup-model
     :name 'SERA-32B
@@ -880,23 +758,7 @@
     (list
      (make-llm-setup-instance
       :model-path "~/Models/noctrex_SERA-32B-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'sonar-deep-research
-    :instances
-    (list (make-llm-setup-instance :provider 'perplexity)))
-
-   (make-llm-setup-model
-    :name 'sonar-pro
-    :instances
-    (list (make-llm-setup-instance :provider 'perplexity)))
-
-   (make-llm-setup-model
-    :name 'sonar-reasoning-pro
-    :supports-reasoning t
-    :instances
-    (list (make-llm-setup-instance :provider 'perplexity))))
+      :hostnames '("hera" "clio")))))
   "List of configured models."
   :type '(repeat sexp)
   :group 'llm-setup)
@@ -956,14 +818,9 @@ startPort: 9400
   :group 'llm-setup)
 
 (defcustom llm-setup-llama-swap-always-on-models
-  '(Devstral-2-123B-Instruct-2512
-    Devstral-Small-2-24B-Instruct-2512
-    Qwen3-Coder-Next
+  '(Devstral-Small-2-24B-Instruct-2512
     gpt-oss-20b
-    mlx-community/gpt-oss-20b-MXFP4-Q8
     gpt-oss-safeguard-20b
-    lmstudio-community/gpt-oss-safeguard-20b-MLX-MXFP4
-    gpt-oss-120b
     Qwen3.5-27B
     Qwen3.5-27B-Instruct
     Qwen3.5-9B
@@ -973,7 +830,6 @@ startPort: 9400
     Qwen3.5-2B
     Qwen3.5-2B-Instruct
     Qwen3.5-0.8B
-    Qwen3.5-35B-A3B
     bge-m3)
   "Model instance names that should remain resident in memory.
 These are placed in the always_on group with swap disabled.
@@ -1162,6 +1018,7 @@ router_settings:%s
 
 general_settings:
   background_health_checks: false
+  health_check_interval: 0
   store_model_in_db: true
   store_prompts_in_spend_logs: true
   maximum_spend_logs_retention_period: \"90d\"
@@ -1230,9 +1087,9 @@ alphabetically by the `:name' field (case-insensitive)."
 (defun llm-setup-models-from-characteristics (&rest characteristics)
   "Return all models that provides the full list of CHARACTERISTICS."
   (cl-loop
-   for model in llm-setup-models-list when
-   (and-let* ((all-chars (llm-setup-model-characteristics model)))
-     (cl-subsetp characteristics all-chars))
+   for model in llm-setup-models-list
+   when (and-let* ((all-chars (llm-setup-model-characteristics model)))
+          (cl-subsetp characteristics all-chars))
    collect (llm-setup-model-name model)))
 
 ;; (llm-setup-models-from-characteristics 'high 'local 'thinking)
@@ -1295,16 +1152,16 @@ alphabetically by the `:name' field (case-insensitive)."
    (delete-dups
     (cl-loop
      for gguf in
-     (sort (directory-files-recursively model "\\.gguf\\'") #'string<) nconc
-     (cl-loop
-      for (_name pattern) in
-      '(("fp" "fp\\(16\\|32\\)[_-]")
-        ("f" "[Ff]\\(16\\|32\\)")
-        ("q" "[Qq][234568]_\\(.*XL\\)?"))
-      when (string-match-p pattern gguf) when
-      (> (file-attribute-size (file-attributes gguf))
-         llm-setup-gguf-min-file-size)
-      collect gguf)))))
+     (cl-sort (directory-files-recursively model "\\.gguf\\'") #'string<)
+     nconc (cl-loop
+            for (_name pattern) in
+            '(("fp" "fp\\(16\\|32\\)[_-]")
+              ("f" "[Ff]\\(16\\|32\\)")
+              ("q" "[Qq][234568]_\\(.*XL\\)?"))
+            when (string-match-p pattern gguf) when
+            (> (file-attribute-size (file-attributes gguf))
+               llm-setup-gguf-min-file-size)
+            collect gguf)))))
 
 (defun llm-setup-get-context-length (model)
   "Get maximum context length of MODEL."
@@ -1669,7 +1526,8 @@ non-nil, is a hash table for caching executable lookups."
                   (cl-case
                       engine
                     (llama-cpp "--predict")
-                    ((mlx-lm vllm-mlx) "--max-tokens"))
+                    (mlx-lm "--max-tokens")
+                    (vllm-mlx "--max-tokens"))
                   (number-to-string max-output-tokens)))
             (and (eq engine 'vllm-mlx)
                  (> parallel 1)
@@ -1987,44 +1845,8 @@ a single exclusive group with swap enabled."
 
 ;;; promptdeploy models.yaml generation
 
-(defun llm-setup--promptdeploy-litellm-match-p (model instance)
-  "Return non-nil if MODEL INSTANCE should appear in litellm provider."
-  (let ((provider (llm-setup-instance-provider instance)))
-    (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
-         (or (eq provider 'vibe-proxy)
-             (eq provider 'omlx)
-             (and (eq provider 'local)
-                  (llm-setup-instance-promptdeploy-remote instance))))))
-
-(defun llm-setup--promptdeploy-remote-match-p (model instance)
-  "Return non-nil if MODEL INSTANCE should appear in llama-cpp-remote."
-  (let ((provider (llm-setup-instance-provider instance)))
-    (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
-         (eq provider 'local)
-         (llm-setup-instance-promptdeploy-remote instance))))
-
-(defun llm-setup--promptdeploy-local-match-p (model instance)
-  "Return non-nil if MODEL INSTANCE should appear in llama-cpp-local."
-  (let ((provider (llm-setup-instance-provider instance)))
-    (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
-         (eq provider 'local))))
-
 (defconst llm-setup-promptdeploy-provider-defs
   (list
-   (list
-    :key "claude-max"
-    :header
-    (concat
-     "  claude-max:\n"
-     "    display_name: \"Claude Max\"\n"
-     "    base_url: \"http://localhost:8317\"\n"
-     "    api_key: \"dummy-not-used\"\n"
-     "    droid:\n"
-     "      provider_type: anthropic\n"
-     "    only: [droid]\n")
-    :match-providers '(vibe-proxy)
-    :default-max-output-tokens nil
-    :include-limits nil)
    (list
     :key "positron-anthropic"
     :header
@@ -2034,8 +1856,7 @@ a single exclusive group with swap enabled."
      "    base_url: \"https://api.anthropic.com\"\n"
      "    api_key: \"${ANTHROPIC_API_KEY}\"\n"
      "    droid:\n"
-     "      provider_type: anthropic\n"
-     "    only: [droid]\n")
+     "      provider_type: anthropic\n")
     :match-providers '(positron_anthropic)
     :default-max-output-tokens 32768
     :include-limits nil)
@@ -2050,8 +1871,7 @@ a single exclusive group with swap enabled."
      "    api_key: \"${GEMINI_API_KEY}\"\n"
      "    droid:\n"
      "      provider_type: generic-chat-completion-api\n"
-     "      no_image_support: true\n"
-     "    only: [droid]\n")
+     "      no_image_support: true\n")
     :match-providers '(positron_gemini)
     :default-max-output-tokens 32000
     :include-limits nil)
@@ -2064,8 +1884,7 @@ a single exclusive group with swap enabled."
      "    base_url: \"https://api.openai.com/v1\"\n"
      "    api_key: \"${OPENAI_API_KEY}\"\n"
      "    droid:\n"
-     "      provider_type: openai\n"
-     "    only: [droid]\n")
+     "      provider_type: openai\n")
     :match-providers '(positron_openai)
     :default-max-output-tokens 32000
     :include-limits nil)
@@ -2090,8 +1909,7 @@ a single exclusive group with swap enabled."
      "      npm: \"@ai-sdk/openai-compatible\"\n"
      "      name: \"LiteLLM\"\n"
      "      timeout: false\n"
-     "    only: [droid, opencode-vulcan]\n")
-    :match-fn #'llm-setup--promptdeploy-litellm-match-p
+     "    except: [opencode-vulcan]\n")
     :name-prefix "hera/"
     :default-max-output-tokens 65536
     :include-limits t
@@ -2107,8 +1925,7 @@ a single exclusive group with swap enabled."
      "    droid:\n"
      "      provider_type: generic-chat-completion-api\n"
      "      no_image_support: true\n"
-     "    only: [droid]\n")
-    :match-fn #'llm-setup--promptdeploy-remote-match-p
+     "    except: [opencode-vulcan]\n")
     :default-max-output-tokens 128000
     :include-limits nil)
    (list
@@ -2125,8 +1942,7 @@ a single exclusive group with swap enabled."
      "    opencode:\n"
      "      npm: \"@ai-sdk/openai-compatible\"\n"
      "      name: \"oMLX\"\n"
-     "      timeout: false\n"
-     "    except: [opencode-vulcan]\n")
+     "      timeout: false\n")
     :match-providers '(omlx)
     :default-max-output-tokens 128000
     :include-limits t
@@ -2137,7 +1953,7 @@ a single exclusive group with swap enabled."
     (concat
      "  llama-cpp-local:\n"
      "    display_name: \"Llama.cpp\"\n"
-     "    base_url: \"http://127.0.0.1:8080/v1\"\n"
+     "    base_url: \"http://hera.lan:8080/v1\"\n"
      "    api_key: \"not-needed\"\n"
      "    droid:\n"
      "      provider_type: generic-chat-completion-api\n"
@@ -2145,9 +1961,7 @@ a single exclusive group with swap enabled."
      "    opencode:\n"
      "      npm: \"@ai-sdk/openai-compatible\"\n"
      "      name: \"Llama-Swap\"\n"
-     "      timeout: false\n"
-     "    except: [opencode-vulcan]\n")
-    :match-fn #'llm-setup--promptdeploy-local-match-p
+     "      timeout: false\n")
     :default-max-output-tokens 128000
     :include-limits t
     :default-output-limit 65536))
@@ -2286,8 +2100,7 @@ PROVIDER-DEF is the provider plist from the provider defs."
             (llm-setup-get-instance-context-length model instance)))
          (output-limit
           (when include-limits
-            (plist-get provider-def :default-output-limit)))
-         (promptdeploy-only (llm-setup-model-promptdeploy-only model)))
+            (plist-get provider-def :default-output-limit))))
     (insert (format "      %s:\n" key))
     (insert (format "        display_name: %S\n" display-name))
     (when max-output
@@ -2295,11 +2108,7 @@ PROVIDER-DEF is the provider plist from the provider defs."
     (when context-limit
       (insert (format "        context_limit: %d\n" context-limit)))
     (when output-limit
-      (insert (format "        output_limit: %d\n" output-limit)))
-    (when promptdeploy-only
-      (insert
-       (format "        only: [%s]\n"
-               (mapconcat #'identity promptdeploy-only ", "))))))
+      (insert (format "        output_limit: %d\n" output-limit)))))
 
 (defun llm-setup-generate-promptdeploy-yaml ()
   "Build promptdeploy models.yaml configuration."
@@ -2903,10 +2712,6 @@ MODELS-HASH is passed to `llm-setup-sync--model-exists-p'."
        (format (concat
                 "(make-llm-setup-model\n"
                 " :name '%s\n"
-                " :context-length nil\n"
-                " :temperature 1.0\n"
-                " :min-p 0.0\n"
-                " :top-p 0.9\n"
                 " :instances\n"
                 " (list\n"
                 "  (make-llm-setup-instance\n"
@@ -2934,10 +2739,6 @@ MODELS-HASH is passed to `llm-setup-sync--model-exists-p'."
        (format (concat
                 "(make-llm-setup-model\n"
                 " :name '%s\n"
-                " :context-length nil\n"
-                " :temperature 1.0\n"
-                " :min-p 0.0\n"
-                " :top-p 0.9\n"
                 " :instances\n"
                 " (list\n"
                 "  (make-llm-setup-instance\n"
@@ -2964,10 +2765,6 @@ MODELS-HASH is passed to `llm-setup-sync--model-exists-p'."
        (format (concat
                 "(make-llm-setup-model\n"
                 " :name '%s\n"
-                " :context-length nil\n"
-                " :temperature 1.0\n"
-                " :min-p 0.0\n"
-                " :top-p 0.9\n"
                 " :instances\n"
                 " (list\n"
                 "  (make-llm-setup-instance\n"
@@ -3178,7 +2975,7 @@ Return the count of entries removed."
      dead-by-model)
     ;; Delete from bottom to top to preserve positions
     (setq regions-to-delete
-          (sort regions-to-delete (lambda (a b) (> (car a) (car b)))))
+          (cl-sort regions-to-delete (lambda (a b) (> (car a) (car b)))))
     (dolist (region regions-to-delete)
       (delete-region (car region) (cdr region))
       (cl-incf removed))
@@ -3235,8 +3032,7 @@ Return the count of entries added."
   (let ((added 0)
         (newly-created (make-hash-table)))
     (cl-flet
-        ((model-live-p
-           (name)
+        ((model-live-p (name)
            (and (llm-setup-sync--model-exists-p name models-hash)
                 (not (gethash name fully-dead-names)))))
       ;; GGUF new entries
@@ -3256,10 +3052,6 @@ Return the count of entries added."
              (format
               (concat "\n\n   (make-llm-setup-model\n"
                       "    :name '%s\n"
-                      "    :context-length nil\n"
-                      "    :temperature 1.0\n"
-                      "    :min-p 0.0\n"
-                      "    :top-p 0.9\n"
                       "    :instances\n"
                       "    (list\n"
                       "     (make-llm-setup-instance\n"
@@ -3284,10 +3076,6 @@ Return the count of entries added."
              (format
               (concat "\n\n   (make-llm-setup-model\n"
                       "    :name '%s\n"
-                      "    :context-length nil\n"
-                      "    :temperature 1.0\n"
-                      "    :min-p 0.0\n"
-                      "    :top-p 0.9\n"
                       "    :instances\n"
                       "    (list\n"
                       "     (make-llm-setup-instance\n"
@@ -3312,10 +3100,6 @@ Return the count of entries added."
              (format
               (concat "\n\n   (make-llm-setup-model\n"
                       "    :name '%s\n"
-                      "    :context-length nil\n"
-                      "    :temperature 1.0\n"
-                      "    :min-p 0.0\n"
-                      "    :top-p 0.9\n"
                       "    :instances\n"
                       "    (list\n"
                       "     (make-llm-setup-instance\n"
