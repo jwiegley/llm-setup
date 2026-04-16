@@ -69,7 +69,7 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-default-instance-name 'Qwen3.5-27B
+(defcustom llm-setup-default-instance-name 'Qwen3.5-27B-Instruct
   "Name of default instance."
   :type 'symbol
   :group 'llm-setup)
@@ -468,14 +468,6 @@
       :provider 'omlx)))
 
    (make-llm-setup-model
-    :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'MLX-Qwen3.5-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled-8bit
-      :provider 'omlx)))
-
-   (make-llm-setup-model
     :name 'Nemotron-3-Nano-30B-A3B
     :context-length 1048576
     :instances
@@ -613,6 +605,18 @@
 
      (make-llm-setup-instance
       :name 'Qwen3.5-27B-unsloth-mlx
+      :provider 'omlx)
+
+     (make-llm-setup-instance
+      :name 'MLX-Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2-8bit
+      :provider 'omlx)
+
+     (make-llm-setup-instance
+      :name 'Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-6bit
+      :provider 'omlx)
+
+     (make-llm-setup-instance
+      :name 'Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-mlx-8bit
       :provider 'omlx)))
 
    (make-llm-setup-model
@@ -727,10 +731,6 @@
 
      (make-llm-setup-instance
       :name 'Qwen3.5-9B-8bit
-      :provider 'omlx)
-     
-     (make-llm-setup-instance
-      :name 'Qwen3.5-9B-unsloth-mlx
       :provider 'omlx)))
 
    (make-llm-setup-model
@@ -747,6 +747,14 @@
                    "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
       :fallbacks '(clio/Qwen3.5-9B-Instruct)
       :hostnames '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'Qwen3.5-9B-Instruct-unsloth-mlx
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Qwen3.5-9B-Instruct-unsloth-mlx
+      :provider 'omlx)))
 
    (make-llm-setup-model
     :name 'SERA-32B
@@ -1745,64 +1753,64 @@ a single exclusive group with swap enabled."
       supports_reasoning: %s
       supports_response_schema: %s
 "
-               model-name-prefix name
-               (cond
-                ((eq 'local provider)
-                 "openai")
-                ((eq 'vibe-proxy provider)
-                 "openai")
-                ((eq 'positron provider)
-                 "openai")
-                ((eq 'omlx provider)
-                 "openai")
-                ((string-match "positron_\\(.+\\)" (symbol-name provider))
-                 (match-string 1 (symbol-name provider)))
-                (t
-                 provider))
-               name
-               (cond
-                ((eq 'local provider)
-                 (concat host "_llama_swap"))
-                ((eq 'vibe-proxy provider)
-                 (concat host "_vibe_proxy"))
-                ((eq 'omlx provider)
-                 "omlx")
-                (t
-                 provider))
-               (if (eq kind 'embedding)
-                   "drop_params: true
+                 model-name-prefix name
+                 (cond
+                  ((eq 'local provider)
+                   "openai")
+                  ((eq 'vibe-proxy provider)
+                   "openai")
+                  ((eq 'positron provider)
+                   "openai")
+                  ((eq 'omlx provider)
+                   "openai")
+                  ((string-match "positron_\\(.+\\)" (symbol-name provider))
+                   (match-string 1 (symbol-name provider)))
+                  (t
+                   provider))
+                 name
+                 (cond
+                  ((eq 'local provider)
+                   (concat host "_llama_swap"))
+                  ((eq 'vibe-proxy provider)
+                   (concat host "_vibe_proxy"))
+                  ((eq 'omlx provider)
+                   "omlx")
+                  (t
+                   provider))
+                 (if (eq kind 'embedding)
+                     "drop_params: true
       encoding_format: \"float\"
       "
-                 "")
+                   "")
 
-               (concat
-                (if supports-system-message
-                    "true"
-                  "false")
-                (when cache-control
-                  "
+                 (concat
+                  (if supports-system-message
+                      "true"
+                    "false")
+                  (when cache-control
+                    "
       cache_control_injection_points:
         - location: message
           role: system"))
-               (if (or (null kind) (eq kind 'text-generation))
-                   "chat"
-                 kind)
-               (or description "")
-               (if max-input-tokens
-                   (format "\n      max_input_tokens: %s" max-input-tokens)
-                 "")
-               (if max-output-tokens
-                   (format "\n      max_output_tokens: %s" max-output-tokens)
-                 "")
-               (if supports-function-calling
-                   "true"
-                 "false")
-               (if supports-reasoning
-                   "true"
-                 "false")
-               (if supports-response-schema
-                   "true"
-                 "false")))))))
+                 (if (or (null kind) (eq kind 'text-generation))
+                     "chat"
+                   kind)
+                 (or description "")
+                 (if max-input-tokens
+                     (format "\n      max_input_tokens: %s" max-input-tokens)
+                   "")
+                 (if max-output-tokens
+                     (format "\n      max_output_tokens: %s" max-output-tokens)
+                   "")
+                 (if supports-function-calling
+                     "true"
+                   "false")
+                 (if supports-reasoning
+                     "true"
+                   "false")
+                 (if supports-response-schema
+                     "true"
+                   "false")))))))
 
 (defun llm-setup-generate-litellm-yaml ()
   "Build LiteLLM config.yaml configuration."
