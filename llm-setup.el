@@ -241,23 +241,21 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-name 'claude-opus-4-6
-      :name 'claude-opus-4-6-thinking-32000
-      :provider 'vibe-proxy
-      :fallbacks '(hera/Qwen3.5-27B))
+      :model-name 'claude-opus-4-7
+      :name 'claude-opus-4-7-thinking-32000
+      :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :model-name 'claude-opus-4-6
-      :name 'claude-opus-4-6
-      :provider 'vibe-proxy
-      :fallbacks '(hera/Qwen3.5-27B-Instruct))
+      :model-name 'claude-opus-4-7
+      :name 'claude-opus-4-7
+      :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :name 'claude-opus-4-6
+      :name 'claude-opus-4-7
       :provider 'positron_anthropic)
 
      (make-llm-setup-instance
-      :name 'claude-opus-4-6
+      :name 'claude-opus-4-7
       :provider 'anthropic)))
 
    (make-llm-setup-model
@@ -373,7 +371,11 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-5.1-GGUF")))
+      :model-path "~/Models/unsloth_GLM-5.1-GGUF")
+
+     (make-llm-setup-instance
+      :name 'GLM-5.1-MXFP4-Q8
+      :provider 'omlx)))
 
    (make-llm-setup-model
     :name 'gpt-5.3-codex
@@ -581,7 +583,6 @@
       :model-path "~/Models/unsloth_Qwen3.5-0.8B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-0.8B)
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
@@ -593,14 +594,12 @@
      (make-llm-setup-instance
       :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q8_K_XL.gguf"
       :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-27B))
+      :cache-type-k 'q8_0)
 
      (make-llm-setup-instance
       :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-27B)
       :hostnames '("clio"))
 
      (make-llm-setup-instance
@@ -628,11 +627,10 @@
     (list
      (make-llm-setup-instance
       :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
-      :parallel 2
+      :parallel 4
       :cache-type-k 'q8_0
       :arguments '("--no-prefill-assistant"
                    "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
-      :fallbacks '(clio/Qwen3.5-27B-Instruct)
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
@@ -645,7 +643,6 @@
       :model-path "~/Models/unsloth_Qwen3.5-2B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-2B)
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
@@ -659,7 +656,6 @@
       :cache-type-k 'q8_0
       :arguments '("--no-prefill-assistant"
                    "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
-      :fallbacks '(clio/Qwen3.5-2B)
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
@@ -672,7 +668,6 @@
       :model-path "~/Models/unsloth_Qwen3.5-35B-A3B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-35B-A3B)
       :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
@@ -699,7 +694,6 @@
       :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-4B)
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
@@ -713,7 +707,6 @@
       :cache-type-k 'q8_0
       :arguments '("--no-prefill-assistant"
                    "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
-      :fallbacks '(clio/Qwen3.5-4B)
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
@@ -726,7 +719,6 @@
       :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :fallbacks '(clio/Qwen3.5-9B)
       :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
@@ -741,11 +733,10 @@
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
-      :parallel 1
+      :parallel 8
       :cache-type-k 'q8_0
       :arguments '("--no-prefill-assistant"
                    "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
-      :fallbacks '(clio/Qwen3.5-9B-Instruct)
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
@@ -755,6 +746,13 @@
      (make-llm-setup-instance
       :name 'Qwen3.5-9B-Instruct-unsloth-mlx
       :provider 'omlx)))
+
+   (make-llm-setup-model
+    :name 'Qwopus3.5-27B-v3
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/Jackrong_Qwopus3.5-27B-v3-GGUF")))
 
    (make-llm-setup-model
     :name 'SERA-32B
@@ -1918,7 +1916,8 @@ a single exclusive group with swap enabled."
      "      name: \"LiteLLM\"\n"
      "      timeout: false\n"
      "    except: [opencode-vulcan]\n")
-    :name-prefix "hera/"
+    :match-fn #'llm-setup--promptdeploy-litellm-match-p
+    :key-fn #'llm-setup-get-full-litellm-name
     :default-max-output-tokens 65536
     :include-limits t
     :default-output-limit 65536)
@@ -1934,6 +1933,7 @@ a single exclusive group with swap enabled."
      "      provider_type: generic-chat-completion-api\n"
      "      no_image_support: true\n"
      "    except: [opencode-vulcan]\n")
+    :match-providers '(local)
     :default-max-output-tokens 128000
     :include-limits nil)
    (list
@@ -1970,6 +1970,7 @@ a single exclusive group with swap enabled."
      "      npm: \"@ai-sdk/openai-compatible\"\n"
      "      name: \"Llama-Swap\"\n"
      "      timeout: false\n")
+    :match-providers '(local)
     :default-max-output-tokens 128000
     :include-limits t
     :default-output-limit 65536))
@@ -1980,6 +1981,7 @@ Each entry is a plist with:
   :match-providers - list of llm-setup provider symbols to match
   :match-fn - predicate (model instance) for complex matching
   :name-prefix - optional prefix for model keys
+  :key-fn - optional (model instance) → string; overrides prefix-based keying
   :default-max-output-tokens - default value, or nil to use model value
   :include-limits - whether to emit context_limit and output_limit
   :default-output-limit - default output_limit value")
@@ -2084,17 +2086,28 @@ If IS-OMLX is non-nil, append \"(MLX)\" suffix."
       (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
            (memq (llm-setup-instance-provider instance) match-providers))))))
 
+(defun llm-setup--promptdeploy-litellm-match-p (model instance)
+  "Return non-nil if MODEL INSTANCE should appear under the litellm provider.
+LiteLLM aggregates all text-generation models across every backend."
+  (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
+       (memq (llm-setup-instance-provider instance)
+             llm-setup-all-model-providers)))
+
 (defun llm-setup-insert-promptdeploy-model (model instance provider-def)
   "Insert a promptdeploy model entry for MODEL INSTANCE.
 PROVIDER-DEF is the provider plist from the provider defs."
   (let* ((name (llm-setup-get-instance-name model instance))
+         (key-fn (plist-get provider-def :key-fn))
          (prefix (or (plist-get provider-def :name-prefix) ""))
-         (key (concat prefix
-                      (if (and (eq (llm-setup-instance-provider instance) 'omlx)
-                               (not (string-empty-p prefix)))
-                          "omlx/"
-                        "")
-                      (symbol-name name)))
+         (key (if key-fn
+                  (funcall key-fn model instance)
+                (concat prefix
+                        (if (and (eq (llm-setup-instance-provider instance)
+                                     'omlx)
+                                 (not (string-empty-p prefix)))
+                            "omlx/"
+                          "")
+                        (symbol-name name))))
          (provider (llm-setup-instance-provider instance))
          (is-omlx (eq provider 'omlx))
          (display-name (llm-setup--promptdeploy-display-name name is-omlx))
@@ -2124,8 +2137,14 @@ PROVIDER-DEF is the provider plist from the provider defs."
     (erase-buffer)
     (insert "providers:\n")
     (dolist (provider-def llm-setup-promptdeploy-provider-defs)
-      (let ((header (plist-get provider-def :header))
-            (has-models nil))
+      (let* ((header (plist-get provider-def :header))
+             ;; Providers without a filter (no :match-fn and no
+             ;; :match-providers) are dynamic — they discover models at
+             ;; runtime — and should always be emitted, without a
+             ;; `models:' block.
+             (no-filter (not (or (plist-get provider-def :match-fn)
+                                 (plist-get provider-def :match-providers))))
+             (has-models nil))
         ;; Check if any models match this provider
         (dolist (mi (llm-setup-instances-list))
           (cl-destructuring-bind
@@ -2133,7 +2152,8 @@ PROVIDER-DEF is the provider plist from the provider defs."
             (when (llm-setup--promptdeploy-instance-match-p
                    model instance provider-def)
               (setq has-models t))))
-        (when has-models
+        (cond
+         (has-models
           (insert "\n" header)
           (insert "    models:\n")
           (dolist (mi (llm-setup-instances-list))
@@ -2142,7 +2162,9 @@ PROVIDER-DEF is the provider plist from the provider defs."
               (when (llm-setup--promptdeploy-instance-match-p
                      model instance provider-def)
                 (llm-setup-insert-promptdeploy-model
-                 model instance provider-def)))))))
+                 model instance provider-def)))))
+         (no-filter
+          (insert "\n" header)))))
     (yaml-mode)
     (current-buffer)))
 
