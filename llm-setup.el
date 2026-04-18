@@ -603,6 +603,15 @@
       :hostnames '("clio"))
 
      (make-llm-setup-instance
+      :name 'Qwen3.5-27B-Instruct
+      :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
+      :parallel 4
+      :cache-type-k 'q8_0
+      :arguments '("--no-prefill-assistant"
+                   "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
+      :hostnames '("hera" "clio"))
+
+     (make-llm-setup-instance
       :name 'Qwen3.5-27B-unsloth-mlx
       :provider 'omlx)
 
@@ -619,21 +628,6 @@
       :provider 'omlx)))
 
    (make-llm-setup-model
-    :name 'Qwen3.5-27B-Instruct
-    :temperature 0.7
-    :top-p 0.8
-    :supports-reasoning nil
-    :instances
-    (list
-     (make-llm-setup-instance
-      :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
-      :parallel 4
-      :cache-type-k 'q8_0
-      :arguments '("--no-prefill-assistant"
-                   "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
     :name 'Qwen3.5-2B
     :temperature 0.6
     :supports-reasoning t
@@ -643,15 +637,10 @@
       :model-path "~/Models/unsloth_Qwen3.5-2B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :hostnames '("hera" "clio"))))
+      :hostnames '("hera" "clio"))
 
-   (make-llm-setup-model
-    :name 'Qwen3.5-2B-Instruct
-    :temperature 0.6
-    :supports-reasoning t
-    :instances
-    (list
      (make-llm-setup-instance
+      :name 'Qwen3.5-2B-Instruct
       :model-path "~/Models/unsloth_Qwen3.5-2B-GGUF"
       :cache-type-k 'q8_0
       :arguments '("--no-prefill-assistant"
@@ -694,15 +683,10 @@
       :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :hostnames '("hera" "clio"))))
+      :hostnames '("hera" "clio"))
 
-   (make-llm-setup-model
-    :name 'Qwen3.5-4B-Instruct
-    :temperature 0.6
-    :supports-reasoning nil
-    :instances
-    (list
      (make-llm-setup-instance
+      :name 'Qwen3.5-4B-Instruct
       :model-path "~/Models/unsloth_Qwen3.5-4B-GGUF"
       :cache-type-k 'q8_0
       :arguments '("--no-prefill-assistant"
@@ -723,29 +707,20 @@
 
      (make-llm-setup-instance
       :name 'Qwen3.5-9B-8bit
-      :provider 'omlx)))
+      :provider 'omlx)
 
-   (make-llm-setup-model
-    :name 'Qwen3.5-9B-Instruct
-    :temperature 0.6
-    :supports-reasoning t
-    :instances
-    (list
      (make-llm-setup-instance
+      :name 'Qwen3.5-9B-Instruct-unsloth-mlx
+      :provider 'omlx)
+
+     (make-llm-setup-instance
+      :name 'Qwen3.5-9B-Instruct
       :model-path "~/Models/unsloth_Qwen3.5-9B-GGUF"
       :parallel 8
       :cache-type-k 'q8_0
       :arguments '("--no-prefill-assistant"
                    "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
       :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3.5-9B-Instruct-unsloth-mlx
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.5-9B-Instruct-unsloth-mlx
-      :provider 'omlx)))
 
    (make-llm-setup-model
     :name 'Qwopus3.5-27B-v3
