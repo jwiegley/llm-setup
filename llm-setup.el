@@ -723,6 +723,32 @@
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
+    :name 'Qwen3.6-27B
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Qwen3.6-27B-MLX-8bit
+      :provider 'omlx)
+
+     (make-llm-setup-instance
+      :name 'Qwen3.6-27B-UD-MLX-4bit
+      :provider 'omlx
+      :hostnames '("clio"))))
+
+   (make-llm-setup-model
+    :name 'Qwen3.6-35B-A3B
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Qwen3.6-35B-A3B-MLX-8bit
+      :provider 'omlx)
+
+     (make-llm-setup-instance
+      :name 'Qwen3.6-35B-A3B-UD-MLX-4bit
+      :provider 'omlx
+      :hostnames '("hera" "clio"))))
+
+   (make-llm-setup-model
     :name 'Qwopus3.5-27B-v3
     :instances
     (list
@@ -2068,6 +2094,24 @@ LiteLLM aggregates all text-generation models across every backend."
        (memq (llm-setup-instance-provider instance)
              llm-setup-all-model-providers)))
 
+(defconst llm-setup-promptdeploy-machine-hosts
+  '("hera" "clio")
+  "Hostnames that correspond to machine-specific deployment targets.
+Instances pinned to a subset of these hosts get an `only:' filter
+naming those hosts.  Instances that run on every host emit no filter.")
+
+(defun llm-setup--promptdeploy-host-only-filter (hostnames)
+  "Return YAML `only:' list string for HOSTNAMES, or nil if unrestricted.
+Each hostname is a deployment target name (e.g. \"hera\", \"clio\").
+Returns nil when HOSTNAMES covers every host in
+`llm-setup-promptdeploy-machine-hosts'."
+  (let ((relevant (seq-intersection
+                   hostnames llm-setup-promptdeploy-machine-hosts)))
+    (when (and relevant
+               (not (seq-set-equal-p
+                     relevant llm-setup-promptdeploy-machine-hosts)))
+      (format "[%s]" (mapconcat #'identity relevant ", ")))))
+
 (defun llm-setup-insert-promptdeploy-model (model instance provider-def)
   "Insert a promptdeploy model entry for MODEL INSTANCE.
 PROVIDER-DEF is the provider plist from the provider defs."
@@ -2096,7 +2140,11 @@ PROVIDER-DEF is the provider plist from the provider defs."
             (llm-setup-get-instance-context-length model instance)))
          (output-limit
           (when include-limits
-            (plist-get provider-def :default-output-limit))))
+            (plist-get provider-def :default-output-limit)))
+         (host-filter
+          (when is-omlx
+            (llm-setup--promptdeploy-host-only-filter
+             (llm-setup-instance-hostnames instance)))))
     (insert (format "      %s:\n" key))
     (insert (format "        display_name: %S\n" display-name))
     (when max-output
@@ -2104,7 +2152,9 @@ PROVIDER-DEF is the provider plist from the provider defs."
     (when context-limit
       (insert (format "        context_limit: %d\n" context-limit)))
     (when output-limit
-      (insert (format "        output_limit: %d\n" output-limit)))))
+      (insert (format "        output_limit: %d\n" output-limit)))
+    (when host-filter
+      (insert (format "        only: %s\n" host-filter)))))
 
 (defun llm-setup-generate-promptdeploy-yaml ()
   "Build promptdeploy models.yaml configuration."
