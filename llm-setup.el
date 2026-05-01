@@ -348,15 +348,6 @@
       :provider 'positron_gemini)))
 
    (make-llm-setup-model
-    :name 'gemma-4-31B-it
-    :context-length 131072
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'gemma-4-31b-8bit
-      :provider 'omlx)))
-
-   (make-llm-setup-model
     :name 'GLM-4.7-Flash
     :context-length 202752
     :temperature 0.7
@@ -474,14 +465,6 @@
       :provider 'groq)))
 
    (make-llm-setup-model
-    :name 'MiniMax-M2.7
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'MiniMax-M2.7-4bit-mxfp4
-      :provider 'omlx)))
-
-   (make-llm-setup-model
     :name 'Nemotron-3-Nano-30B-A3B
     :context-length 1048576
     :instances
@@ -576,14 +559,6 @@
                    "--pooling" "last"
                    "--batch-size" "8192"
                    "--ubatch-size" "2048"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3-Reranker-4B-mxfp8
-    :kind 'reranker
-    :instances
-    (list
-     (make-llm-setup-instance
-      :provider 'omlx)))
 
    (make-llm-setup-model
     :name 'Qwen3.5-0.8B
