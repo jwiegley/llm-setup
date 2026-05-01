@@ -69,7 +69,7 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-default-instance-name 'Qwen3.5-27B-Instruct
+(defcustom llm-setup-default-instance-name 'Qwen3.6-27B-Instruct
   "Name of default instance."
   :type 'symbol
   :group 'llm-setup)
