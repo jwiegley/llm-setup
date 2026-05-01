@@ -424,6 +424,14 @@
       :model-path "~/Models/unsloth_gpt-oss-safeguard-20b-GGUF")))
 
    (make-llm-setup-model
+    :name 'granite-speech-4.1-2b
+    :kind 'audio-transcription
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/cstr_granite-speech-4.1-2b-GGUF")))
+
+   (make-llm-setup-model
     :name 'Kimi-K2.5
     :instances
     (list
