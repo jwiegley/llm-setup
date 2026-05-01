@@ -667,9 +667,19 @@
       :provider 'omlx)
 
      (make-llm-setup-instance
-      :name 'Qwen3.6-27B-UD-MLX-4bit
-      :provider 'omlx
-      :hostnames '("clio"))))
+      :model-path "~/Models/unsloth_Qwen3.6-27B-GGUF"
+      :arguments '("--no-prefill-assistant")
+      :cache-type-k 'q8_0
+      :hostnames '("hera" "clio"))
+
+     (make-llm-setup-instance
+      :name 'Qwen3.6-27B-Instruct
+      :model-path "~/Models/unsloth_Qwen3.6-27B-GGUF"
+      :parallel 4
+      :cache-type-k 'q8_0
+      :arguments '("--no-prefill-assistant"
+                   "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3.6-35B-A3B
@@ -680,8 +690,9 @@
       :provider 'omlx)
 
      (make-llm-setup-instance
-      :name 'Qwen3.6-35B-A3B-UD-MLX-4bit
-      :provider 'omlx
+      :model-path "~/Models/unsloth_Qwen3.6-35B-A3B-GGUF"
+      :arguments '("--no-prefill-assistant")
+      :cache-type-k 'q8_0
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
