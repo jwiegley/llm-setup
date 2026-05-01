@@ -103,7 +103,8 @@
 (defconst llm-setup-all-model-mime-types
   '("image/jpeg" "image/png" "image/gif" "image/webp"))
 
-(defconst llm-setup-all-model-kinds '(text-generation embedding reranker))
+(defconst llm-setup-all-model-kinds
+  '(text-generation embedding reranker audio-transcription audio-speech))
 
 (defconst llm-setup-all-model-providers
   '(local
@@ -1791,9 +1792,14 @@ a single exclusive group with swap enabled."
       cache_control_injection_points:
         - location: message
           role: system"))
-                 (if (or (null kind) (eq kind 'text-generation))
-                     "chat"
-                   kind)
+                 (cond ((or (null kind) (eq kind 'text-generation))
+                        "chat")
+                       ((eq kind 'audio-transcription)
+                        "audio_transcription")
+                       ((eq kind 'audio-speech)
+                        "audio_speech")
+                       (t
+                        kind))
                  (or description "")
                  (if max-input-tokens
                      (format "\n      max_input_tokens: %s" max-input-tokens)
