@@ -283,11 +283,14 @@
 
    (make-llm-setup-model
     :name 'cohere-transcribe-03-2026
+    :kind 'audio-transcription
     :instances
     (list
      (make-llm-setup-instance
       :name 'cohere-transcribe-03-2026-mlx-fp16
-      :provider 'omlx)))
+      :provider 'omlx)
+     (make-llm-setup-instance
+      :model-path "~/Models/cstr_cohere-transcribe-03-2026-GGUF")))
 
    (make-llm-setup-model
     :name 'DeepSeek-R1-0528
