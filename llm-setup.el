@@ -366,11 +366,7 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-5.1-GGUF")
-
-     (make-llm-setup-instance
-      :name 'GLM-5.1-MXFP4-Q8
-      :provider 'omlx)))
+      :model-path "~/Models/unsloth_GLM-5.1-GGUF")))
 
    (make-llm-setup-model
     :name 'gpt-5.3-codex
@@ -385,11 +381,7 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gpt-oss-120b-GGUF")
-
-     (make-llm-setup-instance
-      :name 'gpt-oss-120b-MXFP4-Q8
-      :provider 'omlx)))
+      :model-path "~/Models/unsloth_gpt-oss-120b-GGUF")))
 
    (make-llm-setup-model
     :name 'gpt-oss-20b
@@ -399,11 +391,7 @@
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_gpt-oss-20b-GGUF"
-      :hostnames '("hera" "clio"))
-
-     (make-llm-setup-instance
-      :name 'gpt-oss-20b-MXFP4-Q8
-      :provider 'omlx)))
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'gpt-oss-safeguard-20b
@@ -638,11 +626,7 @@
       :model-path "~/Models/unsloth_Qwen3.5-35B-A3B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :hostnames '("hera" "clio"))
-
-     (make-llm-setup-instance
-      :name 'Qwen3.5-35B-A3B-8bit
-      :provider 'omlx)))
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-397B-A17B
@@ -685,14 +669,6 @@
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
       :hostnames '("hera" "clio"))
-
-     (make-llm-setup-instance
-      :name 'Qwen3.5-9B-8bit
-      :provider 'omlx)
-
-     (make-llm-setup-instance
-      :name 'Qwen3.5-9B-Instruct-unsloth-mlx
-      :provider 'omlx)
 
      (make-llm-setup-instance
       :name 'Qwen3.5-9B-Instruct
