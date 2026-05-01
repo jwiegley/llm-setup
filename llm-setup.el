@@ -423,17 +423,11 @@
       :model-path "~/Models/cstr_granite-speech-4.1-2b-GGUF")))
 
    (make-llm-setup-model
-    :name 'Kimi-K2.5
+    :name 'Kimi-K2.6
     :instances
     (list
      (make-llm-setup-instance
-      :context-length 98304
-      :max-output-tokens 32768
-      :model-path "~/Models/unsloth_Kimi-K2.5-GGUF")
-
-     (make-llm-setup-instance
-      :name 'Kimi-K2.5-MLX-2.8bit
-      :provider 'omlx)))
+      :model-path "~/Models/unsloth_Kimi-K2.6-GGUF")))
 
    (make-llm-setup-model
     :name 'Leanstral-2603
