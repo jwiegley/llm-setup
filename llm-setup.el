@@ -700,7 +700,9 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/Jackrong_Qwopus3.5-27B-v3-GGUF")))
+      :model-path "~/Models/Jackrong_Qwopus3.5-27B-v3-GGUF"
+      :arguments '("--no-prefill-assistant")
+      :cache-type-k 'q8_0)))
 
    (make-llm-setup-model
     :name 'SERA-32B
