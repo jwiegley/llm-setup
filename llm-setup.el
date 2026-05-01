@@ -561,40 +561,19 @@
     :instances
     (list
      (make-llm-setup-instance
-      :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q8_K_XL.gguf"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0)
-
-     (make-llm-setup-instance
-      :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
+      :model-path "~/Models/unsloth_Qwen3.5-27B-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0
-      :hostnames '("clio"))
+      :hostnames '("hera" "clio"))
 
      (make-llm-setup-instance
       :name 'Qwen3.5-27B-Instruct
-      :file-path "~/Models/unsloth_Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
+      :model-path "~/Models/unsloth_Qwen3.5-27B-GGUF"
       :parallel 4
       :cache-type-k 'q8_0
       :arguments '("--no-prefill-assistant"
                    "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
-      :hostnames '("hera" "clio"))
-
-     (make-llm-setup-instance
-      :name 'Qwen3.5-27B-unsloth-mlx
-      :provider 'omlx)
-
-     (make-llm-setup-instance
-      :name 'MLX-Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2-8bit
-      :provider 'omlx)
-
-     (make-llm-setup-instance
-      :name 'Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-6bit
-      :provider 'omlx)
-
-     (make-llm-setup-instance
-      :name 'Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-mlx-8bit
-      :provider 'omlx)))
+      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3.5-2B
