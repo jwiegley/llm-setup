@@ -369,8 +369,8 @@
       :model-path "~/Models/unsloth_GLM-5.1-GGUF")))
 
    (make-llm-setup-model
-    :name 'gpt-5.3-codex
-    :description "ChatGPT 5.3 Codex (Positron)"
+    :name 'gpt-5.5
+    :description "ChatGPT 5.5 (Positron)"
     :instances
     (list (make-llm-setup-instance :provider 'positron_openai)))
 
