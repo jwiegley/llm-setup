@@ -2066,21 +2066,25 @@ Returns nil when HOSTNAMES covers every host in
                      relevant llm-setup-promptdeploy-machine-hosts)))
       (format "[%s]" (mapconcat #'identity relevant ", ")))))
 
+(defun llm-setup--promptdeploy-key (model instance provider-def)
+  "Compute the YAML model key for MODEL INSTANCE under PROVIDER-DEF."
+  (let ((name (llm-setup-get-instance-name model instance))
+        (key-fn (plist-get provider-def :key-fn))
+        (prefix (or (plist-get provider-def :name-prefix) "")))
+    (if key-fn
+        (funcall key-fn model instance)
+      (concat prefix
+              (if (and (eq (llm-setup-instance-provider instance) 'omlx)
+                       (not (string-empty-p prefix)))
+                  "omlx/"
+                "")
+              (symbol-name name)))))
+
 (defun llm-setup-insert-promptdeploy-model (model instance provider-def)
   "Insert a promptdeploy model entry for MODEL INSTANCE.
 PROVIDER-DEF is the provider plist from the provider defs."
   (let* ((name (llm-setup-get-instance-name model instance))
-         (key-fn (plist-get provider-def :key-fn))
-         (prefix (or (plist-get provider-def :name-prefix) ""))
-         (key (if key-fn
-                  (funcall key-fn model instance)
-                (concat prefix
-                        (if (and (eq (llm-setup-instance-provider instance)
-                                     'omlx)
-                                 (not (string-empty-p prefix)))
-                            "omlx/"
-                          "")
-                        (symbol-name name))))
+         (key (llm-setup--promptdeploy-key model instance provider-def))
          (provider (llm-setup-instance-provider instance))
          (is-omlx (eq provider 'omlx))
          (display-name (llm-setup--promptdeploy-display-name name is-omlx))
