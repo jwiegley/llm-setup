@@ -1909,7 +1909,8 @@ a single exclusive group with swap enabled."
     :match-providers '(omlx)
     :default-max-output-tokens 128000
     :include-limits t
-    :default-output-limit 65536)
+    :default-output-limit 65536
+    :include-host-filter t)
    (list
     :key "llama-cpp-local"
     :header
@@ -1939,7 +1940,11 @@ Each entry is a plist with:
   :key-fn - optional (model instance) → string; overrides prefix-based keying
   :default-max-output-tokens - default value, or nil to use model value
   :include-limits - whether to emit context_limit and output_limit
-  :default-output-limit - default output_limit value")
+  :default-output-limit - default output_limit value
+  :include-host-filter - when non-nil, emit per-model `only:' filter based
+    on the union of hostnames across all instances sharing the same YAML
+    key.  Use for providers whose models are pinned to specific hosts
+    (e.g. `llama-cpp-local', `omlx').")
 
 (defun llm-setup--promptdeploy-display-name (name is-omlx)
   "Generate promptdeploy display name from instance NAME symbol.
@@ -2100,7 +2105,15 @@ PROVIDER-DEF is the provider plist from the provider defs."
           (when include-limits
             (plist-get provider-def :default-output-limit)))
          (host-filter
-          (when is-omlx
+          ;; Apply per-model `only:' filter when either:
+          ;;   - the provider-def opts in via :include-host-filter
+          ;;     (e.g. llama-cpp-local, omlx), or
+          ;;   - the instance is omlx, even when generated under
+          ;;     another provider (e.g. omlx-prefixed entries inside
+          ;;     the litellm aggregator).  This preserves the long-
+          ;;     standing behaviour where omlx models advertise their
+          ;;     host pinning in every YAML context they appear in.
+          (when (or (plist-get provider-def :include-host-filter) is-omlx)
             (llm-setup--promptdeploy-host-only-filter
              (llm-setup-instance-hostnames instance)))))
     (insert (format "      %s:\n" key))
