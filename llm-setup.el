@@ -1850,6 +1850,24 @@ a single exclusive group with swap enabled."
     :default-max-output-tokens 32000
     :include-limits nil)
    (list
+    :key "nvidia"
+    :header
+    (concat
+     "  nvidia:\n"
+     "    display_name: \"NVIDIA\"\n"
+     "    base_url: \"https://integrate.api.nvidia.com/v1\"\n"
+     "    api_key: \"${NVIDIA_API_KEY}\"\n"
+     "    droid:\n"
+     "      provider_type: openai\n"
+     "    opencode:\n"
+     "      npm: \"@ai-sdk/openai-compatible\"\n"
+     "      name: \"NVIDIA\"\n"
+     "      timeout: false\n"
+     "    models:\n"
+     "      qwen/qwen3-coder-480b-a35b-instruct:\n"
+     "        display_name: \"Qwen3 Coder 480B A35B Instruct\"\n"
+     "        max_output_tokens: 81920\n"))
+   (list
     :key "litellm"
     :header
     (concat
