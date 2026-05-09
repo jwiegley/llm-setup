@@ -1881,13 +1881,17 @@ a single exclusive group with swap enabled."
     :header
     (concat
      "  llama-cpp-remote:\n"
-     "    display_name: \"Llama.cpp\"\n"
-     "    base_url: \"https://10.7.0.1/v1/\"\n"
+     "    display_name: \"Llama.cpp (Remote)\"\n"
+     "    base_url: \"https://10.6.0.1/v1/\"\n"
      "    api_key: \"dummy-api-key\"\n"
+     "    only: [clio]\n"
      "    droid:\n"
      "      provider_type: generic-chat-completion-api\n"
      "      no_image_support: true\n"
-     "    except: [opencode-vulcan]\n")
+     "    opencode:\n"
+     "      npm: \"@ai-sdk/openai-compatible\"\n"
+     "      name: \"Llama-Swap (Remote)\"\n"
+     "      timeout: false\n")
     :match-providers '(local)
     :default-max-output-tokens 128000
     :include-limits nil)
