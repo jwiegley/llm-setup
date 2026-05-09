@@ -1917,7 +1917,7 @@ a single exclusive group with swap enabled."
     (concat
      "  llama-cpp-local:\n"
      "    display_name: \"Llama.cpp\"\n"
-     "    base_url: \"http://hera.lan:8080/v1\"\n"
+     "    base_url: \"http://localhost:8080/v1\"\n"
      "    api_key: \"not-needed\"\n"
      "    droid:\n"
      "      provider_type: generic-chat-completion-api\n"
@@ -1929,7 +1929,8 @@ a single exclusive group with swap enabled."
     :match-providers '(local)
     :default-max-output-tokens 128000
     :include-limits t
-    :default-output-limit 65536))
+    :default-output-limit 65536
+    :include-host-filter t))
   "Provider definitions for promptdeploy models.yaml generation.
 Each entry is a plist with:
   :key - provider name in YAML
