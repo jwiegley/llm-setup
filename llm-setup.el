@@ -2085,9 +2085,13 @@ Returns nil when HOSTNAMES covers every host in
                 "")
               (symbol-name name)))))
 
-(defun llm-setup-insert-promptdeploy-model (model instance provider-def)
+(defun llm-setup-insert-promptdeploy-model
+    (model instance provider-def &optional hostnames)
   "Insert a promptdeploy model entry for MODEL INSTANCE.
-PROVIDER-DEF is the provider plist from the provider defs."
+PROVIDER-DEF is the provider plist from the provider defs.
+HOSTNAMES, when non-nil, overrides the instance's own hostnames for
+host-filter computation; pass the union across deduplicated instances
+when multiple registry entries share a YAML key."
   (let* ((name (llm-setup-get-instance-name model instance))
          (key (llm-setup--promptdeploy-key model instance provider-def))
          (provider (llm-setup-instance-provider instance))
@@ -2104,6 +2108,8 @@ PROVIDER-DEF is the provider plist from the provider defs."
          (output-limit
           (when include-limits
             (plist-get provider-def :default-output-limit)))
+         (effective-hostnames
+          (or hostnames (llm-setup-instance-hostnames instance)))
          (host-filter
           ;; Apply per-model `only:' filter when either:
           ;;   - the provider-def opts in via :include-host-filter
@@ -2115,7 +2121,7 @@ PROVIDER-DEF is the provider plist from the provider defs."
           ;;     host pinning in every YAML context they appear in.
           (when (or (plist-get provider-def :include-host-filter) is-omlx)
             (llm-setup--promptdeploy-host-only-filter
-             (llm-setup-instance-hostnames instance)))))
+             effective-hostnames))))
     (insert (format "      %s:\n" key))
     (insert (format "        display_name: %S\n" display-name))
     (when max-output
@@ -2140,25 +2146,47 @@ PROVIDER-DEF is the provider plist from the provider defs."
              ;; `models:' block.
              (no-filter (not (or (plist-get provider-def :match-fn)
                                  (plist-get provider-def :match-providers))))
-             (has-models nil))
-        ;; Check if any models match this provider
+             ;; Group matching (model . instance) pairs by their YAML key
+             ;; so that a model with multiple registry instances (e.g.
+             ;; one defaulting to hera plus a clio override) emits a
+             ;; single YAML entry whose `only:' filter reflects the
+             ;; union of hostnames.  Without this, two entries with the
+             ;; same key would collide in PyYAML and the later filter
+             ;; would silently exclude the model from the other host.
+             (entries-by-key (make-hash-table :test 'equal))
+             (key-order nil))
         (dolist (mi (llm-setup-instances-list))
           (cl-destructuring-bind
               (model . instance) mi
             (when (llm-setup--promptdeploy-instance-match-p
                    model instance provider-def)
-              (setq has-models t))))
+              (let ((key (llm-setup--promptdeploy-key
+                          model instance provider-def)))
+                (unless (gethash key entries-by-key)
+                  (push key key-order))
+                (puthash key
+                         (cons (cons model instance)
+                               (gethash key entries-by-key))
+                         entries-by-key)))))
         (cond
-         (has-models
+         (key-order
           (insert "\n" header)
           (insert "    models:\n")
-          (dolist (mi (llm-setup-instances-list))
-            (cl-destructuring-bind
-                (model . instance) mi
-              (when (llm-setup--promptdeploy-instance-match-p
-                     model instance provider-def)
-                (llm-setup-insert-promptdeploy-model
-                 model instance provider-def)))))
+          (dolist (key (nreverse key-order))
+            ;; Entries were pushed in reverse registry order; reverse
+            ;; back so the LAST registry instance for this key wins
+            ;; for limits/display, matching the prior PyYAML
+            ;; "duplicate-key, last wins" behaviour.
+            (let* ((entries (nreverse (gethash key entries-by-key)))
+                   (last-entry (car (last entries)))
+                   (model (car last-entry))
+                   (instance (cdr last-entry))
+                   (hostnames
+                    (delete-dups
+                     (cl-loop for (_m . i) in entries
+                              append (llm-setup-instance-hostnames i)))))
+              (llm-setup-insert-promptdeploy-model
+               model instance provider-def hostnames))))
          (no-filter
           (insert "\n" header)))))
     (yaml-mode)
