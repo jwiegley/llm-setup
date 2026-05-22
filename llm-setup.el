@@ -575,6 +575,14 @@
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
+    :name 'Qwen3.6-27B-oQ8-mtp
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Qwen3.6-27B-oQ8-mtp
+      :provider 'omlx)))
+
+   (make-llm-setup-model
     :name 'Qwen3.6-35B-A3B
     :instances
     (list
@@ -590,6 +598,23 @@
 
      (make-llm-setup-instance
       :name 'Qwen3.6-35B-A3B-UD-MLX-4bit
+      :provider 'omlx)))
+
+   (make-llm-setup-model
+    :name 'Qwen3.6-35B-A3B-oQ4-mtp
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Qwen3.6-35B-A3B-oQ4-mtp
+      :hostnames '("hera" "clio")
+      :provider 'omlx)))
+
+   (make-llm-setup-model
+    :name 'Qwen3.6-35B-A3B-4bit-MTPLX-Optimized-Speed
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Qwen3.6-35B-A3B-4bit-MTPLX-Optimized-Speed
       :provider 'omlx)))
 
    (make-llm-setup-model
