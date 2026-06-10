@@ -190,7 +190,11 @@
     (list
      (make-llm-setup-instance
       :model-path "~/Models/gpustack_bge-m3-GGUF"
-      :parallel 40
+      ;; llama.cpp build 9553 asserts in build_pooling (ggml_can_mul_mat)
+      ;; when --ctx-size (= context-length * parallel = 8192 * N) is too
+      ;; large: 40 crashes on load, 16 loads in ~2s and still matches
+      ;; `make store --concurrency 16'.  Revisit if llama-cpp is bumped.
+      :parallel 16
       :concurrency-limit 32
       :hostnames '("hera" "clio")
       :arguments '("--embedding"
