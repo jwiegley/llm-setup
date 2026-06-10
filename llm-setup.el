@@ -176,6 +176,7 @@
   (cache-reuse nil) ; integer: min chunk size for cache reuse
   (slot-save-path nil) ; path for saving/restoring slot KV cache
   (slot-prompt-similarity nil) ; float: min prompt similarity to reuse slot
+  (concurrency-limit nil) ; integer: llama-swap concurrencyLimit override
   )
 
 (defcustom llm-setup-models-list
@@ -190,6 +191,7 @@
      (make-llm-setup-instance
       :model-path "~/Models/gpustack_bge-m3-GGUF"
       :parallel 40
+      :concurrency-limit 32
       :hostnames '("hera" "clio")
       :arguments '("--embedding"
                    "--pooling" "mean"
@@ -713,6 +715,18 @@ startPort: 9400
   "Model instance names that should remain resident in memory.
 These are placed in the always_on group with swap disabled.
 All other models go into a single exclusive group."
+  :type '(repeat symbol)
+  :group 'llm-setup)
+
+(defcustom llm-setup-llama-swap-preload-models
+  '(bge-m3)
+  "Model instance names to preload at llama-swap startup.
+Emitted as a `hooks.on_startup.preload' list so these models are
+resident before the first request arrives, which avoids cold-load
+HTTP 429 rejections under a concurrent burst.  Only names actually
+emitted for the target host are included.  When preloading more than
+one model, also add them to `llm-setup-llama-swap-always-on-models'
+so they share a group and are not swapped out as each one loads."
   :type '(repeat symbol)
   :group 'llm-setup)
 
@@ -1321,6 +1335,7 @@ non-nil, is a hash table for caching executable lookups."
          (context-length
           (llm-setup-get-instance-context-length model instance))
          (parallel (llm-setup-instance-parallel instance))
+         (concurrency-limit (llm-setup-instance-concurrency-limit instance))
          (cache-type-k (llm-setup-instance-cache-type-k instance))
          (cache-type-v (llm-setup-instance-cache-type-v instance))
          (kv-offload (llm-setup-instance-kv-offload instance))
@@ -1420,9 +1435,13 @@ non-nil, is a hash table for caching executable lookups."
     proxy: \"http://127.0.0.1:${PORT}\"
     cmd: >"
                          (llm-setup-get-instance-name model instance)))
-         (footer "
+         (footer
+          (concat
+           (and concurrency-limit
+                (format "\n    concurrencyLimit: %d" concurrency-limit))
+           "
     checkEndpoint: /health
-"))
+")))
     (cl-case
         engine
       (llama-cpp
@@ -1533,6 +1552,27 @@ a single exclusive group with swap enabled."
                    "")))
      "\n")))
 
+(defun llm-setup--generate-llama-swap-hooks (emitted-names)
+  "Generate llama-swap on_startup preload hooks YAML from EMITTED-NAMES.
+Models in `llm-setup-llama-swap-preload-models' that were emitted for
+the host are listed under `hooks.on_startup.preload' so they load at
+llama-swap startup and are resident before the first request arrives."
+  (let ((preload
+         (cl-remove-if-not
+          (lambda (name)
+            (memq name llm-setup-llama-swap-preload-models))
+          emitted-names)))
+    (when preload
+      (concat
+       "\nhooks:"
+       "\n  on_startup:"
+       "\n    preload:"
+       (mapconcat
+        (lambda (name) (format "\n      - %s" (symbol-name name)))
+        preload
+        "")
+       "\n"))))
+
 (defun llm-setup-generate-llama-swap-yaml (hostname)
   "Build llama-swap.yaml configuration for HOSTNAME."
   (with-current-buffer (get-buffer-create "*llama-swap.yaml*")
@@ -1555,8 +1595,10 @@ a single exclusive group with swap enabled."
               (when (/= pos (point))
                 (push (llm-setup-get-instance-name model instance)
                       emitted-names))))))
-      (insert
-       (llm-setup--generate-llama-swap-groups (nreverse emitted-names))))
+      (let ((names (nreverse emitted-names)))
+        (insert (llm-setup--generate-llama-swap-groups names))
+        (when-let* ((hooks (llm-setup--generate-llama-swap-hooks names)))
+          (insert hooks))))
     (yaml-mode)
     (current-buffer)))
 
