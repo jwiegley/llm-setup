@@ -11,8 +11,7 @@ pre-commit:
       glob: "*.el"
       run: scripts/check-format.sh {staged_files}
     package-lint:
-      glob: "*.el"
-      exclude: "scripts/**"
+      glob: "llm-setup.el"
       run: >
         emacs --batch -L . \
           -l package-lint \
@@ -24,6 +23,9 @@ pre-commit:
     relint:
       glob: "*.el"
       run: emacs --batch -L . -l relint -f relint-batch {staged_files}
+    ert:
+      glob: "*.el"
+      run: emacs --batch -L . --eval '(setq load-prefer-newer t)' -l llm-setup-test.el -f ert-run-tests-batch-and-exit
     nix-check:
       glob: "*.nix"
       run: nix flake check --no-warn-dirty 2>&1

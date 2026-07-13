@@ -152,8 +152,8 @@
 (cl-defstruct
     llm-setup-instance
   "Deployment configuration for a single model instance."
-  name ; alternate name to use with provider
-  model-name ; alternate model-name to use
+  name ; public deployment name
+  model-name ; provider-facing model name override
   context-length ; context length to use for instance
   max-input-tokens ; number of tokens to accept
   max-output-tokens ; number of tokens to predict
@@ -228,23 +228,6 @@
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
-    :name 'claude-haiku
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-name 'claude-haiku-4-5-20251001
-      :name 'claude-haiku-4-5-20251001
-      :provider 'vibe-proxy)
-
-     (make-llm-setup-instance
-      :name 'claude-haiku-4-5-20251001
-      :provider 'positron_anthropic)
-
-     (make-llm-setup-instance
-      :name 'claude-haiku-4-5-20251001
-      :provider 'anthropic)))
-
-   (make-llm-setup-model
     :name 'claude-fable
     :instances
     (list
@@ -264,6 +247,23 @@
 
      (make-llm-setup-instance
       :name 'claude-fable-5
+      :provider 'anthropic)))
+
+   (make-llm-setup-model
+    :name 'claude-haiku
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-name 'claude-haiku-4-5-20251001
+      :name 'claude-haiku-4-5-20251001
+      :provider 'vibe-proxy)
+
+     (make-llm-setup-instance
+      :name 'claude-haiku-4-5-20251001
+      :provider 'positron_anthropic)
+
+     (make-llm-setup-instance
+      :name 'claude-haiku-4-5-20251001
       :provider 'anthropic)))
 
    (make-llm-setup-model
@@ -1193,11 +1193,12 @@ alphabetically by the `:name' field (case-insensitive)."
       (shell-command (format "gguf-tools show %s" gguf)))))
 
 (defun llm-setup-get-instance-model-name (model instance)
-  "Return the model name for the given MODEL and INSTANCE."
-  (or (llm-setup-instance-model-name instance) (llm-setup-model-name model)))
+  "Return the provider-facing model name for MODEL and INSTANCE."
+  (or (llm-setup-instance-model-name instance)
+      (llm-setup-get-instance-name model instance)))
 
 (defun llm-setup-get-instance-name (model instance)
-  "Return the model name for the given MODEL and INSTANCE."
+  "Return the public deployment name for MODEL and INSTANCE."
   (or (llm-setup-instance-name instance) (llm-setup-model-name model)))
 
 (defun llm-setup-get-instance-context-length (model instance)
@@ -1660,6 +1661,7 @@ llama-swap startup and are resident before the first request arrives."
          (provider (llm-setup-instance-provider instance))
          (cache-control (llm-setup-instance-cache-control instance))
          (name (llm-setup-get-instance-name model instance))
+         (model-name (llm-setup-get-instance-model-name model instance))
          (kind (llm-setup-model-kind model))
          (description (llm-setup-model-description model))
          (max-input-tokens
@@ -1709,7 +1711,7 @@ llama-swap startup and are resident before the first request arrives."
                    (match-string 1 (symbol-name provider)))
                   (t
                    provider))
-                 name
+                 model-name
                  (cond
                   ((eq 'local provider)
                    (concat host "_llama_swap"))

@@ -67,16 +67,16 @@ After modifying `llm-setup.el`, reload it in your running Emacs:
 
 ### Checks
 
-All checks run via `nix flake check`, which covers:
+All static checks run via `nix flake check`, which covers:
 
 - **Byte-compilation** with warnings treated as errors
 - **package-lint** for package header and dependency conventions
 - **checkdoc** for docstring style
 - **relint** for regexp correctness
-- **Format check** via `indent-region`
 
-Pre-commit hooks (via lefthook) run the same checks in parallel on
-staged files.
+Pre-commit hooks (via lefthook) run the same checks in parallel on staged
+files, plus ERT regression tests for generated configuration and a format
+check via `format-all`.
 
 ### Formatting
 
