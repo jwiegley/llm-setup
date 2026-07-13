@@ -94,6 +94,61 @@
      (= (length keys)
         (length (delete-dups (copy-sequence keys)))))))
 
+(ert-deftest llm-setup-test-resident-model-references ()
+  "Require resident and preloaded names to resolve to declared instances."
+  (should
+   (equal llm-setup-llama-swap-always-on-models
+          '(Qwen3.6-27B-Instruct GLM-5.2 bge-m3)))
+  (should
+   (equal llm-setup-llama-swap-preload-models
+          '(Qwen3.6-27B-Instruct bge-m3)))
+  (let ((instance-names
+         (mapcar
+          (lambda (entry)
+            (llm-setup-get-instance-name (car entry) (cdr entry)))
+          (llm-setup-instances-list))))
+    (dolist (name (append llm-setup-llama-swap-always-on-models
+                          llm-setup-llama-swap-preload-models))
+      (should (memq name instance-names)))
+    (dolist (name llm-setup-llama-swap-preload-models)
+      (should (memq name llm-setup-llama-swap-always-on-models)))))
+
+(ert-deftest llm-setup-test-resident-model-host-eligibility ()
+  "Generate resident groups and preload hooks from host-eligible models."
+  (let ((eligible
+         (lambda (hostname)
+           (cl-remove-if-not
+            (lambda (name)
+              (seq-some
+               (lambda (entry)
+                 (let ((model (car entry))
+                       (instance (cdr entry)))
+                   (and
+                    (eq name
+                        (llm-setup-get-instance-name model instance))
+                    (memq (llm-setup-instance-provider instance)
+                          '(local vibe-proxy))
+                    (member hostname
+                            (llm-setup-instance-hostnames instance)))))
+               (llm-setup-instances-list)))
+            llm-setup-llama-swap-always-on-models))))
+    (let ((hera (funcall eligible "hera"))
+          (clio (funcall eligible "clio"))
+          (hooks
+           "\nhooks:\n  on_startup:\n    preload:\n      - Qwen3.6-27B-Instruct\n      - bge-m3\n"))
+      (should (equal hera '(Qwen3.6-27B-Instruct GLM-5.2 bge-m3)))
+      (should (equal clio '(Qwen3.6-27B-Instruct bge-m3)))
+      (should
+       (equal
+        (llm-setup--generate-llama-swap-groups hera)
+        "\ngroups:\n  always_on:\n    swap: false\n    exclusive: false\n    members:\n      - Qwen3.6-27B-Instruct\n      - GLM-5.2\n      - bge-m3\n"))
+      (should
+       (equal
+        (llm-setup--generate-llama-swap-groups clio)
+        "\ngroups:\n  always_on:\n    swap: false\n    exclusive: false\n    members:\n      - Qwen3.6-27B-Instruct\n      - bge-m3\n"))
+      (should (equal (llm-setup--generate-llama-swap-hooks hera) hooks))
+      (should (equal (llm-setup--generate-llama-swap-hooks clio) hooks)))))
+
 (provide 'llm-setup-test)
 
 ;;; llm-setup-test.el ends here

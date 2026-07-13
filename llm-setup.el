@@ -740,7 +740,9 @@ startPort: 9400
   :group 'llm-setup)
 
 (defcustom llm-setup-llama-swap-always-on-models
-  '(bge-m3)
+  '(Qwen3.6-27B-Instruct
+    GLM-5.2
+    bge-m3)
   "Model instance names that should remain resident in memory.
 These are placed in the always_on group with swap disabled.
 All other models go into a single exclusive group."
@@ -748,7 +750,8 @@ All other models go into a single exclusive group."
   :group 'llm-setup)
 
 (defcustom llm-setup-llama-swap-preload-models
-  '(bge-m3)
+  '(Qwen3.6-27B-Instruct
+    bge-m3)
   "Model instance names to preload at llama-swap startup.
 Emitted as a `hooks.on_startup.preload' list so these models are
 resident before the first request arrives, which avoids cold-load
