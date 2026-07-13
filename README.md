@@ -34,7 +34,7 @@ llm-setup-models-list (Elisp structs)
 ```
 
 Running `M-x llm-setup-reset` validates the registry, rebuilds all YAML configs,
-restarts the remote services, and updates GPTel -- five steps, fully
+restarts the remote services, and updates GPTel -- six steps, fully
 automated.
 
 ## Getting started
