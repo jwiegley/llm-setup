@@ -69,7 +69,7 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-default-instance-name 'Qwen3.6-27B-Instruct
+(defcustom llm-setup-default-instance-name 'Qwen3.6-27B-oQ8-mtp
   "Name of default instance."
   :type 'symbol
   :group 'llm-setup)
@@ -245,6 +245,28 @@
       :provider 'anthropic)))
 
    (make-llm-setup-model
+    :name 'claude-fable
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-name 'claude-fable-5
+      :name 'claude-fable-5-thinking-32000
+      :provider 'vibe-proxy)
+
+     (make-llm-setup-instance
+      :model-name 'claude-fable-5
+      :name 'claude-fable-5
+      :provider 'vibe-proxy)
+
+     (make-llm-setup-instance
+      :name 'claude-fable-5
+      :provider 'positron_anthropic)
+
+     (make-llm-setup-instance
+      :name 'claude-fable-5
+      :provider 'anthropic)))
+
+   (make-llm-setup-model
     :name 'claude-opus
     :instances
     (list
@@ -311,15 +333,6 @@
       :provider 'openrouter)))
 
    (make-llm-setup-model
-    :name 'DeepSeek-V3.2
-    :context-length 163840
-    :instances
-    (list
-     (make-llm-setup-instance
-      :context-length 12000
-      :model-path "~/Models/unsloth_DeepSeek-V3.2-GGUF")))
-
-   (make-llm-setup-model
     :name 'Devstral-2-123B-Instruct-2512
     :instances
     (list
@@ -367,13 +380,13 @@
       '("--repeat-penalty" "1.0"))))
 
    (make-llm-setup-model
-    :name 'GLM-5.1
+    :name 'GLM-5.2
     :context-length 200000
     :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-5.1-GGUF")))
+      :model-path "~/Models/unsloth_GLM-5.2-GGUF")))
 
    (make-llm-setup-model
     :name 'gpt-5.5
@@ -418,6 +431,14 @@
       :model-path "~/Models/cstr_granite-speech-4.1-2b-GGUF")))
 
    (make-llm-setup-model
+    :name 'Huihui-Qwable-3.6-27b-abliterated-MTP
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/huihui-ai_Huihui-Qwable-3.6-27b-abliterated-MTP-GGUF"
+      :arguments '("--spec-type" "draft-mtp" "--spec-draft-n-max" "6"))))
+
+   (make-llm-setup-model
     :name 'Kimi-K2.6
     :instances
     (list
@@ -452,6 +473,13 @@
      (make-llm-setup-instance
       :name 'llama-3.3-70b-versatile
       :provider 'groq)))
+
+   (make-llm-setup-model
+    :name 'Meta-Llama-3.1-8B
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/mradermacher_Meta-Llama-3.1-8B-GGUF")))
 
    (make-llm-setup-model
     :name 'Nemotron-3-Nano-30B-A3B
@@ -607,15 +635,6 @@
       :provider 'omlx)))
 
    (make-llm-setup-model
-    :name 'Qwen3.6-35B-A3B-oQ4-mtp
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.6-35B-A3B-oQ4-mtp
-      :hostnames '("hera" "clio")
-      :provider 'omlx)))
-
-   (make-llm-setup-model
     :name 'Qwen3.6-35B-A3B-4bit-MTPLX-Optimized-Speed
     :instances
     (list
@@ -632,6 +651,15 @@
       :model-path "~/Models/unsloth_Qwen3.6-35B-A3B-MTP-GGUF"
       :arguments '("--no-prefill-assistant")
       :cache-type-k 'q8_0)))
+
+   (make-llm-setup-model
+    :name 'Qwen3.6-35B-A3B-oQ4-mtp
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Qwen3.6-35B-A3B-oQ4-mtp
+      :hostnames '("hera" "clio")
+      :provider 'omlx)))
 
    (make-llm-setup-model
     :name 'Qwopus3.5-27B-v3
@@ -712,10 +740,7 @@ startPort: 9400
   :group 'llm-setup)
 
 (defcustom llm-setup-llama-swap-always-on-models
-  '(Devstral-Small-2-24B-Instruct-2512
-    gpt-oss-20b
-    gpt-oss-safeguard-20b
-    bge-m3)
+  '(bge-m3)
   "Model instance names that should remain resident in memory.
 These are placed in the always_on group with swap disabled.
 All other models go into a single exclusive group."
