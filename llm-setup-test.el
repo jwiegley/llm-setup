@@ -10,6 +10,7 @@
 (require 'llm-setup)
 
 (declare-function llm-setup-aider-model-name "llm-setup")
+(declare-function llm-setup--instance-eligible-for-host-p "llm-setup")
 
 (ert-deftest llm-setup-test-litellm-provider-model-alias ()
   "Keep the public route distinct from its provider-facing model name."
@@ -116,40 +117,66 @@
       (should (memq name llm-setup-llama-swap-always-on-models)))))
 
 (ert-deftest llm-setup-test-resident-model-host-eligibility ()
-  "Generate resident groups and preload hooks from host-eligible models."
-  (let ((eligible
-         (lambda (hostname)
-           (cl-remove-if-not
-            (lambda (name)
-              (seq-some
-               (lambda (entry)
-                 (let ((model (car entry))
-                       (instance (cdr entry)))
+  "Use the generator's host predicate to select resident candidates."
+  (cl-labels
+      ((resident-candidates
+         (hostname)
+         (let (names)
+           (dolist (entry (llm-setup-instances-list))
+             (let* ((model (car entry))
+                    (instance (cdr entry))
+                    (name (llm-setup-get-instance-name model instance)))
+               (when
                    (and
-                    (eq name
-                        (llm-setup-get-instance-name model instance))
-                    (memq (llm-setup-instance-provider instance)
-                          '(local vibe-proxy))
-                    (member hostname
-                            (llm-setup-instance-hostnames instance)))))
-               (llm-setup-instances-list)))
-            llm-setup-llama-swap-always-on-models))))
-    (let ((hera (funcall eligible "hera"))
-          (clio (funcall eligible "clio"))
-          (hooks
-           "\nhooks:\n  on_startup:\n    preload:\n      - Qwen3.6-27B-Instruct\n      - bge-m3\n"))
-      (should (equal hera '(Qwen3.6-27B-Instruct GLM-5.2 bge-m3)))
-      (should (equal clio '(Qwen3.6-27B-Instruct bge-m3)))
+                    (llm-setup--instance-eligible-for-host-p
+                     instance hostname)
+                    (memq name llm-setup-llama-swap-always-on-models))
+                 (cl-pushnew name names))))
+           (sort
+            names
+            (lambda (left right)
+              (string< (downcase (symbol-name left))
+                       (downcase (symbol-name right))))))))
+    (should
+     (equal (resident-candidates "hera")
+            '(bge-m3 GLM-5.2 Qwen3.6-27B-Instruct)))
+    (should
+     (equal (resident-candidates "clio")
+            '(bge-m3 Qwen3.6-27B-Instruct)))))
+
+(ert-deftest llm-setup-test-llama-swap-policy-rendering ()
+  "Render resident, exclusive, and preload sections from emitted models."
+  (let ((emitted
+         '(bge-m3 GLM-5.2 Huihui-Qwable-3.6-27b-abliterated-MTP
+                  Qwen3.6-27B-Instruct)))
+    (should
+     (equal
+      (llm-setup--generate-llama-swap-groups emitted)
+      "\ngroups:\n  always_on:\n    swap: false\n    exclusive: false\n    members:\n      - bge-m3\n      - GLM-5.2\n      - Qwen3.6-27B-Instruct\n  exclusive_models:\n    swap: true\n    exclusive: false\n    members:\n      - Huihui-Qwable-3.6-27b-abliterated-MTP\n"))
+    (should
+     (equal
+      (llm-setup--generate-llama-swap-hooks emitted)
+      "\nhooks:\n  on_startup:\n    preload:\n      - bge-m3\n      - Qwen3.6-27B-Instruct\n"))))
+
+(ert-deftest llm-setup-test-llama-swap-concurrency-limit ()
+  "Emit a per-model concurrency limit only when one is configured."
+  (let ((model (make-llm-setup-model :name 'test-model :context-length 1))
+        (instance
+         (make-llm-setup-instance
+          :file-path "/tmp/test-model.gguf"
+          :concurrency-limit 32))
+        (llm-setup-llama-server-executable "true"))
+    (with-temp-buffer
+      (llm-setup-insert-instance-llama-swap model instance "hera")
       (should
-       (equal
-        (llm-setup--generate-llama-swap-groups hera)
-        "\ngroups:\n  always_on:\n    swap: false\n    exclusive: false\n    members:\n      - Qwen3.6-27B-Instruct\n      - GLM-5.2\n      - bge-m3\n"))
-      (should
-       (equal
-        (llm-setup--generate-llama-swap-groups clio)
-        "\ngroups:\n  always_on:\n    swap: false\n    exclusive: false\n    members:\n      - Qwen3.6-27B-Instruct\n      - bge-m3\n"))
-      (should (equal (llm-setup--generate-llama-swap-hooks hera) hooks))
-      (should (equal (llm-setup--generate-llama-swap-hooks clio) hooks)))))
+       (string-match-p
+        (regexp-quote
+         "\n    concurrencyLimit: 32\n    checkEndpoint: /health\n")
+        (buffer-string))))
+    (setf (llm-setup-instance-concurrency-limit instance) nil)
+    (with-temp-buffer
+      (llm-setup-insert-instance-llama-swap model instance "hera")
+      (should-not (string-match-p "concurrencyLimit" (buffer-string))))))
 
 (ert-deftest llm-setup-test-default-gptel-model-exists ()
   "Require the shared client default to resolve to one GPTel backend model."

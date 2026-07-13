@@ -194,10 +194,11 @@
     (list
      (make-llm-setup-instance
       :model-path "~/Models/gpustack_bge-m3-GGUF"
-      ;; llama.cpp build 9553 asserts in build_pooling (ggml_can_mul_mat)
-      ;; when --ctx-size (= context-length * parallel = 8192 * N) is too
-      ;; large: 40 crashes on load, 16 loads in ~2s and still matches
-      ;; `make store --concurrency 16'.  Revisit if llama-cpp is bumped.
+      ;; llama.cpp build 9553 asserted in build_pooling (ggml_can_mul_mat)
+      ;; when --ctx-size (= context-length * parallel = 8192 * N) was too
+      ;; large: 40 crashed on load, while 16 loaded in ~2s and still matched
+      ;; `make store --concurrency 16'.  Build 9976 is now installed, but 40
+      ;; has not been revalidated; retain the conservative cap until it is.
       :parallel 16
       :concurrency-limit 32
       :hostnames '("hera" "clio")
@@ -1610,6 +1611,12 @@ llama-swap startup and are resident before the first request arrives."
         "")
        "\n"))))
 
+(defun llm-setup--instance-eligible-for-host-p (instance hostname)
+  "Return non-nil when INSTANCE can be emitted for HOSTNAME."
+  (and
+   (memq (llm-setup-instance-provider instance) '(local vibe-proxy))
+   (member hostname (llm-setup-instance-hostnames instance))))
+
 (defun llm-setup-generate-llama-swap-yaml (hostname)
   "Build llama-swap.yaml configuration for HOSTNAME."
   (with-current-buffer (get-buffer-create "*llama-swap.yaml*")
@@ -1621,10 +1628,7 @@ llama-swap startup and are resident before the first request arrives."
       (dolist (mi (llm-setup-instances-list))
         (cl-destructuring-bind
             (model . instance) mi
-          (when (and (memq
-                      (llm-setup-instance-provider instance)
-                      '(local vibe-proxy))
-                     (member hostname (llm-setup-instance-hostnames instance)))
+          (when (llm-setup--instance-eligible-for-host-p instance hostname)
             (let ((pos (point)))
               (llm-setup-insert-instance-llama-swap model instance
                                                     hostname
