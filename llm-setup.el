@@ -69,10 +69,14 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-default-instance-name 'Qwen3.6-27B-oQ8-mtp
-  "Name of default instance."
+(defcustom llm-setup-default-instance-name 'hera/omlx/Qwen3.6-27B-oQ8-mtp
+  "Fully qualified LiteLLM model identifier used by GPTel and Aider."
   :type 'symbol
   :group 'llm-setup)
+
+(defun llm-setup-aider-model-name ()
+  "Return Aider's OpenAI-compatible name for the configured default model."
+  (format "openai/%s" llm-setup-default-instance-name))
 
 (defcustom llm-setup-valid-hostnames '("hera" "clio" ;; "vulcan"
                                        )

@@ -9,6 +9,8 @@
 (require 'ert)
 (require 'llm-setup)
 
+(declare-function llm-setup-aider-model-name "llm-setup")
+
 (ert-deftest llm-setup-test-litellm-provider-model-alias ()
   "Keep the public route distinct from its provider-facing model name."
   (let ((model (make-llm-setup-model :name 'claude-fable))
@@ -148,6 +150,21 @@
         "\ngroups:\n  always_on:\n    swap: false\n    exclusive: false\n    members:\n      - Qwen3.6-27B-Instruct\n      - bge-m3\n"))
       (should (equal (llm-setup--generate-llama-swap-hooks hera) hooks))
       (should (equal (llm-setup--generate-llama-swap-hooks clio) hooks)))))
+
+(ert-deftest llm-setup-test-default-gptel-model-exists ()
+  "Require the shared client default to resolve to one GPTel backend model."
+  (should
+   (eq llm-setup-default-instance-name
+       'hera/omlx/Qwen3.6-27B-oQ8-mtp))
+  (should
+   (equal (llm-setup-aider-model-name)
+          "openai/hera/omlx/Qwen3.6-27B-oQ8-mtp"))
+  (should
+   (= 1
+      (cl-count
+       llm-setup-default-instance-name
+       (mapcar #'car (llm-setup-gptel-backends))
+       :test #'eq))))
 
 (provide 'llm-setup-test)
 
