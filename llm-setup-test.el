@@ -82,6 +82,18 @@
               "^      model: [^\n]*/claude-fable$"
               yaml))))))))
 
+(ert-deftest llm-setup-test-model-registry-sorted-and-unique ()
+  "Keep model family names sorted case-insensitively and unique."
+  (let ((keys
+         (mapcar
+          (lambda (model)
+            (downcase (symbol-name (llm-setup-model-name model))))
+          llm-setup-models-list)))
+    (should (equal keys (sort (copy-sequence keys) #'string<)))
+    (should
+     (= (length keys)
+        (length (delete-dups (copy-sequence keys)))))))
+
 (provide 'llm-setup-test)
 
 ;;; llm-setup-test.el ends here
