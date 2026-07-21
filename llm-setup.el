@@ -69,7 +69,7 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-default-instance-name 'hera/omlx/Qwen3.6-27B-oQ8-mtp
+(defcustom llm-setup-default-instance-name 'hera/omlx/Qwen3.6-27B-oQ4e-mtp
   "Fully qualified LiteLLM model identifier used by GPTel and Aider."
   :type 'symbol
   :group 'llm-setup)
@@ -614,6 +614,15 @@
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
+    :name 'Qwen3.6-27B-oQ4e-mtp
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'Qwen3.6-27B-oQ4e-mtp
+      :hostnames '("hera" "clio")
+      :provider 'omlx)))
+
+   (make-llm-setup-model
     :name 'Qwen3.6-27B-oQ8-mtp
     :instances
     (list
@@ -745,8 +754,7 @@ startPort: 9400
   :group 'llm-setup)
 
 (defcustom llm-setup-llama-swap-always-on-models
-  '(Qwen3.6-27B-Instruct
-    GLM-5.2
+  '(GLM-5.2
     bge-m3)
   "Model instance names that should remain resident in memory.
 These are placed in the always_on group with swap disabled.
@@ -755,8 +763,7 @@ All other models go into a single exclusive group."
   :group 'llm-setup)
 
 (defcustom llm-setup-llama-swap-preload-models
-  '(Qwen3.6-27B-Instruct
-    bge-m3)
+  '(bge-m3)
   "Model instance names to preload at llama-swap startup.
 Emitted as a `hooks.on_startup.preload' list so these models are
 resident before the first request arrives, which avoids cold-load
@@ -2167,6 +2174,9 @@ when multiple registry entries share a YAML key."
   "Build promptdeploy models.yaml configuration."
   (with-current-buffer (get-buffer-create "*promptdeploy-models.yaml*")
     (erase-buffer)
+    (insert "defaults:\n")
+    (insert "  provider: litellm\n")
+    (insert (format "  model: %s\n\n" llm-setup-default-instance-name))
     (insert "providers:\n")
     (dolist (provider-def llm-setup-promptdeploy-provider-defs)
       (let* ((header (plist-get provider-def :header))

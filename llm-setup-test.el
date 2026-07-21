@@ -101,10 +101,10 @@
   "Require resident and preloaded names to resolve to declared instances."
   (should
    (equal llm-setup-llama-swap-always-on-models
-          '(Qwen3.6-27B-Instruct GLM-5.2 bge-m3)))
+          '(GLM-5.2 bge-m3)))
   (should
    (equal llm-setup-llama-swap-preload-models
-          '(Qwen3.6-27B-Instruct bge-m3)))
+          '(bge-m3)))
   (let ((instance-names
          (mapcar
           (lambda (entry)
@@ -139,24 +139,23 @@
                        (downcase (symbol-name right))))))))
     (should
      (equal (resident-candidates "hera")
-            '(bge-m3 GLM-5.2 Qwen3.6-27B-Instruct)))
+            '(bge-m3 GLM-5.2)))
     (should
      (equal (resident-candidates "clio")
-            '(bge-m3 Qwen3.6-27B-Instruct)))))
+            '(bge-m3)))))
 
 (ert-deftest llm-setup-test-llama-swap-policy-rendering ()
   "Render resident, exclusive, and preload sections from emitted models."
   (let ((emitted
-         '(bge-m3 GLM-5.2 Huihui-Qwable-3.6-27b-abliterated-MTP
-                  Qwen3.6-27B-Instruct)))
+         '(bge-m3 GLM-5.2 Huihui-Qwable-3.6-27b-abliterated-MTP)))
     (should
      (equal
       (llm-setup--generate-llama-swap-groups emitted)
-      "\ngroups:\n  always_on:\n    swap: false\n    exclusive: false\n    members:\n      - bge-m3\n      - GLM-5.2\n      - Qwen3.6-27B-Instruct\n  exclusive_models:\n    swap: true\n    exclusive: false\n    members:\n      - Huihui-Qwable-3.6-27b-abliterated-MTP\n"))
+      "\ngroups:\n  always_on:\n    swap: false\n    exclusive: false\n    members:\n      - bge-m3\n      - GLM-5.2\n  exclusive_models:\n    swap: true\n    exclusive: false\n    members:\n      - Huihui-Qwable-3.6-27b-abliterated-MTP\n"))
     (should
      (equal
       (llm-setup--generate-llama-swap-hooks emitted)
-      "\nhooks:\n  on_startup:\n    preload:\n      - bge-m3\n      - Qwen3.6-27B-Instruct\n"))))
+      "\nhooks:\n  on_startup:\n    preload:\n      - bge-m3\n"))))
 
 (ert-deftest llm-setup-test-llama-swap-concurrency-limit ()
   "Emit a per-model concurrency limit only when one is configured."
@@ -182,10 +181,16 @@
   "Require the shared client default to resolve to one GPTel backend model."
   (should
    (eq llm-setup-default-instance-name
-       'hera/omlx/Qwen3.6-27B-oQ8-mtp))
+       'hera/omlx/Qwen3.6-27B-oQ4e-mtp))
   (should
    (equal (llm-setup-aider-model-name)
-          "openai/hera/omlx/Qwen3.6-27B-oQ8-mtp"))
+          "openai/hera/omlx/Qwen3.6-27B-oQ4e-mtp"))
+  (cl-letf (((symbol-function 'yaml-mode) #'fundamental-mode))
+    (with-current-buffer (llm-setup-generate-promptdeploy-yaml)
+      (should
+       (string-prefix-p
+        "defaults:\n  provider: litellm\n  model: hera/omlx/Qwen3.6-27B-oQ4e-mtp\n\nproviders:\n"
+        (buffer-string)))))
   (should
    (= 1
       (cl-count
