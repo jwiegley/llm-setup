@@ -7,16 +7,20 @@ llama-swap, LiteLLM, and GPTel all in sync when I add or remove a model?
 
 `llm-setup.el` is my answer to that. It's a single Emacs Lisp file that
 maintains a model registry -- a list of `llm-setup-model` and `llm-setup-instance`
-structs -- and generates all downstream configuration from it:
-llama-swap YAML for each host, LiteLLM config for the central proxy, a
-nonsecret model registry for Nix, and GPTel backend definitions for in-editor use.
+structs -- plus explicit model selections, then generates all downstream
+configuration from them: llama-swap YAML for each host, LiteLLM config for the
+central proxy, a nonsecret model registry for Nix, and GPTel backend definitions
+for in-editor use.
 
 ## How it works
 
-The registry in `llm-setup-models-list` is the single source of truth. Each
-model has family-level metadata (name, characteristics, capabilities,
-sampling parameters) and one or more deployment instances (provider,
-engine, hostnames, file paths). Everything else is derived.
+The registry in `llm-setup-models-list` is the source of deployed model facts.
+Each model has family-level metadata (name, characteristics, capabilities,
+sampling parameters) and one or more deployment instances (provider, engine,
+hostnames, file paths). `llm-setup-nix-provider-defs` supplies provider facts
+and exceptional Nix-only static routes such as NVIDIA. The explicit default and
+Claude variables are the source of the exact model selections. Everything else
+is derived.
 
 The infrastructure looks like this:
 
@@ -30,7 +34,7 @@ llm-setup-models-list (Elisp structs)
     │     └─ Unified OpenAI-compatible proxy
     │
     ├─► config/ai/model-registry.json (Nix source)
-    │     └─ Nonsecret model facts and selected default
+    │     └─ Schema-v2 nonsecret model facts and four exact selections
     │
     └─► gptel backends (Emacs)
           └─ In-editor LLM interaction via LiteLLM
