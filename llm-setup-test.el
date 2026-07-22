@@ -101,11 +101,14 @@
   "Generate exact GPTel and LiteLLM routes for OpenRouter models."
   (dolist (case '((Kimi-K3
                    moonshotai/kimi-k3
-                   openrouter/moonshotai/kimi-k3)
+                   openrouter/moonshotai/kimi-k3
+                   1048576)
                   (Qwen3.7-Max
                    qwen/qwen3.7-max
-                   openrouter/qwen/qwen3.7-max)))
-    (pcase-let ((`(,family-name ,instance-name ,route-name) case))
+                   openrouter/qwen/qwen3.7-max
+                   1000000)))
+    (pcase-let
+        ((`(,family-name ,instance-name ,route-name ,context-length) case))
       (let* ((model
               (seq-find
                (lambda (candidate)
@@ -117,6 +120,8 @@
         (should (= 1 (length instances)))
         (should (eq (llm-setup-instance-name instance) instance-name))
         (should (eq (llm-setup-instance-provider instance) 'openrouter))
+        (should (= context-length (llm-setup-model-context-length model)))
+        (should (llm-setup-model-supports-reasoning model))
         (should
          (equal
           (mapcar
@@ -134,6 +139,15 @@
             (should
              (string-match-p
               (regexp-quote (format "\n      model: %s\n" route-name))
+              yaml))
+            (should
+             (string-match-p
+              (regexp-quote
+               "\n      litellm_credential_name: openrouter_credential\n")
+              yaml))
+            (should
+             (string-match-p
+              (regexp-quote "\n      supports_reasoning: true\n")
               yaml))))))))
 
 (ert-deftest llm-setup-test-openrouter-glm-family ()

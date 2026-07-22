@@ -431,6 +431,8 @@
 
    (make-llm-setup-model
     :name 'Kimi-K3
+    :context-length 1048576
+    :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
@@ -593,6 +595,8 @@
 
    (make-llm-setup-model
     :name 'Qwen3.7-Max
+    :context-length 1000000
+    :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
