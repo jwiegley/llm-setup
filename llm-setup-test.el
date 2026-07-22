@@ -169,12 +169,16 @@
             (seq-find
              (lambda (instance)
                (eq (llm-setup-instance-provider instance) 'openrouter))
-             instances)))
+             instances))
+           (route-name 'openrouter/z-ai/glm-5.2))
       (should (= 2 (length instances)))
       (should local)
       (should openrouter)
       (should (= 200000 (llm-setup-model-context-length model)))
       (should (= 1.0 (llm-setup-model-temperature model)))
+      (should
+       (equal (llm-setup-instance-model-path local)
+              "~/Models/unsloth_GLM-5.2-GGUF"))
       (should (= 200000
                  (llm-setup-get-instance-context-length model local)))
       (should (eq (llm-setup-instance-name openrouter) 'z-ai/glm-5.2))
@@ -182,7 +186,25 @@
                  (llm-setup-instance-context-length openrouter)))
       (should (= 1048576
                  (llm-setup-get-instance-context-length
-                  model openrouter))))))
+                  model openrouter)))
+      (should
+       (equal
+        (mapcar
+         #'car
+         (llm-setup-get-instance-gptel-backend model openrouter))
+        (list route-name)))
+      (with-temp-buffer
+        (llm-setup-insert-instance-litellm model openrouter)
+        (let ((yaml (buffer-string)))
+          (should
+           (string-match-p
+            (regexp-quote
+             (format "\n  - model_name: %s\n" route-name))
+            yaml))
+          (should
+           (string-match-p
+            (regexp-quote (format "\n      model: %s\n" route-name))
+            yaml)))))))
 
 (ert-deftest llm-setup-test-resident-model-references ()
   "Require resident and preloaded names to resolve to declared instances."
