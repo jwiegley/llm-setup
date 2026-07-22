@@ -936,11 +936,6 @@ Contains a %s placeholder for dynamically generated router fallbacks."
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-promptdeploy-path "~/src/promptdeploy/models.yaml"
-  "Pathname to promptdeploy models.yaml file."
-  :type 'file
-  :group 'llm-setup)
-
 (defcustom llm-setup-nix-model-registry-path
   "~/src/nix/config/ai/model-registry.json"
   "Path to the generated Nix model registry JSON file."
@@ -1793,7 +1788,7 @@ llama-swap startup and are resident before the first request arrives."
   (shell-command "sudo systemctl --user -M litellm@ restart litellm.service")
   (message "[litellm] Done"))
 
-;;; promptdeploy models.yaml generation
+;;; Nix model registry generation
 
 (defconst llm-setup-nix-provider-defs
   (list
@@ -1802,7 +1797,6 @@ llama-swap startup and are resident before the first request arrives."
     :display-name "Positron"
     :base-url "https://api.anthropic.com"
     :api-key '((env . "ANTHROPIC_API_KEY"))
-    :droid-provider-type "anthropic"
     :match-providers '(positron_anthropic)
     :default-max-output-tokens 32768
     :include-limits nil)
@@ -1811,8 +1805,6 @@ llama-swap startup and are resident before the first request arrives."
     :display-name "Positron"
     :base-url "https://generativelanguage.googleapis.com/v1beta/"
     :api-key '((env . "GEMINI_API_KEY"))
-    :droid-provider-type "generic-chat-completion-api"
-    :droid-no-image-support t
     :match-providers '(positron_gemini)
     :default-max-output-tokens 32000
     :include-limits nil)
@@ -1821,7 +1813,6 @@ llama-swap startup and are resident before the first request arrives."
     :display-name "Positron"
     :base-url "https://api.openai.com/v1"
     :api-key '((env . "OPENAI_API_KEY"))
-    :droid-provider-type "openai"
     :match-providers '(positron_openai)
     :default-max-output-tokens 32000
     :include-limits nil)
@@ -1830,8 +1821,6 @@ llama-swap startup and are resident before the first request arrives."
     :display-name "NVIDIA"
     :base-url "https://integrate.api.nvidia.com/v1"
     :api-key '((env . "NVIDIA_API_KEY"))
-    :droid-provider-type "openai"
-    :opencode-name "NVIDIA"
     :static-models
     (list
      (list
@@ -1843,12 +1832,6 @@ llama-swap startup and are resident before the first request arrives."
     :display-name "LiteLLM"
     :base-url "https://litellm.vulcan.lan/v1/"
     :api-key '((env . "LITELLM_API_KEY"))
-    :droid-provider-type "generic-chat-completion-api"
-    :droid-no-image-support t
-    :droid-extra-args '(("min_p" . 0) ("temperature" . 1) ("top_p" . 1))
-    :droid-extra-headers '(("x-litellm-tags" . "droid"))
-    :opencode-name "LiteLLM"
-    :promptdeploy-except '("opencode-vulcan")
     :match-fn #'llm-setup--model-registry-litellm-match-p
     :key-fn #'llm-setup-get-full-litellm-name
     :default-max-output-tokens 65536
@@ -1860,9 +1843,6 @@ llama-swap startup and are resident before the first request arrives."
     :base-url "https://10.6.0.1/v1/"
     :api-key '((nonSecret . "dummy-api-key"))
     :hosts '("clio")
-    :droid-provider-type "generic-chat-completion-api"
-    :droid-no-image-support t
-    :opencode-name "Llama-Swap (Remote)"
     :match-providers '(local)
     :default-max-output-tokens 128000
     :include-limits nil)
@@ -1871,9 +1851,6 @@ llama-swap startup and are resident before the first request arrives."
     :display-name "oMLX"
     :base-url "http://hera.lan:8000/v1"
     :api-key '((nonSecret . "dummy-key"))
-    :droid-provider-type "generic-chat-completion-api"
-    :droid-no-image-support t
-    :opencode-name "oMLX"
     :match-providers '(omlx)
     :default-max-output-tokens 128000
     :include-limits t
@@ -1884,9 +1861,6 @@ llama-swap startup and are resident before the first request arrives."
     :display-name "Llama.cpp"
     :base-url "http://localhost:8080/v1"
     :api-key '((nonSecret . "not-needed"))
-    :droid-provider-type "generic-chat-completion-api"
-    :droid-no-image-support t
-    :opencode-name "Llama-Swap"
     :match-providers '(local)
     :default-max-output-tokens 128000
     :include-limits t
@@ -1904,10 +1878,7 @@ Each entry is a plist with:
   :default-max-output-tokens - default value, or nil to use model value
   :include-limits - whether to emit context_limit and output_limit
   :default-output-limit - default output_limit value
-  :include-host-filter - whether model host availability is projected.
-
-The promptdeploy-specific fields are temporary compatibility policy for its
-legacy YAML renderer and are never included in the Nix registry projection.")
+  :include-host-filter - whether model host availability is projected.")
 
 (defun llm-setup--model-registry-display-name (name is-omlx)
   "Generate a registry display name from instance NAME symbol.
@@ -2019,8 +1990,8 @@ LiteLLM aggregates all non-embedding and non-reranker models."
 (defconst llm-setup-nix-model-registry-hosts
   '("hera" "clio")
   "Hostnames that correspond to machine-specific deployment targets.
-Instances pinned to a subset of these hosts get an `only:' filter
-naming those hosts.  Instances that run on every host emit no filter.")
+Instances pinned to a subset of these hosts get a `hosts' field
+naming those hosts.  Instances that run on every host omit the field.")
 
 (defun llm-setup--model-registry-limited-hosts (hostnames)
   "Return restricted deployment HOSTNAMES, or nil when unrestricted."
@@ -2030,12 +2001,6 @@ naming those hosts.  Instances that run on every host emit no filter.")
                (not (seq-set-equal-p
                      relevant llm-setup-nix-model-registry-hosts)))
       relevant)))
-
-(defun llm-setup--promptdeploy-host-only-filter (hostnames)
-  "Return YAML `only:' list string for HOSTNAMES, or nil if unrestricted."
-  (when-let* ((limited
-               (llm-setup--model-registry-limited-hosts hostnames)))
-    (format "[%s]" (mapconcat #'identity limited ", "))))
 
 (defun llm-setup--model-registry-key (model instance provider-def)
   "Compute the model ID for MODEL INSTANCE under PROVIDER-DEF."
@@ -2050,70 +2015,6 @@ naming those hosts.  Instances that run on every host emit no filter.")
                   "omlx/"
                 "")
               (symbol-name name)))))
-
-(defun llm-setup--promptdeploy-api-key (provider-def)
-  "Return PROVIDER-DEF's structured credential as legacy YAML text."
-  (pcase (car (car (plist-get provider-def :api-key)))
-    ('env
-     (format "${%s}" (cdr (car (plist-get provider-def :api-key)))))
-    ('nonSecret
-     (cdr (car (plist-get provider-def :api-key))))
-    (kind
-     (error "Unsupported credential reference: %S" kind))))
-
-(defun llm-setup--promptdeploy-provider-header (provider-def)
-  "Render PROVIDER-DEF's structured facts for the legacy YAML generator."
-  (concat
-   (format "  %s:\n" (plist-get provider-def :id))
-   (format "    display_name: %S\n" (plist-get provider-def :display-name))
-   (format "    base_url: %S\n" (plist-get provider-def :base-url))
-   (format
-    "    api_key: %S\n" (llm-setup--promptdeploy-api-key provider-def))
-   (when-let* ((hosts (plist-get provider-def :hosts)))
-     (format "    only: [%s]\n" (mapconcat #'identity hosts ", ")))
-   (when-let* ((provider-type
-                (plist-get provider-def :droid-provider-type)))
-     (concat
-      "    droid:\n"
-      (format "      provider_type: %s\n" provider-type)
-      (when (plist-get provider-def :droid-no-image-support)
-        "      no_image_support: true\n")
-      (when-let* ((extra-args (plist-get provider-def :droid-extra-args)))
-        (concat
-         "      extra_args:\n"
-         (mapconcat
-          (lambda (entry)
-            (format "        %s: %s\n" (car entry) (cdr entry)))
-          extra-args "")))
-      (when-let* ((extra-headers
-                   (plist-get provider-def :droid-extra-headers)))
-        (concat
-         "      extra_headers:\n"
-         (mapconcat
-          (lambda (entry)
-            (format "        %s: %s\n" (car entry) (cdr entry)))
-          extra-headers "")))))
-   (when-let* ((name (plist-get provider-def :opencode-name)))
-     (concat
-      "    opencode:\n"
-      "      npm: \"@ai-sdk/openai-compatible\"\n"
-      (format "      name: %S\n" name)
-      "      timeout: false\n"))
-   (when-let* ((excluded (plist-get provider-def :promptdeploy-except)))
-     (format "    except: [%s]\n" (mapconcat #'identity excluded ", ")))
-   (when-let* ((models (plist-get provider-def :static-models)))
-     (concat
-      "    models:\n"
-      (mapconcat
-       (lambda (model)
-         (concat
-          (format "      %s:\n" (plist-get model :id))
-          (format
-           "        display_name: %S\n" (plist-get model :display-name))
-          (format
-           "        max_output_tokens: %d\n"
-           (plist-get model :max-output-tokens))))
-       models "")))))
 
 (defun llm-setup--model-registry-instance-groups (provider-def)
   "Return PROVIDER-DEF's matching instance groups in declaration order."
@@ -2267,130 +2168,6 @@ file is byte-identical, leave it untouched.  Return the expanded path."
             (delete-file temporary)))))
     destination))
 
-(defun llm-setup-insert-promptdeploy-model
-    (model instance provider-def &optional hostnames)
-  "Insert a promptdeploy model entry for MODEL INSTANCE.
-PROVIDER-DEF is the provider plist from the provider defs.
-HOSTNAMES, when non-nil, overrides the instance's own hostnames for
-host-filter computation; pass the union across deduplicated instances
-when multiple registry entries share a YAML key."
-  (let* ((name (llm-setup-get-instance-name model instance))
-         (key (llm-setup--model-registry-key model instance provider-def))
-         (provider (llm-setup-instance-provider instance))
-         (is-omlx (eq provider 'omlx))
-         (display-name (llm-setup--model-registry-display-name name is-omlx))
-         (default-max (plist-get provider-def :default-max-output-tokens))
-         (max-output
-          (or default-max
-              (llm-setup-get-instance-max-output-tokens model instance)))
-         (include-limits (plist-get provider-def :include-limits))
-         (context-limit
-          (when include-limits
-            (llm-setup-get-instance-context-length model instance)))
-         (output-limit
-          (when include-limits
-            (plist-get provider-def :default-output-limit)))
-         (effective-hostnames
-          (or hostnames (llm-setup-instance-hostnames instance)))
-         (host-filter
-          ;; Apply per-model `only:' filter when either:
-          ;;   - the provider-def opts in via :include-host-filter
-          ;;     (e.g. llama-cpp-local, omlx), or
-          ;;   - the instance is omlx, even when generated under
-          ;;     another provider (e.g. omlx-prefixed entries inside
-          ;;     the litellm aggregator).  This preserves the long-
-          ;;     standing behaviour where omlx models advertise their
-          ;;     host pinning in every YAML context they appear in.
-          (when (or (plist-get provider-def :include-host-filter) is-omlx)
-            (llm-setup--promptdeploy-host-only-filter
-             effective-hostnames))))
-    (insert (format "      %s:\n" key))
-    (insert (format "        display_name: %S\n" display-name))
-    (when max-output
-      (insert (format "        max_output_tokens: %d\n" max-output)))
-    (when context-limit
-      (insert (format "        context_limit: %d\n" context-limit)))
-    (when output-limit
-      (insert (format "        output_limit: %d\n" output-limit)))
-    (when host-filter
-      (insert (format "        only: %s\n" host-filter)))))
-
-(defun llm-setup-generate-promptdeploy-yaml ()
-  "Build promptdeploy models.yaml configuration."
-  (with-current-buffer (get-buffer-create "*promptdeploy-models.yaml*")
-    (erase-buffer)
-    (insert "defaults:\n")
-    (insert "  provider: litellm\n")
-    (insert (format "  model: %s\n\n" llm-setup-default-instance-name))
-    (insert "providers:\n")
-    (dolist (provider-def llm-setup-nix-provider-defs)
-      (let* ((header
-              (llm-setup--promptdeploy-provider-header provider-def))
-             ;; Providers without a filter (no :match-fn and no
-             ;; :match-providers) are dynamic — they discover models at
-             ;; runtime — and should always be emitted, without a
-             ;; `models:' block.
-             (no-filter (not (or (plist-get provider-def :match-fn)
-                                 (plist-get provider-def :match-providers))))
-             ;; Group matching (model . instance) pairs by their YAML key
-             ;; so that a model with multiple registry instances (e.g.
-             ;; one defaulting to hera plus a clio override) emits a
-             ;; single YAML entry whose `only:' filter reflects the
-             ;; union of hostnames.  Without this, two entries with the
-             ;; same key would collide in PyYAML and the later filter
-             ;; would silently exclude the model from the other host.
-             (entries-by-key (make-hash-table :test 'equal))
-             (key-order nil))
-        (dolist (mi (llm-setup-instances-list))
-          (cl-destructuring-bind
-              (model . instance) mi
-            (when (llm-setup--model-registry-instance-match-p
-                   model instance provider-def)
-              (let ((key (llm-setup--model-registry-key
-                          model instance provider-def)))
-                (unless (gethash key entries-by-key)
-                  (push key key-order))
-                (puthash key
-                         (cons (cons model instance)
-                               (gethash key entries-by-key))
-                         entries-by-key)))))
-        (cond
-         (key-order
-          (insert "\n" header)
-          (insert "    models:\n")
-          (dolist (key (nreverse key-order))
-            ;; Entries were pushed in reverse registry order; reverse
-            ;; back so the LAST registry instance for this key wins
-            ;; for limits/display, matching the prior PyYAML
-            ;; "duplicate-key, last wins" behaviour.
-            (let* ((entries (nreverse (gethash key entries-by-key)))
-                   (last-entry (car (last entries)))
-                   (model (car last-entry))
-                   (instance (cdr last-entry))
-                   (hostnames
-                    (delete-dups
-                     (cl-loop for (_m . i) in entries
-                              append (llm-setup-instance-hostnames i)))))
-              (llm-setup-insert-promptdeploy-model
-               model instance provider-def hostnames))))
-         (no-filter
-          (insert "\n" header)))))
-    (yaml-mode)
-    (current-buffer)))
-
-;; (display-buffer (llm-setup-generate-promptdeploy-yaml))
-
-(defun llm-setup-build-promptdeploy-yaml ()
-  "Build promptdeploy models.yaml configuration."
-  (message "[promptdeploy] Generating models.yaml...")
-  (with-temp-buffer
-    (insert
-     (with-current-buffer (llm-setup-generate-promptdeploy-yaml)
-       (buffer-string)))
-    (message "[promptdeploy] Writing to %s..." llm-setup-promptdeploy-path)
-    (write-file (expand-file-name llm-setup-promptdeploy-path)))
-  (message "[promptdeploy] Done"))
-
 (defun llm-setup-reset ()
   "Reset all of the configuration files related to LLMs."
   (interactive)
@@ -2410,9 +2187,9 @@ when multiple registry entries share a YAML key."
   ;; Update LiteLLM to refer to all local and remote models
   (message "[llm-setup-reset] Step 4/6: Building LiteLLM config...")
   (llm-setup-build-litellm-yaml)
-  ;; Update promptdeploy models.yaml
-  (message "[llm-setup-reset] Step 5/6: Building promptdeploy models.yaml...")
-  (llm-setup-build-promptdeploy-yaml)
+  ;; Publish the nonsecret model registry consumed by Nix
+  (message "[llm-setup-reset] Step 5/6: Publishing Nix model registry...")
+  (llm-setup-build-nix-model-registry)
   ;; Update GPTel with instance list, to remain in sync with LiteLLM
   (message "[llm-setup-reset] Step 6/6: Updating GPTel backends...")
   (setq gptel-model llm-setup-default-instance-name
