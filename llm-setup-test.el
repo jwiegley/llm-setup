@@ -12,6 +12,48 @@
 (declare-function llm-setup-aider-model-name "llm-setup")
 (declare-function llm-setup--instance-eligible-for-host-p "llm-setup")
 
+(defun llm-setup-test--nix-model-registry ()
+  "Return the rendered Nix model registry parsed as alists and lists."
+  (json-parse-string
+   (llm-setup-render-nix-model-registry)
+   :object-type 'alist
+   :array-type 'list
+   :null-object nil
+   :false-object :json-false))
+
+(defun llm-setup-test--nix-provider (registry id)
+  "Return the provider with ID from REGISTRY."
+  (seq-find
+   (lambda (provider)
+     (equal (alist-get 'id provider) id))
+   (alist-get 'providers registry)))
+
+(defun llm-setup-test--nix-model (registry provider id)
+  "Return PROVIDER and ID's model from REGISTRY."
+  (seq-find
+   (lambda (model)
+     (and (equal (alist-get 'provider model) provider)
+          (equal (alist-get 'id model) id)))
+   (alist-get 'models registry)))
+
+(defun llm-setup-test--keys-follow-p (object allowed)
+  "Return non-nil when OBJECT's keys are the ordered subset of ALLOWED."
+  (let ((keys (mapcar #'car object)))
+    (equal keys
+           (seq-filter (lambda (key) (memq key keys)) allowed))))
+
+(defun llm-setup-test--assert-hosts (object)
+  "Assert that OBJECT's optional hosts field is valid when present."
+  (when-let* ((hosts-cell (assq 'hosts object)))
+    (let ((hosts (cdr hosts-cell)))
+      (should (consp hosts))
+      (should (seq-every-p #'stringp hosts))
+      (should (seq-every-p (lambda (host) (member host '("hera" "clio")))
+                           hosts))
+      (should
+       (= (length hosts)
+          (length (delete-dups (copy-sequence hosts))))))))
+
 (ert-deftest llm-setup-test-litellm-provider-model-alias ()
   "Keep the public route distinct from its provider-facing model name."
   (let ((model (make-llm-setup-model :name 'claude-fable))
@@ -306,6 +348,299 @@
        llm-setup-default-instance-name
        (mapcar #'car (llm-setup-gptel-backends))
        :test #'eq))))
+
+(ert-deftest llm-setup-test-nix-model-registry-exact-schema ()
+  "Render only the locked top-level, provider, and model fields."
+  (let* ((registry (llm-setup-test--nix-model-registry))
+         (providers (alist-get 'providers registry))
+         (models (alist-get 'models registry)))
+    (should
+     (equal (mapcar #'car registry)
+            '(schemaVersion default providers models)))
+    (should (= 1 (alist-get 'schemaVersion registry)))
+    (should
+     (equal (mapcar #'car (alist-get 'default registry))
+            '(provider model)))
+    (dolist (key '(provider model))
+      (let ((value (alist-get key (alist-get 'default registry))))
+        (should (stringp value))
+        (should-not (string-empty-p value))))
+    (dolist (provider providers)
+      (should
+       (llm-setup-test--keys-follow-p
+        provider '(id displayName baseUrl apiKey hosts)))
+      (should
+       (equal (seq-take (mapcar #'car provider) 4)
+              '(id displayName baseUrl apiKey)))
+      (dolist (key '(id displayName baseUrl))
+        (let ((value (alist-get key provider)))
+          (should (stringp value))
+          (should-not (string-empty-p value))))
+      (let* ((api-key (alist-get 'apiKey provider))
+             (key (caar api-key))
+             (value (cdar api-key)))
+        (should (= 1 (length api-key)))
+        (should (stringp value))
+        (should-not (string-empty-p value))
+        (pcase key
+          ('env
+           (should (string-match-p "\\`[A-Z][A-Z0-9_]*\\'" value)))
+          ('nonSecret
+           (should
+            (member value '("dummy-api-key" "dummy-key" "not-needed"))))
+          (_ (ert-fail (format "Unexpected apiKey shape: %S" api-key)))))
+      (llm-setup-test--assert-hosts provider))
+    (dolist (model models)
+      (should
+       (llm-setup-test--keys-follow-p
+        model
+        '(provider id displayName maxOutputTokens contextLimit outputLimit
+                   hosts)))
+      (should
+       (equal (seq-take (mapcar #'car model) 4)
+              '(provider id displayName maxOutputTokens)))
+      (dolist (key '(provider id displayName))
+        (let ((value (alist-get key model)))
+          (should (stringp value))
+          (should-not (string-empty-p value))))
+      (dolist (key '(maxOutputTokens contextLimit outputLimit))
+        (when-let* ((cell (assq key model)))
+          (should (integerp (cdr cell)))
+          (should (> (cdr cell) 0))))
+      (llm-setup-test--assert-hosts model))))
+
+(ert-deftest llm-setup-test-nix-model-registry-inventory ()
+  "Preserve the authored provider and route inventory."
+  (let* ((registry (llm-setup-test--nix-model-registry))
+         (providers (alist-get 'providers registry))
+         (models (alist-get 'models registry))
+         (expected
+          '(("positron-anthropic" . 4)
+            ("positron-google" . 2)
+            ("positron-openai" . 1)
+            ("nvidia" . 1)
+            ("litellm" . 52)
+            ("llama-cpp-remote" . 24)
+            ("omlx" . 5)
+            ("llama-cpp-local" . 24))))
+    (should (= 8 (length providers)))
+    (should (= 113 (length models)))
+    (should
+     (equal
+      (mapcar
+       (lambda (entry)
+         (cons
+          (car entry)
+          (cl-count (car entry) models
+                    :key (lambda (model) (alist-get 'provider model))
+                    :test #'equal)))
+       expected)
+      expected))
+    (should
+     (llm-setup-test--nix-model
+      registry "litellm" "openrouter/moonshotai/kimi-k3"))
+    (should
+     (llm-setup-test--nix-model
+      registry "litellm" "openrouter/qwen/qwen3.7-max"))))
+
+(ert-deftest llm-setup-test-nix-model-registry-references-resolve ()
+  "Keep provider IDs, routes, and the selected default unambiguous."
+  (let* ((registry (llm-setup-test--nix-model-registry))
+         (providers (alist-get 'providers registry))
+         (models (alist-get 'models registry))
+         (provider-ids (mapcar (lambda (p) (alist-get 'id p)) providers))
+         (routes
+          (mapcar
+           (lambda (model)
+             (cons (alist-get 'provider model) (alist-get 'id model)))
+           models))
+         (default (alist-get 'default registry))
+         (default-route
+          (cons (alist-get 'provider default) (alist-get 'model default))))
+    (should
+     (= (length provider-ids)
+        (length (delete-dups (copy-sequence provider-ids)))))
+    (should
+     (= (length routes)
+        (length (delete-dups (copy-tree routes)))))
+    (dolist (model models)
+      (should (member (alist-get 'provider model) provider-ids)))
+    (should
+     (equal default-route
+            '("litellm" . "hera/omlx/Qwen3.6-27B-oQ4e-mtp")))
+    (should (member default-route routes))))
+
+(ert-deftest llm-setup-test-nix-model-registry-preserves-source-order ()
+  "Keep provider groups and representative route boundaries in source order."
+  (let* ((registry (llm-setup-test--nix-model-registry))
+         (providers (alist-get 'providers registry))
+         (models (alist-get 'models registry)))
+    (should
+     (equal
+      (mapcar (lambda (provider) (alist-get 'id provider)) providers)
+      '("positron-anthropic" "positron-google" "positron-openai"
+        "nvidia" "litellm" "llama-cpp-remote" "omlx"
+        "llama-cpp-local")))
+    (should
+     (equal
+      (mapcar
+       (lambda (index)
+         (let ((model (nth index models)))
+           (cons (alist-get 'provider model) (alist-get 'id model))))
+       '(0 4 6 7 8 59 60 83 84 88 89 112))
+      '(("positron-anthropic" . "claude-fable-5")
+        ("positron-google" . "gemini-3-pro-preview")
+        ("positron-openai" . "gpt-5.5")
+        ("nvidia" . "qwen/qwen3-coder-480b-a35b-instruct")
+        ("litellm" . "hera/Bonsai-8B")
+        ("litellm" . "hera/atorsvn/TinyLlama-1.1B-step-50K-105b-gptq-4bit")
+        ("llama-cpp-remote" . "Bonsai-8B")
+        ("llama-cpp-remote"
+         . "atorsvn/TinyLlama-1.1B-step-50K-105b-gptq-4bit")
+        ("omlx" . "cohere-transcribe-03-2026-mlx-fp16")
+        ("omlx" . "Qwen3.6-35B-A3B-oQ4-mtp")
+        ("llama-cpp-local" . "Bonsai-8B")
+        ("llama-cpp-local"
+         . "atorsvn/TinyLlama-1.1B-step-50K-105b-gptq-4bit"))))
+    (should
+     (equal (llm-setup-render-nix-model-registry)
+            (llm-setup-render-nix-model-registry)))))
+
+(ert-deftest llm-setup-test-nix-model-registry-deduplicates-in-source-order ()
+  "Deduplicate keys, merge hosts, and use the last declaration's limits."
+  (let*
+      ((llm-setup-models-list
+        (list
+         (make-llm-setup-model
+          :name 'first
+          :context-length 100
+          :max-output-tokens 10
+          :instances
+          (list (make-llm-setup-instance :provider 'local)))
+         (make-llm-setup-model
+          :name 'shared-family
+          :context-length 200
+          :max-output-tokens 20
+          :instances
+          (list
+           (make-llm-setup-instance
+            :name 'shared
+            :provider 'local
+            :hostnames '("hera")
+            :context-length 201
+            :max-output-tokens 21)
+           (make-llm-setup-instance
+            :name 'shared
+            :provider 'local
+            :hostnames '("clio")
+            :context-length 202
+            :max-output-tokens 22)))
+         (make-llm-setup-model
+          :name 'last
+          :context-length 300
+          :max-output-tokens 30
+          :instances
+          (list (make-llm-setup-instance :provider 'local)))))
+       (llm-setup-nix-provider-defs
+        (list
+         (list
+          :id "litellm"
+          :display-name "LiteLLM"
+          :base-url "https://example.invalid/v1/"
+          :api-key '((env . "LITELLM_API_KEY"))
+          :match-providers '(local)
+          :include-limits t
+          :default-output-limit 99
+          :include-host-filter t)))
+       (llm-setup-default-instance-name 'shared)
+       (registry (llm-setup-test--nix-model-registry))
+       (models (alist-get 'models registry))
+       (shared
+        (llm-setup-test--nix-model registry "litellm" "shared")))
+    (should
+     (equal
+      (mapcar (lambda (model) (alist-get 'id model)) models)
+      '("first" "shared" "last")))
+    (should (= 22 (alist-get 'maxOutputTokens shared)))
+    (should (= 202 (alist-get 'contextLimit shared)))
+    (should (= 99 (alist-get 'outputLimit shared)))
+    (should-not (assq 'hosts shared))))
+
+(ert-deftest llm-setup-test-nix-model-registry-projects-hosts ()
+  "Project provider and model host restrictions, omitting unrestricted ones."
+  (let* ((registry (llm-setup-test--nix-model-registry))
+         (remote
+          (llm-setup-test--nix-provider registry "llama-cpp-remote"))
+         (litellm-omlx
+          (llm-setup-test--nix-model
+           registry "litellm"
+           "hera/omlx/cohere-transcribe-03-2026-mlx-fp16"))
+         (omlx
+          (llm-setup-test--nix-model
+           registry "omlx" "cohere-transcribe-03-2026-mlx-fp16"))
+         (local-only
+          (llm-setup-test--nix-model
+           registry "llama-cpp-local" "cohere-transcribe-03-2026"))
+         (local-unrestricted
+          (llm-setup-test--nix-model
+           registry "llama-cpp-local" "Bonsai-8B")))
+    (should (equal (alist-get 'hosts remote) '("clio")))
+    (dolist (provider (alist-get 'providers registry))
+      (unless (equal (alist-get 'id provider) "llama-cpp-remote")
+        (should-not (assq 'hosts provider))))
+    (should (equal (alist-get 'hosts litellm-omlx) '("hera")))
+    (should (equal (alist-get 'hosts omlx) '("hera")))
+    (should (equal (alist-get 'hosts local-only) '("hera")))
+    (should-not (assq 'hosts local-unrestricted))))
+
+(ert-deftest llm-setup-test-nix-model-registry-excludes-embedding-and-reranker ()
+  "Exclude embedding and reranker instances while retaining speech routes."
+  (let* ((registry (llm-setup-test--nix-model-registry))
+         (models (alist-get 'models registry))
+         (forbidden
+          '("bge-m3" "bge-reranker-v2-m3" "nomic-embed-text-v2-moe"
+            "Qwen.Qwen3-Reranker-8B" "Qwen3-Embedding-8B")))
+    (dolist (model models)
+      (dolist (fragment forbidden)
+        (should-not
+         (string-match-p
+          (regexp-quote fragment) (alist-get 'id model)))))
+    (should
+     (llm-setup-test--nix-model
+      registry "omlx" "cohere-transcribe-03-2026-mlx-fp16"))
+    (should
+     (llm-setup-test--nix-model
+      registry "llama-cpp-local" "granite-speech-4.1-2b"))))
+
+(ert-deftest llm-setup-test-nix-model-registry-preserves-legacy-yaml ()
+  "Keep legacy promptdeploy YAML byte-identical until Task 4 removes it."
+  (cl-letf (((symbol-function 'yaml-mode) #'fundamental-mode))
+    (with-current-buffer (llm-setup-generate-promptdeploy-yaml)
+      (let ((yaml (buffer-string)))
+        (should (= 20556 (string-bytes yaml)))
+        (should
+         (equal
+          (secure-hash 'sha256 yaml)
+          "4850eb329b7155d580214fe784586e67989462732c6fd9354b6441645552b7f4"))))))
+
+(ert-deftest llm-setup-test-nix-model-registry-deterministic-and-secret-free ()
+  "Render deterministically without credential lookup or file writes."
+  (let ((llm-setup-api-key "TASK1-SENTINEL-SECRET")
+        (llm-setup-litellm-environment-function
+         (lambda () (ert-fail "Credential lookup must not run"))))
+    (cl-letf (((symbol-function 'write-region)
+               (lambda (&rest _) (ert-fail "write-region must not run")))
+              ((symbol-function 'write-file)
+               (lambda (&rest _) (ert-fail "write-file must not run")))
+              ((symbol-function 'rename-file)
+               (lambda (&rest _) (ert-fail "rename-file must not run"))))
+      (let ((first-value (llm-setup-nix-model-registry))
+            (first-json (llm-setup-render-nix-model-registry)))
+        (should (equal first-value (llm-setup-nix-model-registry)))
+        (should (equal first-json (llm-setup-render-nix-model-registry)))
+        (should (string-suffix-p "\n" first-json))
+        (should-not
+         (string-match-p (regexp-quote llm-setup-api-key) first-json))))))
 
 (provide 'llm-setup-test)
 

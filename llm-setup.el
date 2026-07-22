@@ -1789,157 +1789,108 @@ llama-swap startup and are resident before the first request arrives."
 
 ;;; promptdeploy models.yaml generation
 
-(defconst llm-setup-promptdeploy-provider-defs
+(defconst llm-setup-nix-provider-defs
   (list
    (list
-    :key "positron-anthropic"
-    :header
-    (concat
-     "  positron-anthropic:\n"
-     "    display_name: \"Positron\"\n"
-     "    base_url: \"https://api.anthropic.com\"\n"
-     "    api_key: \"${ANTHROPIC_API_KEY}\"\n"
-     "    droid:\n"
-     "      provider_type: anthropic\n")
+    :id "positron-anthropic"
+    :display-name "Positron"
+    :base-url "https://api.anthropic.com"
+    :api-key '((env . "ANTHROPIC_API_KEY"))
+    :droid-provider-type "anthropic"
     :match-providers '(positron_anthropic)
     :default-max-output-tokens 32768
     :include-limits nil)
    (list
-    :key "positron-google"
-    :header
-    (concat
-     "  positron-google:\n"
-     "    display_name: \"Positron\"\n"
-     "    base_url: "
-     "\"https://generativelanguage.googleapis.com/v1beta/\"\n"
-     "    api_key: \"${GEMINI_API_KEY}\"\n"
-     "    droid:\n"
-     "      provider_type: generic-chat-completion-api\n"
-     "      no_image_support: true\n")
+    :id "positron-google"
+    :display-name "Positron"
+    :base-url "https://generativelanguage.googleapis.com/v1beta/"
+    :api-key '((env . "GEMINI_API_KEY"))
+    :droid-provider-type "generic-chat-completion-api"
+    :droid-no-image-support t
     :match-providers '(positron_gemini)
     :default-max-output-tokens 32000
     :include-limits nil)
    (list
-    :key "positron-openai"
-    :header
-    (concat
-     "  positron-openai:\n"
-     "    display_name: \"Positron\"\n"
-     "    base_url: \"https://api.openai.com/v1\"\n"
-     "    api_key: \"${OPENAI_API_KEY}\"\n"
-     "    droid:\n"
-     "      provider_type: openai\n")
+    :id "positron-openai"
+    :display-name "Positron"
+    :base-url "https://api.openai.com/v1"
+    :api-key '((env . "OPENAI_API_KEY"))
+    :droid-provider-type "openai"
     :match-providers '(positron_openai)
     :default-max-output-tokens 32000
     :include-limits nil)
    (list
-    :key "nvidia"
-    :header
-    (concat
-     "  nvidia:\n"
-     "    display_name: \"NVIDIA\"\n"
-     "    base_url: \"https://integrate.api.nvidia.com/v1\"\n"
-     "    api_key: \"${NVIDIA_API_KEY}\"\n"
-     "    droid:\n"
-     "      provider_type: openai\n"
-     "    opencode:\n"
-     "      npm: \"@ai-sdk/openai-compatible\"\n"
-     "      name: \"NVIDIA\"\n"
-     "      timeout: false\n"
-     "    models:\n"
-     "      qwen/qwen3-coder-480b-a35b-instruct:\n"
-     "        display_name: \"Qwen3 Coder 480B A35B Instruct\"\n"
-     "        max_output_tokens: 81920\n"))
+    :id "nvidia"
+    :display-name "NVIDIA"
+    :base-url "https://integrate.api.nvidia.com/v1"
+    :api-key '((env . "NVIDIA_API_KEY"))
+    :droid-provider-type "openai"
+    :opencode-name "NVIDIA"
+    :static-models
+    (list
+     (list
+      :id "qwen/qwen3-coder-480b-a35b-instruct"
+      :display-name "Qwen3 Coder 480B A35B Instruct"
+      :max-output-tokens 81920)))
    (list
-    :key "litellm"
-    :header
-    (concat
-     "  litellm:\n"
-     "    display_name: \"LiteLLM\"\n"
-     "    base_url: \"https://litellm.vulcan.lan/v1/\"\n"
-     "    api_key: \"${LITELLM_API_KEY}\"\n"
-     "    droid:\n"
-     "      provider_type: generic-chat-completion-api\n"
-     "      no_image_support: true\n"
-     "      extra_args:\n"
-     "        min_p: 0\n"
-     "        temperature: 1\n"
-     "        top_p: 1\n"
-     "      extra_headers:\n"
-     "        x-litellm-tags: droid\n"
-     "    opencode:\n"
-     "      npm: \"@ai-sdk/openai-compatible\"\n"
-     "      name: \"LiteLLM\"\n"
-     "      timeout: false\n"
-     "    except: [opencode-vulcan]\n")
-    :match-fn #'llm-setup--promptdeploy-litellm-match-p
+    :id "litellm"
+    :display-name "LiteLLM"
+    :base-url "https://litellm.vulcan.lan/v1/"
+    :api-key '((env . "LITELLM_API_KEY"))
+    :droid-provider-type "generic-chat-completion-api"
+    :droid-no-image-support t
+    :droid-extra-args '(("min_p" . 0) ("temperature" . 1) ("top_p" . 1))
+    :droid-extra-headers '(("x-litellm-tags" . "droid"))
+    :opencode-name "LiteLLM"
+    :promptdeploy-except '("opencode-vulcan")
+    :match-fn #'llm-setup--model-registry-litellm-match-p
     :key-fn #'llm-setup-get-full-litellm-name
     :default-max-output-tokens 65536
     :include-limits t
     :default-output-limit 65536)
    (list
-    :key "llama-cpp-remote"
-    :header
-    (concat
-     "  llama-cpp-remote:\n"
-     "    display_name: \"Llama.cpp (Remote)\"\n"
-     "    base_url: \"https://10.6.0.1/v1/\"\n"
-     "    api_key: \"dummy-api-key\"\n"
-     "    only: [clio]\n"
-     "    droid:\n"
-     "      provider_type: generic-chat-completion-api\n"
-     "      no_image_support: true\n"
-     "    opencode:\n"
-     "      npm: \"@ai-sdk/openai-compatible\"\n"
-     "      name: \"Llama-Swap (Remote)\"\n"
-     "      timeout: false\n")
+    :id "llama-cpp-remote"
+    :display-name "Llama.cpp (Remote)"
+    :base-url "https://10.6.0.1/v1/"
+    :api-key '((nonSecret . "dummy-api-key"))
+    :hosts '("clio")
+    :droid-provider-type "generic-chat-completion-api"
+    :droid-no-image-support t
+    :opencode-name "Llama-Swap (Remote)"
     :match-providers '(local)
     :default-max-output-tokens 128000
     :include-limits nil)
    (list
-    :key "omlx"
-    :header
-    (concat
-     "  omlx:\n"
-     "    display_name: \"oMLX\"\n"
-     "    base_url: \"http://hera.lan:8000/v1\"\n"
-     "    api_key: \"dummy-key\"\n"
-     "    droid:\n"
-     "      provider_type: generic-chat-completion-api\n"
-     "      no_image_support: true\n"
-     "    opencode:\n"
-     "      npm: \"@ai-sdk/openai-compatible\"\n"
-     "      name: \"oMLX\"\n"
-     "      timeout: false\n")
+    :id "omlx"
+    :display-name "oMLX"
+    :base-url "http://hera.lan:8000/v1"
+    :api-key '((nonSecret . "dummy-key"))
+    :droid-provider-type "generic-chat-completion-api"
+    :droid-no-image-support t
+    :opencode-name "oMLX"
     :match-providers '(omlx)
     :default-max-output-tokens 128000
     :include-limits t
     :default-output-limit 65536
     :include-host-filter t)
    (list
-    :key "llama-cpp-local"
-    :header
-    (concat
-     "  llama-cpp-local:\n"
-     "    display_name: \"Llama.cpp\"\n"
-     "    base_url: \"http://localhost:8080/v1\"\n"
-     "    api_key: \"not-needed\"\n"
-     "    droid:\n"
-     "      provider_type: generic-chat-completion-api\n"
-     "      no_image_support: true\n"
-     "    opencode:\n"
-     "      npm: \"@ai-sdk/openai-compatible\"\n"
-     "      name: \"Llama-Swap\"\n"
-     "      timeout: false\n")
+    :id "llama-cpp-local"
+    :display-name "Llama.cpp"
+    :base-url "http://localhost:8080/v1"
+    :api-key '((nonSecret . "not-needed"))
+    :droid-provider-type "generic-chat-completion-api"
+    :droid-no-image-support t
+    :opencode-name "Llama-Swap"
     :match-providers '(local)
     :default-max-output-tokens 128000
     :include-limits t
     :default-output-limit 65536
     :include-host-filter t))
-  "Provider definitions for promptdeploy models.yaml generation.
+  "Nonsecret provider facts and model projection rules for Nix.
 Each entry is a plist with:
-  :key - provider name in YAML
-  :header - static YAML for provider (before models:)
+  :id, :display-name, :base-url, :api-key - serialized provider facts
+  :hosts - optional provider-level host availability
+  :static-models - model facts authored independently of the instance registry
   :match-providers - list of llm-setup provider symbols to match
   :match-fn - predicate (model instance) for complex matching
   :name-prefix - optional prefix for model keys
@@ -1947,13 +1898,13 @@ Each entry is a plist with:
   :default-max-output-tokens - default value, or nil to use model value
   :include-limits - whether to emit context_limit and output_limit
   :default-output-limit - default output_limit value
-  :include-host-filter - when non-nil, emit per-model `only:' filter based
-    on the union of hostnames across all instances sharing the same YAML
-    key.  Use for providers whose models are pinned to specific hosts
-    (e.g. `llama-cpp-local', `omlx').")
+  :include-host-filter - whether model host availability is projected.
 
-(defun llm-setup--promptdeploy-display-name (name is-omlx)
-  "Generate promptdeploy display name from instance NAME symbol.
+The promptdeploy-specific fields are temporary compatibility policy for its
+legacy YAML renderer and are never included in the Nix registry projection.")
+
+(defun llm-setup--model-registry-display-name (name is-omlx)
+  "Generate a registry display name from instance NAME symbol.
 If IS-OMLX is non-nil, append \"(MLX)\" suffix."
   (let* ((s (symbol-name name))
          (is-mlx
@@ -2006,7 +1957,7 @@ If IS-OMLX is non-nil, append \"(MLX)\" suffix."
                     (match-string 3 s)))
            ;; General transformation
            (t
-            (llm-setup--promptdeploy-general-display-name s)))))
+            (llm-setup--model-registry-general-display-name s)))))
     (concat
      result
      (if has-instruct
@@ -2019,7 +1970,7 @@ If IS-OMLX is non-nil, append \"(MLX)\" suffix."
          " (Thinking)"
        ""))))
 
-(defun llm-setup--promptdeploy-general-display-name (s)
+(defun llm-setup--model-registry-general-display-name (s)
   "Convert name S to a general-purpose display name."
   (let* ( ;; Insert space at lowercase-to-digit boundaries
          (s (replace-regexp-in-string "\\([a-z]\\)\\([0-9]\\)" "\\1 \\2" s))
@@ -2041,7 +1992,7 @@ If IS-OMLX is non-nil, append \"(MLX)\" suffix."
                (split-string s)
                " ")))
 
-(defun llm-setup--promptdeploy-instance-match-p (model instance provider-def)
+(defun llm-setup--model-registry-instance-match-p (model instance provider-def)
   "Return non-nil if MODEL INSTANCE matches PROVIDER-DEF."
   (let ((match-fn (plist-get provider-def :match-fn))
         (match-providers (plist-get provider-def :match-providers)))
@@ -2052,33 +2003,36 @@ If IS-OMLX is non-nil, append \"(MLX)\" suffix."
       (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
            (memq (llm-setup-instance-provider instance) match-providers))))))
 
-(defun llm-setup--promptdeploy-litellm-match-p (model instance)
+(defun llm-setup--model-registry-litellm-match-p (model instance)
   "Return non-nil if MODEL INSTANCE should appear under the litellm provider.
-LiteLLM aggregates all text-generation models across every backend."
+LiteLLM aggregates all non-embedding and non-reranker models."
   (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
        (memq (llm-setup-instance-provider instance)
              llm-setup-all-model-providers)))
 
-(defconst llm-setup-promptdeploy-machine-hosts
+(defconst llm-setup-nix-model-registry-hosts
   '("hera" "clio")
   "Hostnames that correspond to machine-specific deployment targets.
 Instances pinned to a subset of these hosts get an `only:' filter
 naming those hosts.  Instances that run on every host emit no filter.")
 
-(defun llm-setup--promptdeploy-host-only-filter (hostnames)
-  "Return YAML `only:' list string for HOSTNAMES, or nil if unrestricted.
-Each hostname is a deployment target name (e.g. \"hera\", \"clio\").
-Returns nil when HOSTNAMES covers every host in
-`llm-setup-promptdeploy-machine-hosts'."
+(defun llm-setup--model-registry-limited-hosts (hostnames)
+  "Return restricted deployment HOSTNAMES, or nil when unrestricted."
   (let ((relevant (seq-intersection
-                   hostnames llm-setup-promptdeploy-machine-hosts)))
+                   hostnames llm-setup-nix-model-registry-hosts)))
     (when (and relevant
                (not (seq-set-equal-p
-                     relevant llm-setup-promptdeploy-machine-hosts)))
-      (format "[%s]" (mapconcat #'identity relevant ", ")))))
+                     relevant llm-setup-nix-model-registry-hosts)))
+      relevant)))
 
-(defun llm-setup--promptdeploy-key (model instance provider-def)
-  "Compute the YAML model key for MODEL INSTANCE under PROVIDER-DEF."
+(defun llm-setup--promptdeploy-host-only-filter (hostnames)
+  "Return YAML `only:' list string for HOSTNAMES, or nil if unrestricted."
+  (when-let* ((limited
+               (llm-setup--model-registry-limited-hosts hostnames)))
+    (format "[%s]" (mapconcat #'identity limited ", "))))
+
+(defun llm-setup--model-registry-key (model instance provider-def)
+  "Compute the model ID for MODEL INSTANCE under PROVIDER-DEF."
   (let ((name (llm-setup-get-instance-name model instance))
         (key-fn (plist-get provider-def :key-fn))
         (prefix (or (plist-get provider-def :name-prefix) "")))
@@ -2091,6 +2045,189 @@ Returns nil when HOSTNAMES covers every host in
                 "")
               (symbol-name name)))))
 
+(defun llm-setup--promptdeploy-api-key (provider-def)
+  "Return PROVIDER-DEF's structured credential as legacy YAML text."
+  (pcase (car (car (plist-get provider-def :api-key)))
+    ('env
+     (format "${%s}" (cdr (car (plist-get provider-def :api-key)))))
+    ('nonSecret
+     (cdr (car (plist-get provider-def :api-key))))
+    (kind
+     (error "Unsupported credential reference: %S" kind))))
+
+(defun llm-setup--promptdeploy-provider-header (provider-def)
+  "Render PROVIDER-DEF's structured facts for the legacy YAML generator."
+  (concat
+   (format "  %s:\n" (plist-get provider-def :id))
+   (format "    display_name: %S\n" (plist-get provider-def :display-name))
+   (format "    base_url: %S\n" (plist-get provider-def :base-url))
+   (format
+    "    api_key: %S\n" (llm-setup--promptdeploy-api-key provider-def))
+   (when-let* ((hosts (plist-get provider-def :hosts)))
+     (format "    only: [%s]\n" (mapconcat #'identity hosts ", ")))
+   (when-let* ((provider-type
+                (plist-get provider-def :droid-provider-type)))
+     (concat
+      "    droid:\n"
+      (format "      provider_type: %s\n" provider-type)
+      (when (plist-get provider-def :droid-no-image-support)
+        "      no_image_support: true\n")
+      (when-let* ((extra-args (plist-get provider-def :droid-extra-args)))
+        (concat
+         "      extra_args:\n"
+         (mapconcat
+          (lambda (entry)
+            (format "        %s: %s\n" (car entry) (cdr entry)))
+          extra-args "")))
+      (when-let* ((extra-headers
+                   (plist-get provider-def :droid-extra-headers)))
+        (concat
+         "      extra_headers:\n"
+         (mapconcat
+          (lambda (entry)
+            (format "        %s: %s\n" (car entry) (cdr entry)))
+          extra-headers "")))))
+   (when-let* ((name (plist-get provider-def :opencode-name)))
+     (concat
+      "    opencode:\n"
+      "      npm: \"@ai-sdk/openai-compatible\"\n"
+      (format "      name: %S\n" name)
+      "      timeout: false\n"))
+   (when-let* ((excluded (plist-get provider-def :promptdeploy-except)))
+     (format "    except: [%s]\n" (mapconcat #'identity excluded ", ")))
+   (when-let* ((models (plist-get provider-def :static-models)))
+     (concat
+      "    models:\n"
+      (mapconcat
+       (lambda (model)
+         (concat
+          (format "      %s:\n" (plist-get model :id))
+          (format
+           "        display_name: %S\n" (plist-get model :display-name))
+          (format
+           "        max_output_tokens: %d\n"
+           (plist-get model :max-output-tokens))))
+       models "")))))
+
+(defun llm-setup--model-registry-instance-groups (provider-def)
+  "Return PROVIDER-DEF's matching instance groups in declaration order."
+  (let ((entries-by-key (make-hash-table :test 'equal))
+        (key-order nil))
+    (dolist (mi (llm-setup-instances-list))
+      (cl-destructuring-bind
+          (model . instance) mi
+        (when (llm-setup--model-registry-instance-match-p
+               model instance provider-def)
+          (let ((key
+                 (llm-setup--model-registry-key
+                  model instance provider-def)))
+            (unless (gethash key entries-by-key)
+              (push key key-order))
+            (puthash key
+                     (cons (cons model instance)
+                           (gethash key entries-by-key))
+                     entries-by-key)))))
+    (mapcar
+     (lambda (key)
+       (nreverse (gethash key entries-by-key)))
+     (nreverse key-order))))
+
+(defun llm-setup--nix-provider-value (provider-def)
+  "Project PROVIDER-DEF into the locked Nix provider schema."
+  (append
+   `((id . ,(plist-get provider-def :id))
+     (displayName . ,(plist-get provider-def :display-name))
+     (baseUrl . ,(plist-get provider-def :base-url))
+     (apiKey . ,(copy-tree (plist-get provider-def :api-key))))
+   (when-let* ((hosts (plist-get provider-def :hosts)))
+     `((hosts . ,(vconcat hosts))))))
+
+(defun llm-setup--nix-static-model-value (provider-def model)
+  "Project static MODEL from PROVIDER-DEF into the locked model schema."
+  (append
+   `((provider . ,(plist-get provider-def :id))
+     (id . ,(plist-get model :id))
+     (displayName . ,(plist-get model :display-name))
+     (maxOutputTokens . ,(plist-get model :max-output-tokens)))
+   (when-let* ((context-limit (plist-get model :context-limit)))
+     `((contextLimit . ,context-limit)))
+   (when-let* ((output-limit (plist-get model :output-limit)))
+     `((outputLimit . ,output-limit)))
+   (when-let* ((hosts (plist-get model :hosts)))
+     `((hosts . ,(vconcat hosts))))))
+
+(defun llm-setup--nix-instance-model-value
+    (provider-def model instance hostnames)
+  "Project MODEL INSTANCE under PROVIDER-DEF with merged HOSTNAMES."
+  (let* ((name (llm-setup-get-instance-name model instance))
+         (is-omlx (eq (llm-setup-instance-provider instance) 'omlx))
+         (include-limits (plist-get provider-def :include-limits))
+         (max-output
+          (or (plist-get provider-def :default-max-output-tokens)
+              (llm-setup-get-instance-max-output-tokens model instance)))
+         (context-limit
+          (when include-limits
+            (llm-setup-get-instance-context-length model instance)))
+         (output-limit
+          (when include-limits
+            (plist-get provider-def :default-output-limit)))
+         (limited-hosts
+          (when (or (plist-get provider-def :include-host-filter) is-omlx)
+            (llm-setup--model-registry-limited-hosts hostnames))))
+    (append
+     `((provider . ,(plist-get provider-def :id))
+       (id . ,(llm-setup--model-registry-key model instance provider-def))
+       (displayName
+        . ,(llm-setup--model-registry-display-name name is-omlx))
+       (maxOutputTokens . ,max-output))
+     (when context-limit
+       `((contextLimit . ,context-limit)))
+     (when output-limit
+       `((outputLimit . ,output-limit)))
+     (when limited-hosts
+       `((hosts . ,(vconcat limited-hosts)))))))
+
+(defun llm-setup--nix-provider-model-values (provider-def)
+  "Return PROVIDER-DEF's model values in declaration order."
+  (append
+   (mapcar
+    (lambda (model)
+      (llm-setup--nix-static-model-value provider-def model))
+    (plist-get provider-def :static-models))
+   (mapcar
+    (lambda (entries)
+      (let* ((last-entry (car (last entries)))
+             (model (car last-entry))
+             (instance (cdr last-entry))
+             (hostnames
+              (delete-dups
+               (cl-loop for (_model . grouped-instance) in entries
+                        append
+                        (llm-setup-instance-hostnames grouped-instance)))))
+        (llm-setup--nix-instance-model-value
+         provider-def model instance hostnames)))
+    (llm-setup--model-registry-instance-groups provider-def))))
+
+(defun llm-setup-nix-model-registry ()
+  "Return the deterministic nonsecret model registry value for Nix."
+  `((schemaVersion . 1)
+    (default
+     . ((provider . "litellm")
+        (model . ,(symbol-name llm-setup-default-instance-name))))
+    (providers
+     . ,(vconcat
+         (mapcar #'llm-setup--nix-provider-value
+                 llm-setup-nix-provider-defs)))
+    (models
+     . ,(vconcat
+         (cl-loop for provider-def in llm-setup-nix-provider-defs
+                  append
+                  (llm-setup--nix-provider-model-values provider-def))))))
+
+(defun llm-setup-render-nix-model-registry ()
+  "Render `llm-setup-nix-model-registry' as canonical JSON plus newline."
+  (concat (json-serialize (llm-setup-nix-model-registry)) "\n"))
+
 (defun llm-setup-insert-promptdeploy-model
     (model instance provider-def &optional hostnames)
   "Insert a promptdeploy model entry for MODEL INSTANCE.
@@ -2099,10 +2236,10 @@ HOSTNAMES, when non-nil, overrides the instance's own hostnames for
 host-filter computation; pass the union across deduplicated instances
 when multiple registry entries share a YAML key."
   (let* ((name (llm-setup-get-instance-name model instance))
-         (key (llm-setup--promptdeploy-key model instance provider-def))
+         (key (llm-setup--model-registry-key model instance provider-def))
          (provider (llm-setup-instance-provider instance))
          (is-omlx (eq provider 'omlx))
-         (display-name (llm-setup--promptdeploy-display-name name is-omlx))
+         (display-name (llm-setup--model-registry-display-name name is-omlx))
          (default-max (plist-get provider-def :default-max-output-tokens))
          (max-output
           (or default-max
@@ -2147,8 +2284,9 @@ when multiple registry entries share a YAML key."
     (insert "  provider: litellm\n")
     (insert (format "  model: %s\n\n" llm-setup-default-instance-name))
     (insert "providers:\n")
-    (dolist (provider-def llm-setup-promptdeploy-provider-defs)
-      (let* ((header (plist-get provider-def :header))
+    (dolist (provider-def llm-setup-nix-provider-defs)
+      (let* ((header
+              (llm-setup--promptdeploy-provider-header provider-def))
              ;; Providers without a filter (no :match-fn and no
              ;; :match-providers) are dynamic — they discover models at
              ;; runtime — and should always be emitted, without a
@@ -2167,9 +2305,9 @@ when multiple registry entries share a YAML key."
         (dolist (mi (llm-setup-instances-list))
           (cl-destructuring-bind
               (model . instance) mi
-            (when (llm-setup--promptdeploy-instance-match-p
+            (when (llm-setup--model-registry-instance-match-p
                    model instance provider-def)
-              (let ((key (llm-setup--promptdeploy-key
+              (let ((key (llm-setup--model-registry-key
                           model instance provider-def)))
                 (unless (gethash key entries-by-key)
                   (push key key-order))
