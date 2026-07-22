@@ -642,6 +642,126 @@
         (should-not
          (string-match-p (regexp-quote llm-setup-api-key) first-json))))))
 
+(ert-deftest llm-setup-test-build-nix-model-registry-idempotent ()
+  "Write deterministic bytes once and leave an identical file untouched."
+  (should
+   (equal
+    llm-setup-nix-model-registry-path
+    "~/src/nix/config/ai/model-registry.json"))
+  (let* ((directory (make-temp-file "llm-setup-registry-" t))
+         (path (expand-file-name "model-registry.json" directory))
+         (unused-default (expand-file-name "unused.json" directory))
+         (llm-setup-nix-model-registry-path unused-default)
+         (first-render (llm-setup-render-nix-model-registry))
+         (second-render (llm-setup-render-nix-model-registry)))
+    (unwind-protect
+        (progn
+          (should
+           (equal
+            llm-setup-nix-model-registry-path
+            unused-default))
+          (should (equal first-render second-render))
+          (llm-setup-build-nix-model-registry path)
+          (should (file-exists-p path))
+          (should-not (file-exists-p unused-default))
+          (set-file-times path (seconds-to-time 1700000000))
+          (let* ((before (file-attributes path 'string))
+                 (before-time (file-attribute-modification-time before))
+                 (before-inode (file-attribute-inode-number before)))
+            (cl-letf (((symbol-function 'make-temp-file)
+                       (lambda (&rest _)
+                         (ert-fail "An identical write must not create a temp file"))))
+              (llm-setup-build-nix-model-registry path))
+            (let ((after (file-attributes path 'string)))
+              (should
+               (equal before-time
+                      (file-attribute-modification-time after)))
+              (should
+               (equal before-inode
+                      (file-attribute-inode-number after)))))
+          (with-temp-buffer
+            (set-buffer-multibyte nil)
+            (insert-file-contents-literally path)
+            (should
+             (equal
+              (buffer-string)
+              (encode-coding-string first-render 'utf-8-unix)))))
+      (delete-directory directory t))))
+
+(ert-deftest llm-setup-test-build-nix-model-registry-atomic-replacement ()
+  "Replace changed content by same-directory rename using UTF-8 Unix bytes."
+  (let* ((directory (make-temp-file "llm-setup-registry-" t))
+         (path (expand-file-name "model-registry.json" directory))
+         (expected (encode-coding-string "{\"name\":\"café\"}\n" 'utf-8-unix))
+         (original-rename (symbol-function 'rename-file))
+         renamed-temp
+         old-inode)
+    (unwind-protect
+        (progn
+          (write-region "old\n" nil path nil 'silent)
+          (setq old-inode
+                (file-attribute-inode-number (file-attributes path 'string)))
+          (cl-letf (((symbol-function 'llm-setup-render-nix-model-registry)
+                     (lambda () "{\"name\":\"café\"}\n"))
+                    ((symbol-function 'rename-file)
+                     (lambda (source destination &optional replace)
+                       (setq renamed-temp source)
+                       (should
+                        (equal (file-name-directory source)
+                               (file-name-directory destination)))
+                       (should (equal destination path))
+                       (should replace)
+                       (with-temp-buffer
+                         (set-buffer-multibyte nil)
+                         (insert-file-contents-literally source)
+                         (should (equal (buffer-string) expected)))
+                       (with-temp-buffer
+                         (insert-file-contents path)
+                         (should (equal (buffer-string) "old\n")))
+                       (funcall original-rename source destination replace))))
+            (llm-setup-build-nix-model-registry path))
+          (should renamed-temp)
+          (should-not (file-exists-p renamed-temp))
+          (should-not
+           (equal
+            old-inode
+            (file-attribute-inode-number (file-attributes path 'string))))
+          (with-temp-buffer
+            (set-buffer-multibyte nil)
+            (insert-file-contents-literally path)
+            (should (equal (buffer-string) expected))
+            (should-not (string-match-p "\r" (buffer-string)))))
+      (delete-directory directory t))))
+
+(ert-deftest llm-setup-test-build-nix-model-registry-cleans-temp-on-error ()
+  "Delete the same-directory temporary file when atomic replacement fails."
+  (let* ((directory (make-temp-file "llm-setup-registry-" t))
+         (path (expand-file-name "model-registry.json" directory))
+         captured-temp)
+    (unwind-protect
+        (progn
+          (write-region "old\n" nil path nil 'silent)
+          (cl-letf (((symbol-function 'llm-setup-render-nix-model-registry)
+                     (lambda () "new\n"))
+                    ((symbol-function 'rename-file)
+                     (lambda (source _destination &optional _replace)
+                       (setq captured-temp source)
+                       (should (file-exists-p source))
+                       (error "Simulated rename failure"))))
+            (should-error
+             (llm-setup-build-nix-model-registry path)
+             :type 'error))
+          (should captured-temp)
+          (should-not (file-exists-p captured-temp))
+          (with-temp-buffer
+            (insert-file-contents path)
+            (should (equal (buffer-string) "old\n")))
+          (should
+           (equal
+            (directory-files directory nil directory-files-no-dot-files-regexp)
+            '("model-registry.json"))))
+      (delete-directory directory t))))
+
 (provide 'llm-setup-test)
 
 ;;; llm-setup-test.el ends here
