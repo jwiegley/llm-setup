@@ -923,6 +923,12 @@ Contains a %s placeholder for dynamically generated router fallbacks."
   :type 'file
   :group 'llm-setup)
 
+(defcustom llm-setup-nix-model-registry-path
+  "~/src/nix/config/ai/model-registry.json"
+  "Path to the generated Nix model registry JSON file."
+  :type 'file
+  :group 'llm-setup)
+
 (defsubst llm-setup-api-base ()
   "Get API base URL."
   (format "%s://%s:%d%s"
@@ -2209,6 +2215,39 @@ naming those hosts.  Instances that run on every host emit no filter.")
 (defun llm-setup-render-nix-model-registry ()
   "Render `llm-setup-nix-model-registry' as canonical JSON plus newline."
   (concat (json-serialize (llm-setup-nix-model-registry)) "\n"))
+
+(defun llm-setup-build-nix-model-registry (&optional path)
+  "Write the Nix model registry atomically to PATH.
+Use `llm-setup-nix-model-registry-path' when PATH is nil.  If the existing
+file is byte-identical, leave it untouched.  Return the expanded path."
+  (let* ((destination
+          (expand-file-name (or path llm-setup-nix-model-registry-path)))
+         (directory (file-name-directory destination))
+         (bytes
+          (encode-coding-string
+           (llm-setup-render-nix-model-registry) 'utf-8-unix))
+         (unchanged
+          (and
+           (file-regular-p destination)
+           (with-temp-buffer
+             (set-buffer-multibyte nil)
+             (insert-file-contents-literally destination)
+             (equal (buffer-string) bytes)))))
+    (unless unchanged
+      (let ((temporary
+             (make-temp-file
+              (expand-file-name
+               (concat "." (file-name-nondirectory destination) ".")
+               directory))))
+        (unwind-protect
+            (progn
+              (let ((coding-system-for-write 'no-conversion))
+                (write-region bytes nil temporary nil 'silent))
+              (set-file-modes temporary (or (file-modes destination) #o644))
+              (rename-file temporary destination t))
+          (when (file-exists-p temporary)
+            (delete-file temporary)))))
+    destination))
 
 (defun llm-setup-insert-promptdeploy-model
     (model instance provider-def &optional hostnames)
