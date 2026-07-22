@@ -74,6 +74,31 @@
   :type 'symbol
   :group 'llm-setup)
 
+(defcustom llm-setup-default-provider "litellm"
+  "Provider ID for the shared default model selection."
+  :type 'string
+  :group 'llm-setup)
+
+(defcustom llm-setup-claude-provider "positron-anthropic"
+  "Provider ID for Claude model selections."
+  :type 'string
+  :group 'llm-setup)
+
+(defcustom llm-setup-claude-default-model-id "claude-fable-5"
+  "Model ID for Claude's default selection."
+  :type 'string
+  :group 'llm-setup)
+
+(defcustom llm-setup-claude-haiku-model-id "claude-sonnet-4-6"
+  "Model ID for Claude's Haiku-class selection."
+  :type 'string
+  :group 'llm-setup)
+
+(defcustom llm-setup-claude-subagent-model-id "claude-fable-5"
+  "Model ID for Claude's subagent selection."
+  :type 'string
+  :group 'llm-setup)
+
 (defun llm-setup-aider-model-name ()
   "Return Aider's OpenAI-compatible name for the configured default model."
   (format "openai/%s" llm-setup-default-instance-name))
@@ -2117,10 +2142,20 @@ naming those hosts.  Instances that run on every host omit the field.")
 
 (defun llm-setup-nix-model-registry ()
   "Return the deterministic nonsecret model registry value for Nix."
-  `((schemaVersion . 1)
-    (default
-     . ((provider . "litellm")
-        (model . ,(symbol-name llm-setup-default-instance-name))))
+  `((schemaVersion . 2)
+    (selections
+     . ((default
+         . ((provider . ,llm-setup-default-provider)
+            (model . ,(symbol-name llm-setup-default-instance-name))))
+        (claudeDefault
+         . ((provider . ,llm-setup-claude-provider)
+            (model . ,llm-setup-claude-default-model-id)))
+        (claudeHaiku
+         . ((provider . ,llm-setup-claude-provider)
+            (model . ,llm-setup-claude-haiku-model-id)))
+        (claudeSubagent
+         . ((provider . ,llm-setup-claude-provider)
+            (model . ,llm-setup-claude-subagent-model-id)))))
     (providers
      . ,(vconcat
          (mapcar #'llm-setup--nix-provider-value

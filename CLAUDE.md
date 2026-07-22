@@ -2,7 +2,7 @@
 
 ## Package Overview
 
-`llm-setup.el` is a single-file LLM model management system for Emacs. It maintains a **model registry** (`llm-setup-models-list`) as the single source of truth and generates runtime plus Nix configurations for a multi-host infrastructure:
+`llm-setup.el` is a single-file LLM model management system for Emacs. It maintains deployed **model facts** in `llm-setup-models-list`, provider and exceptional Nix-only static-model facts in `llm-setup-nix-provider-defs`, and exact default and Claude selections in explicit Custom variables, then generates runtime plus Nix configurations for a multi-host infrastructure:
 
 ```
 llm-setup-models-list (Elisp structs)
@@ -14,7 +14,7 @@ llm-setup-models-list (Elisp structs)
     │     └─ Unified OpenAI-compatible proxy aggregating all local + cloud providers
     │
     ├─► config/ai/model-registry.json (Nix source)
-    │     └─ Nonsecret model facts and selected default
+    │     └─ Schema-v2 nonsecret model facts and four exact selections
     │
     └─► gptel backends (Emacs)
           └─ In-editor LLM interaction via LiteLLM
@@ -27,7 +27,13 @@ llm-setup-models-list (Elisp structs)
 
 ## Development Commands
 
-No build system (no Makefile, Eask, or Cask). No test suite.
+No traditional build system (no Makefile, Eask, or Cask). Nix provides the development environment and repository checks.
+
+**ERT:**
+```bash
+nix develop -c emacs --batch -L . --eval '(setq load-prefer-newer t)' \
+  -l llm-setup-test.el -f ert-run-tests-batch-and-exit
+```
 
 **Byte-compile:**
 ```bash
@@ -61,7 +67,7 @@ Two `cl-defstruct` types form the registry:
 - **`llm-setup-model`** — Family-level: name, description, characteristics (`high`/`medium`/`low`/`remote`/`local`/`thinking`/`instruct`/`coding`/`rewrite`), capabilities (`media`/`tool`/`json`/`url`), kind (`text-generation`/`embedding`/`reranker`), sampling parameters, and a list of instances.
 - **`llm-setup-instance`** — Deployment-level: provider, engine, hostnames, model-path, file-path, draft-model, cache settings, fallbacks. Each instance belongs to exactly one `llm-setup-model`.
 
-The registry lives in `llm-setup-models-list` (a large `defcustom`). All downstream generation iterates this via `llm-setup-instances-list`, which flattens it into `(model . instance)` cons pairs.
+The deployed-model registry lives in `llm-setup-models-list` (a large `defcustom`). Downstream model generation iterates this via `llm-setup-instances-list`, which flattens it into `(model . instance)` cons pairs. The Nix projection combines those instances with `llm-setup-nix-provider-defs`, which owns provider facts and exceptional static routes. It also reads `llm-setup-default-provider`, `llm-setup-default-instance-name`, `llm-setup-claude-provider`, and the three `llm-setup-claude-*-model-id` variables. It emits the ordered `default`, `claudeDefault`, `claudeHaiku`, and `claudeSubagent` selections in schema version 2.
 
 ### Naming System
 

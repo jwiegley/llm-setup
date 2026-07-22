@@ -350,15 +350,18 @@
          (models (alist-get 'models registry)))
     (should
      (equal (mapcar #'car registry)
-            '(schemaVersion default providers models)))
-    (should (= 1 (alist-get 'schemaVersion registry)))
-    (should
-     (equal (mapcar #'car (alist-get 'default registry))
-            '(provider model)))
-    (dolist (key '(provider model))
-      (let ((value (alist-get key (alist-get 'default registry))))
-        (should (stringp value))
-        (should-not (string-empty-p value))))
+            '(schemaVersion selections providers models)))
+    (should (= 2 (alist-get 'schemaVersion registry)))
+    (let ((selections (alist-get 'selections registry)))
+      (should
+       (equal (mapcar #'car selections)
+              '(default claudeDefault claudeHaiku claudeSubagent)))
+      (dolist (selection selections)
+        (should (equal (mapcar #'car (cdr selection)) '(provider model)))
+        (dolist (key '(provider model))
+          (let ((value (alist-get key (cdr selection))))
+            (should (stringp value))
+            (should-not (string-empty-p value))))))
     (dolist (provider providers)
       (should
        (llm-setup-test--keys-follow-p
@@ -438,7 +441,7 @@
       registry "litellm" "openrouter/qwen/qwen3.7-max"))))
 
 (ert-deftest llm-setup-test-nix-model-registry-references-resolve ()
-  "Keep provider IDs, routes, and the selected default unambiguous."
+  "Keep provider IDs, routes, and every selected model unambiguous."
   (let* ((registry (llm-setup-test--nix-model-registry))
          (providers (alist-get 'providers registry))
          (models (alist-get 'models registry))
@@ -448,9 +451,12 @@
            (lambda (model)
              (cons (alist-get 'provider model) (alist-get 'id model)))
            models))
-         (default (alist-get 'default registry))
-         (default-route
-          (cons (alist-get 'provider default) (alist-get 'model default))))
+         (selection-routes
+          (mapcar
+           (lambda (selection)
+             (cons (alist-get 'provider (cdr selection))
+                   (alist-get 'model (cdr selection))))
+           (alist-get 'selections registry))))
     (should
      (= (length provider-ids)
         (length (delete-dups (copy-sequence provider-ids)))))
@@ -460,9 +466,67 @@
     (dolist (model models)
       (should (member (alist-get 'provider model) provider-ids)))
     (should
-     (equal default-route
-            '("litellm" . "hera/omlx/Qwen3.6-27B-oQ4e-mtp")))
-    (should (member default-route routes))))
+     (equal
+      selection-routes
+      '(("litellm" . "hera/omlx/Qwen3.6-27B-oQ4e-mtp")
+        ("positron-anthropic" . "claude-fable-5")
+        ("positron-anthropic" . "claude-sonnet-4-6")
+        ("positron-anthropic" . "claude-fable-5"))))
+    (dolist (selection-route selection-routes)
+      (should (member selection-route routes)))))
+
+(ert-deftest llm-setup-test-nix-model-registry-selection-variables ()
+  "Project every model-selection variable into its exact role."
+  (let ((llm-setup-default-provider "override-default-provider"))
+    (should
+     (equal
+      (alist-get
+       'provider
+       (alist-get
+        'default
+        (alist-get
+         'selections (llm-setup-test--nix-model-registry))))
+      "override-default-provider")))
+  (let ((llm-setup-default-instance-name 'override-default-model))
+    (should
+     (equal
+      (alist-get
+       'model
+       (alist-get
+        'default
+        (alist-get
+         'selections (llm-setup-test--nix-model-registry))))
+      "override-default-model")))
+  (let ((llm-setup-claude-provider "override-claude-provider"))
+    (dolist (role '(claudeDefault claudeHaiku claudeSubagent))
+      (should
+       (equal
+        (alist-get
+         'provider
+         (alist-get
+          role
+          (alist-get
+           'selections (llm-setup-test--nix-model-registry))))
+        "override-claude-provider"))))
+  (dolist
+      (case
+       '((llm-setup-claude-default-model-id claudeDefault
+                                            "override-claude-default")
+         (llm-setup-claude-haiku-model-id claudeHaiku
+                                          "override-claude-haiku")
+         (llm-setup-claude-subagent-model-id claudeSubagent
+                                             "override-claude-subagent")))
+    (pcase-let ((`(,variable ,role ,value) case))
+      (cl-progv (list variable) (list value)
+        (should
+         (equal
+          (alist-get
+           'model
+           (alist-get
+            role
+            (alist-get
+             'selections (llm-setup-test--nix-model-registry))))
+          value))))))
 
 (ert-deftest llm-setup-test-nix-model-registry-preserves-source-order ()
   "Keep provider groups and representative route boundaries in source order."
