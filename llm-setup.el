@@ -327,34 +327,15 @@
       :model-path "~/Models/cstr_cohere-transcribe-03-2026-GGUF")))
 
    (make-llm-setup-model
-    :name 'DeepSeek-R1-0528
-    :context-length 163840
-    :temperature 0.6
-    :supports-reasoning t
+    :name 'deepseek-ai-DeepSeek-V4-Flash-8bit
     :instances
     (list
      (make-llm-setup-instance
-      :name 'deepseek/deepseek-r1-0528:free
-      :provider 'openrouter)))
-
-   (make-llm-setup-model
-    :name 'Devstral-2-123B-Instruct-2512
-    :instances
-    (list
+      :name 'mlx-community/deepseek-ai-DeepSeek-V4-Flash-8bit
+      :engine 'vllm-mlx)
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Devstral-2-123B-Instruct-2512-GGUF")))
-
-   (make-llm-setup-model
-    :name 'Devstral-Small-2-24B-Instruct-2512
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF")
-
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Devstral-Small-2-24B-Instruct-2512-GGUF"
-      :hostnames '("clio")
-      :context-length 140000)))
+      :name 'deepseek-ai-DeepSeek-V4-Flash-8bit
+      :provider 'omlx)))
 
    (make-llm-setup-model
     :name 'gemini-3-pro-preview
@@ -391,7 +372,12 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-5.2-GGUF")))
+      :model-path "~/Models/unsloth_GLM-5.2-GGUF")
+
+     (make-llm-setup-instance
+      :name 'z-ai/glm-5.2
+      :context-length 1048576
+      :provider 'openrouter)))
 
    (make-llm-setup-model
     :name 'gpt-5.5
@@ -444,19 +430,12 @@
       :arguments '("--spec-type" "draft-mtp" "--spec-draft-n-max" "6"))))
 
    (make-llm-setup-model
-    :name 'Kimi-K2.6
+    :name 'Kimi-K3
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Kimi-K2.6-GGUF")))
-
-   (make-llm-setup-model
-    :name 'Leanstral-2603
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/jackcloudman_Leanstral-2603-GGUF")))
+      :name 'moonshotai/kimi-k3
+      :provider 'openrouter)))
 
    (make-llm-setup-model
     :name 'LFM2.5-350M
@@ -466,6 +445,30 @@
      (make-llm-setup-instance
       :model-path "~/Models/LiquidAI_LFM2.5-350M-GGUF"
       :hostnames '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'Llama-2-13B-layer-mix-bpw-2.2-mlx
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'GreenBitAI/Llama-2-13B-layer-mix-bpw-2.2-mlx
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'Llama-2-13B-layer-mix-bpw-2.5-mlx
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'GreenBitAI/Llama-2-13B-layer-mix-bpw-2.5-mlx
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'Llama-2-13B-layer-mix-bpw-3.0-mlx
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'GreenBitAI/Llama-2-13B-layer-mix-bpw-3.0-mlx
+      :engine 'vllm-mlx)))
 
    (make-llm-setup-model
     :name 'llama-3.3-70b
@@ -549,26 +552,6 @@
                    "--ubatch-size" "2048"))))
 
    (make-llm-setup-model
-    :name 'Qwen3-30B-A3B
-    :context-length 40000
-    :temperature 0.2
-    :supports-reasoning nil
-    :instances
-    (list
-     (make-llm-setup-instance
-      :max-output-tokens 32000
-      :model-path "~/Models/unsloth_Qwen3-30B-A3B-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3-Coder-Next
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Qwen3-Coder-Next-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
     :name 'Qwen3-Embedding-8B
     :context-length 32767
     :kind 'embedding
@@ -581,37 +564,6 @@
                    "--pooling" "last"
                    "--batch-size" "8192"
                    "--ubatch-size" "2048"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3.5-397B-A17B
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.5-397B-A17B-unsloth-mlx-4bit
-      :provider 'omlx)))
-
-   (make-llm-setup-model
-    :name 'Qwen3.6-27B
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.6-27B-MLX-8bit
-      :provider 'omlx)
-
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Qwen3.6-27B-GGUF"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0
-      :hostnames '("hera" "clio"))
-
-     (make-llm-setup-instance
-      :name 'Qwen3.6-27B-Instruct
-      :model-path "~/Models/unsloth_Qwen3.6-27B-GGUF"
-      :parallel 4
-      :cache-type-k 'q8_0
-      :arguments '("--no-prefill-assistant"
-                   "--chat-template-kwargs" "'{\"enable_thinking\":false}'")
-      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'Qwen3.6-27B-oQ4e-mtp
@@ -631,42 +583,6 @@
       :provider 'omlx)))
 
    (make-llm-setup-model
-    :name 'Qwen3.6-35B-A3B
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.6-35B-A3B-MLX-8bit
-      :provider 'omlx)
-
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Qwen3.6-35B-A3B-GGUF"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0
-      :hostnames '("hera" "clio"))
-
-     (make-llm-setup-instance
-      :name 'Qwen3.6-35B-A3B-UD-MLX-4bit
-      :provider 'omlx)))
-
-   (make-llm-setup-model
-    :name 'Qwen3.6-35B-A3B-4bit-MTPLX-Optimized-Speed
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.6-35B-A3B-4bit-MTPLX-Optimized-Speed
-      :provider 'omlx)))
-
-   (make-llm-setup-model
-    :name 'Qwen3.6-35B-A3B-MTP
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.6-35B-A3B-MTP
-      :model-path "~/Models/unsloth_Qwen3.6-35B-A3B-MTP-GGUF"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0)))
-
-   (make-llm-setup-model
     :name 'Qwen3.6-35B-A3B-oQ4-mtp
     :instances
     (list
@@ -674,6 +590,14 @@
       :name 'Qwen3.6-35B-A3B-oQ4-mtp
       :hostnames '("hera" "clio")
       :provider 'omlx)))
+
+   (make-llm-setup-model
+    :name 'Qwen3.7-Max
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'qwen/qwen3.7-max
+      :provider 'openrouter)))
 
    (make-llm-setup-model
     :name 'Qwopus3.5-27B-v3
@@ -694,7 +618,30 @@
     (list
      (make-llm-setup-instance
       :model-path "~/Models/noctrex_SERA-32B-GGUF"
-      :hostnames '("hera" "clio")))))
+      :hostnames '("hera" "clio"))))
+
+   (make-llm-setup-model
+    :name 'thesven
+    :instances
+    (list
+     (make-llm-setup-instance
+      :model-path "~/Models/thesven")))
+
+   (make-llm-setup-model
+    :name 'TinyLlama-1.1B-Chat-v0.1-gptq-4bit
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'atorsvn/TinyLlama-1.1B-Chat-v0.1-gptq-4bit
+      :engine 'vllm-mlx)))
+
+   (make-llm-setup-model
+    :name 'TinyLlama-1.1B-step-50K-105b-gptq-4bit
+    :instances
+    (list
+     (make-llm-setup-instance
+      :name 'atorsvn/TinyLlama-1.1B-step-50K-105b-gptq-4bit
+      :engine 'vllm-mlx))))
   "List of configured models."
   :type '(repeat sexp)
   :group 'llm-setup)

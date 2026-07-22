@@ -97,6 +97,79 @@
      (= (length keys)
         (length (delete-dups (copy-sequence keys)))))))
 
+(ert-deftest llm-setup-test-openrouter-routes ()
+  "Generate exact GPTel and LiteLLM routes for OpenRouter models."
+  (dolist (case '((Kimi-K3
+                   moonshotai/kimi-k3
+                   openrouter/moonshotai/kimi-k3)
+                  (Qwen3.7-Max
+                   qwen/qwen3.7-max
+                   openrouter/qwen/qwen3.7-max)))
+    (pcase-let ((`(,family-name ,instance-name ,route-name) case))
+      (let* ((model
+              (seq-find
+               (lambda (candidate)
+                 (eq (llm-setup-model-name candidate) family-name))
+               llm-setup-models-list))
+             (instances (and model (llm-setup-model-instances model)))
+             (instance (car instances)))
+        (should model)
+        (should (= 1 (length instances)))
+        (should (eq (llm-setup-instance-name instance) instance-name))
+        (should (eq (llm-setup-instance-provider instance) 'openrouter))
+        (should
+         (equal
+          (mapcar
+           #'car
+           (llm-setup-get-instance-gptel-backend model instance))
+          (list route-name)))
+        (with-temp-buffer
+          (llm-setup-insert-instance-litellm model instance)
+          (let ((yaml (buffer-string)))
+            (should
+             (string-match-p
+              (regexp-quote
+               (format "\n  - model_name: %s\n" route-name))
+              yaml))
+            (should
+             (string-match-p
+              (regexp-quote (format "\n      model: %s\n" route-name))
+              yaml))))))))
+
+(ert-deftest llm-setup-test-openrouter-glm-family ()
+  "Keep local and OpenRouter GLM-5.2 instances in one family."
+  (let ((models
+         (seq-filter
+          (lambda (model)
+            (eq (llm-setup-model-name model) 'GLM-5.2))
+          llm-setup-models-list)))
+    (should (= 1 (length models)))
+    (let* ((model (car models))
+           (instances (llm-setup-model-instances model))
+           (local
+            (seq-find
+             (lambda (instance)
+               (eq (llm-setup-instance-provider instance) 'local))
+             instances))
+           (openrouter
+            (seq-find
+             (lambda (instance)
+               (eq (llm-setup-instance-provider instance) 'openrouter))
+             instances)))
+      (should (= 2 (length instances)))
+      (should local)
+      (should openrouter)
+      (should (= 200000 (llm-setup-model-context-length model)))
+      (should (= 1.0 (llm-setup-model-temperature model)))
+      (should (= 200000
+                 (llm-setup-get-instance-context-length model local)))
+      (should (eq (llm-setup-instance-name openrouter) 'z-ai/glm-5.2))
+      (should (= 1048576
+                 (llm-setup-instance-context-length openrouter)))
+      (should (= 1048576
+                 (llm-setup-get-instance-context-length
+                  model openrouter))))))
+
 (ert-deftest llm-setup-test-resident-model-references ()
   "Require resident and preloaded names to resolve to declared instances."
   (should
