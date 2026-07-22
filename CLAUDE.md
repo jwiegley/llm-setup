@@ -2,7 +2,7 @@
 
 ## Package Overview
 
-`llm-setup.el` is a single-file LLM model management system for Emacs. It maintains a **model registry** (`llm-setup-models-list`) as the single source of truth and generates deployment configurations for a multi-host infrastructure:
+`llm-setup.el` is a single-file LLM model management system for Emacs. It maintains a **model registry** (`llm-setup-models-list`) as the single source of truth and generates runtime plus Nix configurations for a multi-host infrastructure:
 
 ```
 llm-setup-models-list (Elisp structs)
@@ -12,6 +12,9 @@ llm-setup-models-list (Elisp structs)
     │
     ├─► litellm/config.yaml (global: vulcan)
     │     └─ Unified OpenAI-compatible proxy aggregating all local + cloud providers
+    │
+    ├─► config/ai/model-registry.json (Nix source)
+    │     └─ Nonsecret model facts and selected default
     │
     └─► gptel backends (Emacs)
           └─ In-editor LLM interaction via LiteLLM
@@ -36,7 +39,7 @@ emacs -batch -L . -f batch-byte-compile llm-setup.el
 (llm-setup-check-instances)
 ```
 
-**Full deployment** (validate → rebuild all YAMLs → restart services → update gptel):
+**Full deployment** (validate → rebuild runtime YAMLs → restart services → publish Nix registry → update gptel):
 ```elisp
 (llm-setup-reset)
 ```
@@ -78,13 +81,14 @@ Each model has multiple names used in different contexts (documented in comments
 
 **LiteLLM** (`llm-setup-generate-litellm-yaml`): Generates globally. All instances are included — local instances get one entry per hostname, remote instances get one entry per provider. Credentials come from `llm-setup-litellm-credentials`, API keys from `llm-setup-litellm-environment-function` (calls `lookup-password`). Router fallbacks are dynamically generated from instance `fallbacks` fields.
 
-### `llm-setup-reset` Orchestration (5 steps)
+### `llm-setup-reset` Orchestration (6 steps)
 
 1. `llm-setup-check-instances` — validate registry; abort on any warning
 2. `llm-setup-build-llama-swap-yaml` — write YAML for hera, kill llama-swap locally
 3. `llm-setup-build-llama-swap-yaml "clio"` — write YAML for clio via TRAMP, kill via SSH
 4. `llm-setup-build-litellm-yaml` — write config to vulcan via TRAMP, restart systemd service
-5. Set `gptel-model` and `gptel-backend` via `gptel-backends-make-litellm` (defined externally)
+5. `llm-setup-build-nix-model-registry` — atomically publish the nonsecret JSON registry for Nix
+6. Set `gptel-model` and `gptel-backend` via `gptel-backends-make-litellm` (defined externally)
 
 ## Adding a New Model
 
@@ -92,7 +96,7 @@ Each model has multiple names used in different contexts (documented in comments
 2. Optionally inspect: `M-x llm-setup-show` to view GGUF metadata
 3. Add a `make-llm-setup-model` + `make-llm-setup-instance` entry to `llm-setup-models-list`
 4. **If the model belongs to a llama-swap group** (always_on, large_models, embeddings, rerankings, stt), update `llm-setup-llama-swap-epilog` — it contains hardcoded model names
-5. Run `M-x llm-setup-reset` to validate and deploy
+5. Run `M-x llm-setup-reset` to validate, deploy, and publish the Nix registry
 6. Use `llm-setup-generate-instance-declarations` to scaffold declarations from `~/Models`
 
 ## Critical Constraints
@@ -102,7 +106,7 @@ Each model has multiple names used in different contexts (documented in comments
 
 ### External Dependencies Not Defined Here
 - `lookup-password` — used to fetch API keys from auth-source; defined elsewhere in the Emacs config
-- `gptel-backends-make-litellm` — called in `llm-setup-reset` step 5; defined in gptel configuration
+- `gptel-backends-make-litellm` — called in `llm-setup-reset` step 6; defined in gptel configuration
 - `yaml-mode`, `json-mode` — used for display buffers but never `require`'d
 
 ### TRAMP Patterns

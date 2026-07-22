@@ -7,9 +7,9 @@ llama-swap, LiteLLM, and GPTel all in sync when I add or remove a model?
 
 `llm-setup.el` is my answer to that. It's a single Emacs Lisp file that
 maintains a model registry -- a list of `llm-setup-model` and `llm-setup-instance`
-structs -- and generates all the downstream configuration from it:
-llama-swap YAML for each host, LiteLLM config for the central proxy, and
-GPTel backend definitions for in-editor use.
+structs -- and generates all downstream configuration from it:
+llama-swap YAML for each host, LiteLLM config for the central proxy, a
+nonsecret model registry for Nix, and GPTel backend definitions for in-editor use.
 
 ## How it works
 
@@ -29,13 +29,16 @@ llm-setup-models-list (Elisp structs)
     ├─► litellm/config.yaml (global: vulcan)
     │     └─ Unified OpenAI-compatible proxy
     │
+    ├─► config/ai/model-registry.json (Nix source)
+    │     └─ Nonsecret model facts and selected default
+    │
     └─► gptel backends (Emacs)
           └─ In-editor LLM interaction via LiteLLM
 ```
 
-Running `M-x llm-setup-reset` validates the registry, rebuilds all YAML configs,
-restarts the remote services, and updates GPTel -- six steps, fully
-automated.
+Running `M-x llm-setup-reset` validates the registry, rebuilds the runtime YAML
+configs and restarts the remote services, publishes the nonsecret Nix registry,
+and updates GPTel -- six steps, fully automated.
 
 ## Getting started
 
@@ -54,7 +57,7 @@ package. The typical workflow is:
 
 1. Download a model with `M-x llm-setup-download`
 2. Add a `make-llm-setup-model` / `make-llm-setup-instance` entry to `llm-setup-models-list`
-3. Run `M-x llm-setup-reset` to validate and deploy
+3. Run `M-x llm-setup-reset` to validate, deploy, and publish the Nix registry
 
 ## Development
 

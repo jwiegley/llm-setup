@@ -336,12 +336,6 @@
   (should
    (equal (llm-setup-aider-model-name)
           "openai/hera/omlx/Qwen3.6-27B-oQ4e-mtp"))
-  (cl-letf (((symbol-function 'yaml-mode) #'fundamental-mode))
-    (with-current-buffer (llm-setup-generate-promptdeploy-yaml)
-      (should
-       (string-prefix-p
-        "defaults:\n  provider: litellm\n  model: hera/omlx/Qwen3.6-27B-oQ4e-mtp\n\nproviders:\n"
-        (buffer-string)))))
   (should
    (= 1
       (cl-count
@@ -612,17 +606,6 @@
      (llm-setup-test--nix-model
       registry "llama-cpp-local" "granite-speech-4.1-2b"))))
 
-(ert-deftest llm-setup-test-nix-model-registry-preserves-legacy-yaml ()
-  "Keep legacy promptdeploy YAML byte-identical until Task 4 removes it."
-  (cl-letf (((symbol-function 'yaml-mode) #'fundamental-mode))
-    (with-current-buffer (llm-setup-generate-promptdeploy-yaml)
-      (let ((yaml (buffer-string)))
-        (should (= 20556 (string-bytes yaml)))
-        (should
-         (equal
-          (secure-hash 'sha256 yaml)
-          "4850eb329b7155d580214fe784586e67989462732c6fd9354b6441645552b7f4"))))))
-
 (ert-deftest llm-setup-test-nix-model-registry-deterministic-and-secret-free ()
   "Render deterministically without credential lookup or file writes."
   (let ((llm-setup-api-key "TASK1-SENTINEL-SECRET")
@@ -761,6 +744,26 @@
             (directory-files directory nil directory-files-no-dot-files-regexp)
             '("model-registry.json"))))
       (delete-directory directory t))))
+
+(ert-deftest llm-setup-test-reset-publishes-nix-registry-only ()
+  "Publish the Nix registry exactly once without another file writer."
+  (let ((nix-writes 0))
+    (cl-letf (((symbol-function 'llm-setup-check-instances)
+               (lambda () 0))
+              ((symbol-function 'llm-setup-build-llama-swap-yaml)
+               #'ignore)
+              ((symbol-function 'llm-setup-build-litellm-yaml)
+               #'ignore)
+              ((symbol-function 'llm-setup-build-nix-model-registry)
+               (lambda (&optional _path)
+                 (cl-incf nix-writes)))
+              ((symbol-function 'write-file)
+               (lambda (&rest _)
+                 (ert-fail "Unexpected file writer ran during reset")))
+              ((symbol-function 'gptel-backends-make-litellm)
+               #'ignore))
+      (llm-setup-reset))
+    (should (= 1 nix-writes))))
 
 (provide 'llm-setup-test)
 
