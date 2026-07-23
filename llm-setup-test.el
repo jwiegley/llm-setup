@@ -816,7 +816,7 @@
       (delete-directory directory t))))
 
 (ert-deftest llm-setup-test-reset-publishes-nix-registry-only ()
-  "Publish the Nix registry exactly once without another file writer."
+  "Publish the Nix registry once without calling `write-file' directly."
   (let ((nix-writes 0))
     (cl-letf (((symbol-function 'llm-setup-check-instances)
                (lambda () 0))
