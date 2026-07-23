@@ -706,7 +706,12 @@
          (unused-default (expand-file-name "unused.json" directory))
          (llm-setup-nix-model-registry-path unused-default)
          (first-render (llm-setup-render-nix-model-registry))
-         (second-render (llm-setup-render-nix-model-registry)))
+         (second-render (llm-setup-render-nix-model-registry))
+         (expected
+          (with-temp-buffer
+            (insert first-render)
+            (json-pretty-print-buffer)
+            (buffer-string))))
     (unwind-protect
         (progn
           (should
@@ -738,15 +743,19 @@
             (should
              (equal
               (buffer-string)
-              (encode-coding-string first-render 'utf-8-unix)))))
+              (encode-coding-string expected 'utf-8-unix)))))
       (delete-directory directory t))))
 
 (ert-deftest llm-setup-test-build-nix-model-registry-atomic-replacement ()
   "Replace changed content by same-directory rename using UTF-8 Unix bytes."
   (let* ((directory (make-temp-file "llm-setup-registry-" t))
          (path (expand-file-name "model-registry.json" directory))
-         (expected (encode-coding-string "{\"name\":\"café\"}\n" 'utf-8-unix))
+         (expected
+          (encode-coding-string
+           "{\n  \"name\": \"café\"\n}\n" 'utf-8-unix))
+         (original-pretty (symbol-function 'json-pretty-print-buffer))
          (original-rename (symbol-function 'rename-file))
+         (pretty-calls 0)
          renamed-temp
          old-inode)
     (unwind-protect
@@ -756,6 +765,12 @@
                 (file-attribute-inode-number (file-attributes path 'string)))
           (cl-letf (((symbol-function 'llm-setup-render-nix-model-registry)
                      (lambda () "{\"name\":\"café\"}\n"))
+                    ((symbol-function 'json-pretty-print-buffer)
+                     (lambda ()
+                       (cl-incf pretty-calls)
+                       (should
+                        (equal (buffer-string) "{\"name\":\"café\"}\n"))
+                       (funcall original-pretty)))
                     ((symbol-function 'rename-file)
                      (lambda (source destination &optional replace)
                        (setq renamed-temp source)
@@ -773,6 +788,7 @@
                          (should (equal (buffer-string) "old\n")))
                        (funcall original-rename source destination replace))))
             (llm-setup-build-nix-model-registry path))
+          (should (= 1 pretty-calls))
           (should renamed-temp)
           (should-not (file-exists-p renamed-temp))
           (should-not
@@ -795,7 +811,7 @@
         (progn
           (write-region "old\n" nil path nil 'silent)
           (cl-letf (((symbol-function 'llm-setup-render-nix-model-registry)
-                     (lambda () "new\n"))
+                     (lambda () "{\"new\":true}\n"))
                     ((symbol-function 'rename-file)
                      (lambda (source _destination &optional _replace)
                        (setq captured-temp source)

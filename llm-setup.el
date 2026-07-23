@@ -2178,8 +2178,10 @@ file is byte-identical, leave it untouched.  Return the expanded path."
           (expand-file-name (or path llm-setup-nix-model-registry-path)))
          (directory (file-name-directory destination))
          (bytes
-          (encode-coding-string
-           (llm-setup-render-nix-model-registry) 'utf-8-unix))
+          (with-temp-buffer
+            (insert (llm-setup-render-nix-model-registry))
+            (json-pretty-print-buffer)
+            (encode-coding-string (buffer-string) 'utf-8-unix)))
          (unchanged
           (and
            (file-regular-p destination)
