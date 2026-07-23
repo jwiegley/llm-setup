@@ -411,6 +411,24 @@
     (list (make-llm-setup-instance :provider 'positron_openai)))
 
    (make-llm-setup-model
+    :name 'gpt-5.6-luna
+    :description "ChatGPT 5.6 Luna (Positron)"
+    :instances
+    (list (make-llm-setup-instance :provider 'positron_openai)))
+
+   (make-llm-setup-model
+    :name 'gpt-5.6-sol
+    :description "ChatGPT 5.6 Sol (Positron)"
+    :instances
+    (list (make-llm-setup-instance :provider 'positron_openai)))
+
+   (make-llm-setup-model
+    :name 'gpt-5.6-terra
+    :description "ChatGPT 5.6 Terra (Positron)"
+    :instances
+    (list (make-llm-setup-instance :provider 'positron_openai)))
+
+   (make-llm-setup-model
     :name 'gpt-oss-120b
     :context-length 131072
     :supports-reasoning t
