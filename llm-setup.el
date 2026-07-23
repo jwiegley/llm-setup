@@ -934,13 +934,20 @@ litellm_settings:
   streaming_request_timeout: 300
   ssl_verify: false
   drop_params: true
-  # set_verbose: True
-  cache: True
+  # set_verbose: true
+  cache: true
   cache_params:
     type: redis
+    mode: default_off
+    namespace: \"agent-response-cache:v1\"
+    ttl: 300
     host: \"10.0.2.2\"
     port: 8085
-    supported_call_types: [\"acompletion\", \"atext_completion\", \"aembedding\", \"atranscription\"]
+    supported_call_types:
+      - completion
+      - atext_completion
+      - aembedding
+      - atranscription
 
 guardrails:
   - guardrail_name: \"harmony_filter\"
