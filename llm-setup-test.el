@@ -414,14 +414,14 @@
          (expected
           '(("positron-anthropic" . 4)
             ("positron-google" . 2)
-            ("positron-openai" . 1)
+            ("positron-openai" . 4)
             ("nvidia" . 1)
-            ("litellm" . 52)
+            ("litellm" . 55)
             ("llama-cpp-remote" . 24)
             ("omlx" . 5)
             ("llama-cpp-local" . 24))))
     (should (= 8 (length providers)))
-    (should (= 113 (length models)))
+    (should (= 119 (length models)))
     (should
      (equal
       (mapcar
@@ -438,7 +438,13 @@
       registry "litellm" "openrouter/moonshotai/kimi-k3"))
     (should
      (llm-setup-test--nix-model
-      registry "litellm" "openrouter/qwen/qwen3.7-max"))))
+      registry "litellm" "openrouter/qwen/qwen3.7-max"))
+    (dolist (id '("gpt-5.6-luna" "gpt-5.6-sol" "gpt-5.6-terra"))
+      (should
+       (llm-setup-test--nix-model registry "positron-openai" id))
+      (should
+       (llm-setup-test--nix-model
+        registry "litellm" (concat "positron_openai/" id))))))
 
 (ert-deftest llm-setup-test-nix-model-registry-references-resolve ()
   "Keep provider IDs, routes, and every selected model unambiguous."
@@ -545,7 +551,7 @@
        (lambda (index)
          (let ((model (nth index models)))
            (cons (alist-get 'provider model) (alist-get 'id model))))
-       '(0 4 6 7 8 59 60 83 84 88 89 112))
+       '(0 4 6 10 11 65 66 89 90 94 95 118))
       '(("positron-anthropic" . "claude-fable-5")
         ("positron-google" . "gemini-3-pro-preview")
         ("positron-openai" . "gpt-5.5")
