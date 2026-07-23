@@ -185,7 +185,8 @@
   model-name ; provider-facing model name override
   context-length ; context length to use for instance
   max-input-tokens ; number of tokens to accept
-  max-output-tokens ; number of tokens to predict
+  max-output-tokens ; number of tokens the model can predict
+  output-limit ; deployment-specific output ceiling
   cache-control ; supports auto-caching?
   (provider 'local) ; where does the model run?
   (parallel 1) ; how many parallel connections to support
@@ -419,8 +420,14 @@
    (make-llm-setup-model
     :name 'gpt-5.6-sol
     :description "ChatGPT 5.6 Sol (Positron)"
+    :context-length 1050000
+    :max-output-tokens 128000
     :instances
-    (list (make-llm-setup-instance :provider 'positron_openai)))
+    (list
+     (make-llm-setup-instance
+      :provider 'positron_openai
+      :max-output-tokens 128000
+      :output-limit 128000)))
 
    (make-llm-setup-model
     :name 'gpt-5.6-terra
@@ -2094,15 +2101,19 @@ naming those hosts.  Instances that run on every host omit the field.")
   (let* ((name (llm-setup-get-instance-name model instance))
          (is-omlx (eq (llm-setup-instance-provider instance) 'omlx))
          (include-limits (plist-get provider-def :include-limits))
+         (instance-max-output
+          (llm-setup-instance-max-output-tokens instance))
          (max-output
-          (or (plist-get provider-def :default-max-output-tokens)
-              (llm-setup-get-instance-max-output-tokens model instance)))
+          (or instance-max-output
+              (plist-get provider-def :default-max-output-tokens)
+              (llm-setup-model-max-output-tokens model)))
          (context-limit
           (when include-limits
             (llm-setup-get-instance-context-length model instance)))
          (output-limit
           (when include-limits
-            (plist-get provider-def :default-output-limit)))
+            (or (llm-setup-instance-output-limit instance)
+                (plist-get provider-def :default-output-limit))))
          (limited-hosts
           (when (or (plist-get provider-def :include-host-filter) is-omlx)
             (llm-setup--model-registry-limited-hosts hostnames))))

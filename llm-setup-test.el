@@ -446,6 +446,16 @@
        (llm-setup-test--nix-model
         registry "litellm" (concat "positron_openai/" id))))))
 
+(ert-deftest llm-setup-test-nix-model-registry-gpt-5.6-sol-limits ()
+  "Preserve GPT-5.6 Sol's long context and output limits through LiteLLM."
+  (let ((model
+         (llm-setup-test--nix-model
+          (llm-setup-test--nix-model-registry)
+          "litellm" "positron_openai/gpt-5.6-sol")))
+    (should (= 1050000 (alist-get 'contextLimit model)))
+    (should (= 128000 (alist-get 'maxOutputTokens model)))
+    (should (= 128000 (alist-get 'outputLimit model)))))
+
 (ert-deftest llm-setup-test-nix-model-registry-references-resolve ()
   "Keep provider IDs, routes, and every selected model unambiguous."
   (let* ((registry (llm-setup-test--nix-model-registry))
@@ -483,7 +493,7 @@
 
 (ert-deftest llm-setup-test-nix-model-registry-selection-variables ()
   "Project every model-selection variable into its exact role."
-  (let ((llm-setup-default-provider "override-default-provider"))
+  (cl-progv '(llm-setup-default-provider) '("override-default-provider")
     (should
      (equal
       (alist-get
