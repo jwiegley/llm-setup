@@ -84,7 +84,7 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-claude-default-model-id "claude-fable-5"
+(defcustom llm-setup-claude-default-model-id "claude-opus-4-8[1m]"
   "Model ID for Claude's default selection."
   :type 'string
   :group 'llm-setup)
@@ -94,7 +94,7 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-claude-subagent-model-id "claude-fable-5"
+(defcustom llm-setup-claude-subagent-model-id "claude-opus-4-8"
   "Model ID for Claude's subagent selection."
   :type 'string
   :group 'llm-setup)
@@ -313,6 +313,14 @@
 
      (make-llm-setup-instance
       :name 'claude-opus-4-7
+      :provider 'positron_anthropic)
+
+     (make-llm-setup-instance
+      :name (intern "claude-opus-4-8[1m]")
+      :provider 'positron_anthropic)
+
+     (make-llm-setup-instance
+      :name 'claude-opus-4-8
       :provider 'positron_anthropic)
 
      (make-llm-setup-instance

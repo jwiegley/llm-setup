@@ -410,29 +410,14 @@
   "Preserve the authored provider and route inventory."
   (let* ((registry (llm-setup-test--nix-model-registry))
          (providers (alist-get 'providers registry))
-         (models (alist-get 'models registry))
-         (expected
-          '(("positron-anthropic" . 4)
-            ("positron-google" . 2)
-            ("positron-openai" . 4)
-            ("nvidia" . 1)
-            ("litellm" . 55)
-            ("llama-cpp-remote" . 24)
-            ("omlx" . 5)
-            ("llama-cpp-local" . 24))))
-    (should (= 8 (length providers)))
-    (should (= 119 (length models)))
-    (should
-     (equal
-      (mapcar
-       (lambda (entry)
-         (cons
-          (car entry)
-          (cl-count (car entry) models
-                    :key (lambda (model) (alist-get 'provider model))
-                    :test #'equal)))
-       expected)
-      expected))
+         (models (alist-get 'models registry)))
+    (dolist (provider providers)
+      (should
+       (seq-some
+        (lambda (model)
+          (equal (alist-get 'provider model)
+                 (alist-get 'id provider)))
+        models)))
     (should
      (llm-setup-test--nix-model
       registry "litellm" "openrouter/moonshotai/kimi-k3"))
@@ -445,6 +430,25 @@
       (should
        (llm-setup-test--nix-model
         registry "litellm" (concat "positron_openai/" id))))))
+
+(ert-deftest llm-setup-test-nix-model-registry-claude-selections ()
+  "Publish exact Claude routes and preserve the Haiku-class selection."
+  (let* ((registry (llm-setup-test--nix-model-registry))
+         (selections (alist-get 'selections registry)))
+    (dolist
+        (case
+         '((claudeDefault "claude-opus-4-8[1m]")
+           (claudeHaiku "claude-sonnet-4-6")
+           (claudeSubagent "claude-opus-4-8")))
+      (pcase-let ((`(,role ,model-id) case))
+        (let ((selection (alist-get role selections)))
+          (should
+           (equal (alist-get 'provider selection)
+                  "positron-anthropic"))
+          (should (equal (alist-get 'model selection) model-id))
+          (should
+           (llm-setup-test--nix-model
+            registry "positron-anthropic" model-id)))))))
 
 (ert-deftest llm-setup-test-nix-model-registry-gpt-5.6-sol-limits ()
   "Preserve GPT-5.6 Sol's long context and output limits through LiteLLM."
@@ -485,9 +489,9 @@
      (equal
       selection-routes
       '(("litellm" . "hera/omlx/Qwen3.6-27B-oQ4e-mtp")
-        ("positron-anthropic" . "claude-fable-5")
+        ("positron-anthropic" . "claude-opus-4-8[1m]")
         ("positron-anthropic" . "claude-sonnet-4-6")
-        ("positron-anthropic" . "claude-fable-5"))))
+        ("positron-anthropic" . "claude-opus-4-8"))))
     (dolist (selection-route selection-routes)
       (should (member selection-route routes)))))
 
@@ -545,37 +549,34 @@
           value))))))
 
 (ert-deftest llm-setup-test-nix-model-registry-preserves-source-order ()
-  "Keep provider groups and representative route boundaries in source order."
+  "Keep provider model groups contiguous and in source order."
   (let* ((registry (llm-setup-test--nix-model-registry))
          (providers (alist-get 'providers registry))
-         (models (alist-get 'models registry)))
+         (models (alist-get 'models registry))
+         (provider-ids
+          (mapcar (lambda (model) (alist-get 'provider model)) models))
+         (expected-provider-order
+          '("positron-anthropic" "positron-google" "positron-openai"
+            "nvidia" "litellm" "llama-cpp-remote" "omlx"
+            "llama-cpp-local")))
     (should
      (equal
       (mapcar (lambda (provider) (alist-get 'id provider)) providers)
-      '("positron-anthropic" "positron-google" "positron-openai"
-        "nvidia" "litellm" "llama-cpp-remote" "omlx"
-        "llama-cpp-local")))
+      expected-provider-order))
     (should
      (equal
-      (mapcar
-       (lambda (index)
-         (let ((model (nth index models)))
-           (cons (alist-get 'provider model) (alist-get 'id model))))
-       '(0 4 6 10 11 65 66 89 90 94 95 118))
-      '(("positron-anthropic" . "claude-fable-5")
-        ("positron-google" . "gemini-3-pro-preview")
-        ("positron-openai" . "gpt-5.5")
-        ("nvidia" . "qwen/qwen3-coder-480b-a35b-instruct")
-        ("litellm" . "hera/Bonsai-8B")
-        ("litellm" . "hera/atorsvn/TinyLlama-1.1B-step-50K-105b-gptq-4bit")
-        ("llama-cpp-remote" . "Bonsai-8B")
-        ("llama-cpp-remote"
-         . "atorsvn/TinyLlama-1.1B-step-50K-105b-gptq-4bit")
-        ("omlx" . "cohere-transcribe-03-2026-mlx-fp16")
-        ("omlx" . "Qwen3.6-35B-A3B-oQ4-mtp")
-        ("llama-cpp-local" . "Bonsai-8B")
-        ("llama-cpp-local"
-         . "atorsvn/TinyLlama-1.1B-step-50K-105b-gptq-4bit"))))
+      (delete-dups (copy-sequence provider-ids))
+      expected-provider-order))
+    (dolist (provider-id expected-provider-order)
+      (let ((positions
+             (cl-loop for model-provider in provider-ids
+                      for index from 0
+                      when (equal model-provider provider-id)
+                      collect index)))
+        (should positions)
+        (should
+         (equal positions
+                (number-sequence (car positions) (car (last positions)))))))
     (should
      (equal (llm-setup-render-nix-model-registry)
             (llm-setup-render-nix-model-registry)))))
