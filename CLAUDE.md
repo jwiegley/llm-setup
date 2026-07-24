@@ -40,7 +40,7 @@ nix develop -c emacs --batch -L . --eval '(setq load-prefer-newer t)' \
 emacs -batch -L . -f batch-byte-compile llm-setup.el
 ```
 
-**Validate configuration** (checks installed models match registry, validates all fields):
+**Validate configuration** (checks installed GGUF models plus enum, hostname, and path fields):
 ```elisp
 (llm-setup-check-instances)
 ```
@@ -64,26 +64,26 @@ The deployed path (`~/.emacs.d/lisp/llm-setup`) is the same physical directory a
 
 Two `cl-defstruct` types form the registry:
 
-- **`llm-setup-model`** — Family-level: name, description, characteristics (`high`/`medium`/`low`/`remote`/`local`/`thinking`/`instruct`/`coding`/`rewrite`), capabilities (`media`/`tool`/`json`/`url`), kind (`text-generation`/`embedding`/`reranker`), sampling parameters, and a list of instances.
+- **`llm-setup-model`** — Family-level: name, description, characteristics (`high`/`medium`/`low`/`remote`/`local`/`thinking`/`instruct`/`coding`/`rewrite`), capabilities (`media`/`tool`/`json`/`url`), kind (`text-generation`/`embedding`/`reranker`/`audio-transcription`/`audio-speech`), sampling parameters, and a list of instances.
 - **`llm-setup-instance`** — Deployment-level: provider, engine, hostnames, model-path, file-path, draft-model, cache settings, fallbacks. Each instance belongs to exactly one `llm-setup-model`.
 
 The deployed-model registry lives in `llm-setup-models-list` (a large `defcustom`). Downstream model generation iterates this via `llm-setup-instances-list`, which flattens it into `(model . instance)` cons pairs. The Nix projection combines those instances with `llm-setup-nix-provider-defs`, which owns provider facts and exceptional static routes. It also reads `llm-setup-default-provider`, `llm-setup-default-instance-name`, `llm-setup-claude-provider`, and the three `llm-setup-claude-*-model-id` variables. It emits the ordered `default`, `claudeDefault`, `claudeHaiku`, and `claudeSubagent` selections in schema version 2.
 
 ### Naming System
 
-Each model has multiple names used in different contexts (documented in comments at line ~380):
+Each model has multiple names used in different contexts:
 
 | Accessor | Returns | Used For |
 |---|---|---|
 | `llm-setup-model-name` | Symbol like `Qwen3.5-27B` | Internal registry key |
 | `llm-setup-instance-name` | Symbol like `mlx-community/Qwen3.5-27B-4bit`, or nil → falls back to model name | llama-swap model key, LiteLLM model name |
-| `llm-setup-instance-model-name` | Override for provider-facing name (e.g. Claude vibe-proxy) | Rarely used; currently bound but unused in LiteLLM generation |
-| `llm-setup-get-full-litellm-name` | `"host/name"` or `"provider/name"` | LiteLLM entries, fallback resolution |
+| `llm-setup-instance-model-name` | Override for provider-facing name (e.g. Claude vibe-proxy) | LiteLLM's provider-facing `model` value |
+| `llm-setup-get-full-litellm-name` | `"host/name"`, `"host/omlx/name"`, or `"provider/name"` | LiteLLM entries, fallback resolution |
 | `llm-setup-short-model-name` | Strips org prefix and GGUF suffix from directory name | Matching installed models to registry |
 
 ### YAML Generation Pipeline
 
-**llama-swap** (`llm-setup-generate-llama-swap-yaml`): Generates per-host. Iterates all instances, filters by hostname membership, emits engine-specific CLI commands with `${PORT}` placeholder. The prolog/epilog (`llm-setup-llama-swap-prolog`/`llm-setup-llama-swap-epilog`) wrap the generated model entries.
+**llama-swap** (`llm-setup-generate-llama-swap-yaml`): Generates per-host. Iterates all instances, filters by hostname membership, and emits engine-specific CLI commands with `${PORT}` placeholders. `llm-setup-llama-swap-prolog` precedes the model entries; groups and preload hooks are generated from the emitted models and resident-model settings.
 
 **LiteLLM** (`llm-setup-generate-litellm-yaml`): Generates globally. All instances are included — local instances get one entry per hostname, remote instances get one entry per provider. Credentials come from `llm-setup-litellm-credentials`, API keys from `llm-setup-litellm-environment-function` (calls `lookup-password`). Router fallbacks are dynamically generated from instance `fallbacks` fields.
 
@@ -101,14 +101,9 @@ Each model has multiple names used in different contexts (documented in comments
 1. Download: `M-x llm-setup-download` (or `llm-setup-checkout` for git-lfs)
 2. Optionally inspect: `M-x llm-setup-show` to view GGUF metadata
 3. Add a `make-llm-setup-model` + `make-llm-setup-instance` entry to `llm-setup-models-list`
-4. **If the model belongs to a llama-swap group** (always_on, large_models, embeddings, rerankings, stt), update `llm-setup-llama-swap-epilog` — it contains hardcoded model names
-5. Run `M-x llm-setup-reset` to validate, deploy, and publish the Nix registry
-6. Use `llm-setup-generate-instance-declarations` to scaffold declarations from `~/Models`
+4. Run `M-x llm-setup-reset` to validate, deploy, and publish the Nix registry
 
 ## Critical Constraints
-
-### Manual Synchronization Required
-`llm-setup-llama-swap-epilog` contains hardcoded model names in its `groups:` section. When models are added/removed from `llm-setup-models-list`, the epilog must be updated separately or llama-swap grouping will be wrong.
 
 ### External Dependencies Not Defined Here
 - `lookup-password` — used to fetch API keys from auth-source; defined elsewhere in the Emacs config
@@ -119,7 +114,7 @@ Each model has multiple names used in different contexts (documented in comments
 Remote operations use `/ssh:hostname:` prefix for file paths (constructed by `llm-setup-remote-path`). LiteLLM config uses multi-hop: `/ssh:vulcan|sudo:root@vulcan:`. Remote `executable-find` works by temporarily setting `default-directory` to the remote host.
 
 ### Allowed Enum Values
-All valid values for provider, engine, kind, characteristics, and capabilities are defined as `defconst` lists (`llm-setup-all-model-providers`, `llm-setup-all-model-engines`, etc.) near line 351. `llm-setup-check-instances` validates against these.
+All valid values for provider, engine, kind, characteristics, and capabilities are defined as `defconst` lists (`llm-setup-all-model-providers`, `llm-setup-all-model-engines`, etc.). `llm-setup-check-instances` validates against these.
 
 ### Provider-to-LiteLLM Mapping
 In `llm-setup-insert-instance-litellm`, provider symbols map to LiteLLM provider strings: `local` → `"openai"`, `positron` → `"openai"`, `positron_anthropic` → `"anthropic"`, etc. Each provider also maps to a credential name.
