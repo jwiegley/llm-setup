@@ -751,8 +751,6 @@
   (expand-file-name ".cache/huggingface/hub" llm-setup-home))
 (defvar llm-setup-lmstudio-models
   (expand-file-name "lmstudio/models" llm-setup-xdg-local))
-(defvar llm-setup-ollama-models
-  (expand-file-name "ollama/models" llm-setup-xdg-local))
 (defvar llm-setup-omlx-api-base "http://hera.lan:8000"
   "Base URL for the oMLX server.")
 (defvar llm-setup-omlx-api-key "dummy-key"
