@@ -2295,12 +2295,6 @@ If HOSTNAME is non-nil, only generate definitions for that host."
 
 ;; (inspect (llm-setup-gptel-backends))
 
-(defun llm-setup-lookup-instance (model)
-  "Return the instance whole model matches the symbol MODEL."
-  (cl-loop
-   for (m . instance) in (llm-setup-instances-list)
-   when (eq model m) return instance))
-
 (defun llm-setup-check-instances ()
   "Check all model and instances definitions."
   (interactive)
