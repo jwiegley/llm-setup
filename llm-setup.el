@@ -169,7 +169,7 @@
   (min-p 0.01) ; minimum p
   (top-p 0.9) ; top p
   (top-k 20) ; top k
-  (kind 'text-generation) ; nil, or symbol from model-kinds
+  (kind 'text-generation) ; symbol from llm-setup-all-model-kinds
   (supports-system-message t) ; t if model supports system messages
   (supports-function-calling t) ; t if model supports function calling
   (supports-reasoning nil) ; t if model supports reasoning
@@ -192,7 +192,7 @@
   (parallel 1) ; how many parallel connections to support
   (cache-type-k 'f16) ; K-quantization
   (cache-type-v 'f16) ; V-quantization
-  (kv-offload t) ; if nil, emit --no-kv-offload
+  (kv-offload t) ; llama-cpp: if nil, emit --no-kv-offload
   (engine 'llama-cpp) ; if local: llama.cpp, koboldcpp, etc.
   (hostnames
    (list llm-setup-default-hostname)) ; if local: hostname where engine runs
@@ -201,8 +201,8 @@
   draft-model ; if local: (optional) path to draft model
   arguments ; if local: arguments to engine
   fallbacks ; if remote: list of fallback model names
-  (cache-prompt t) ; if nil, emit --no-cache-prompt
-  (cache-ram nil) ; if non-nil, emit --cache-ram
+  (cache-prompt t) ; llama-cpp: if nil, emit --no-cache-prompt
+  (cache-ram nil) ; numeric llama-cpp --cache-ram value
   (cache-reuse nil) ; integer: min chunk size for cache reuse
   (slot-save-path nil) ; path for saving/restoring slot KV cache
   (slot-prompt-similarity nil) ; float: min prompt similarity to reuse slot
@@ -711,38 +711,6 @@
   "List of configured models."
   :type '(repeat sexp)
   :group 'llm-setup)
-
-;;; Models have several names:
-;;
-;; llm-setup-model-name
-;; llm-setup-model-aliases
-;; llm-setup-instance-name
-;; llm-setup-instance-model-name
-;;
-;; These names are used in several places:
-;;
-;; - The name of the model as reported by v1/models, which is used for
-;;   submitting queries to that model to eihter llama-swap, LiteLLM or
-;;   directly to an external model provider (Anthropic, OpenRouter, etc)
-;; - The name of the model as managed by that backend
-;; - The name of the model as submitted to the provider by the backend
-;;
-;;; llama-swap.yaml
-;;
-;; "mlx-community/gpt-oss-20b-MXFP4-Q8":
-;;   cmd: >
-;;     /etc/profiles/per-user/johnw/bin/mlx-lm server
-;;       --host 127.0.0.1 --port ${PORT}
-;;       --model mlx-community/gpt-oss-20b-MXFP4-Q8 ...
-;;
-;; "gpt-oss-20b":
-;;   cmd: >
-;;     /etc/profiles/per-user/johnw/bin/llama-server
-;;       --host 127.0.0.1 --port ${PORT}
-;;       --jinja
-;;       --model /Users/johnw/Models/unsloth_gpt-oss-20b-GGUF/gpt-oss-20b-F16.gguf ...
-;;
-;;; litellm/config.yaml
 
 (defvar llm-setup-home (expand-file-name "~"))
 (defvar llm-setup-xdg-local (expand-file-name ".local/share" llm-setup-home))
