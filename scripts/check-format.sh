@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Check that Emacs Lisp files are properly formatted with format-all.
+# Compare Emacs Lisp files with format-all output.
 # Usage: check-format.sh [file ...]
 set -uo pipefail
 
