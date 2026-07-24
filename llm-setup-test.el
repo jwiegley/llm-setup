@@ -109,23 +109,54 @@
             (eq (llm-setup-model-name candidate) 'claude-fable))
           llm-setup-models-list)))
     (should model)
-    (let ((instances (llm-setup-model-instances model)))
-      (should (= 4 (length instances)))
-      (dolist (instance instances)
-        (should
-         (eq (llm-setup-get-instance-model-name model instance)
-             'claude-fable-5))
-        (with-temp-buffer
-          (llm-setup-insert-instance-litellm model instance)
-          (let ((yaml (buffer-string)))
-            (should
-             (string-match-p
-              "^      model: \\(?:openai\\|anthropic\\)/claude-fable-5$"
-              yaml))
-            (should-not
-             (string-match-p
-              "^      model: [^\n]*/claude-fable$"
-              yaml))))))))
+    (let ((instances (llm-setup-model-instances model))
+          (expectations
+           '((vibe-proxy
+              "claude-fable-5-thinking-32000"
+              "claude-fable-5"
+              "openai/claude-fable-5")
+             (vibe-proxy
+              "claude-fable-5"
+              "claude-fable-5"
+              "openai/claude-fable-5")
+             (positron_anthropic
+              "claude-fable-5"
+              "claude-fable-5"
+              "anthropic/claude-fable-5")
+             (positron_anthropic
+              "claude-fable-5[1m]"
+              "claude-fable-5[1m]"
+              "anthropic/claude-fable-5[1m]")
+             (anthropic
+              "claude-fable-5"
+              "claude-fable-5"
+              "anthropic/claude-fable-5"))))
+      (should (= (length expectations) (length instances)))
+      (cl-mapc
+       (lambda (instance expectation)
+         (pcase-let ((`(,provider ,public-name ,provider-model-name ,route)
+                      expectation))
+           (should (eq (llm-setup-instance-provider instance) provider))
+           (should
+            (equal (symbol-name (llm-setup-instance-name instance))
+                   public-name))
+           (should
+            (equal
+             (symbol-name
+              (llm-setup-get-instance-model-name model instance))
+             provider-model-name))
+           (with-temp-buffer
+             (llm-setup-insert-instance-litellm model instance)
+             (let ((yaml (buffer-string)))
+               (should
+                (string-match-p
+                 (regexp-quote (format "      model: %s\n" route))
+                 yaml))
+               (should-not
+                (string-match-p
+                 "^      model: [^\n]*/claude-fable$"
+                 yaml))))))
+       instances expectations))))
 
 (ert-deftest llm-setup-test-model-registry-sorted-and-unique ()
   "Keep model family names sorted case-insensitively and unique."
@@ -436,10 +467,9 @@
   (let* ((registry (llm-setup-test--nix-model-registry))
          (selections (alist-get 'selections registry)))
     (dolist
-        (case
-         '((claudeDefault "claude-opus-4-8[1m]")
-           (claudeHaiku "claude-sonnet-4-6")
-           (claudeSubagent "claude-opus-4-8")))
+        (case '((claudeDefault "claude-opus-4-8[1m]")
+                (claudeHaiku "claude-sonnet-5")
+                (claudeSubagent "claude-opus-4-8")))
       (pcase-let ((`(,role ,model-id) case))
         (let ((selection (alist-get role selections)))
           (should
@@ -490,7 +520,7 @@
       selection-routes
       '(("litellm" . "hera/omlx/Qwen3.6-27B-oQ4e-mtp")
         ("positron-anthropic" . "claude-opus-4-8[1m]")
-        ("positron-anthropic" . "claude-sonnet-4-6")
+        ("positron-anthropic" . "claude-sonnet-5")
         ("positron-anthropic" . "claude-opus-4-8"))))
     (dolist (selection-route selection-routes)
       (should (member selection-route routes)))))
@@ -529,13 +559,12 @@
            'selections (llm-setup-test--nix-model-registry))))
         "override-claude-provider"))))
   (dolist
-      (case
-       '((llm-setup-claude-default-model-id claudeDefault
-                                            "override-claude-default")
-         (llm-setup-claude-haiku-model-id claudeHaiku
-                                          "override-claude-haiku")
-         (llm-setup-claude-subagent-model-id claudeSubagent
-                                             "override-claude-subagent")))
+      (case '((llm-setup-claude-default-model-id claudeDefault
+                                                 "override-claude-default")
+              (llm-setup-claude-haiku-model-id claudeHaiku
+                                               "override-claude-haiku")
+              (llm-setup-claude-subagent-model-id claudeSubagent
+                                                  "override-claude-subagent")))
     (pcase-let ((`(,variable ,role ,value) case))
       (cl-progv (list variable) (list value)
         (should

@@ -89,7 +89,7 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-claude-haiku-model-id "claude-sonnet-4-6"
+(defcustom llm-setup-claude-haiku-model-id "claude-sonnet-5"
   "Model ID for Claude's Haiku-class selection."
   :type 'string
   :group 'llm-setup)
@@ -277,6 +277,10 @@
       :provider 'positron_anthropic)
 
      (make-llm-setup-instance
+      :name (intern "claude-fable-5[1m]")
+      :provider 'positron_anthropic)
+
+     (make-llm-setup-instance
       :name 'claude-fable-5
       :provider 'anthropic)))
 
@@ -302,17 +306,17 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-name 'claude-opus-4-7
-      :name 'claude-opus-4-7-thinking-32000
+      :model-name 'claude-opus-4-8
+      :name 'claude-opus-4-8-thinking-32000
       :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :model-name 'claude-opus-4-7
-      :name 'claude-opus-4-7
+      :model-name 'claude-opus-4-8
+      :name 'claude-opus-4-8
       :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :name 'claude-opus-4-7
+      :name 'claude-opus-4-8
       :provider 'positron_anthropic)
 
      (make-llm-setup-instance
@@ -321,10 +325,6 @@
 
      (make-llm-setup-instance
       :name 'claude-opus-4-8
-      :provider 'positron_anthropic)
-
-     (make-llm-setup-instance
-      :name 'claude-opus-4-7
       :provider 'anthropic)))
 
    (make-llm-setup-model
@@ -332,21 +332,25 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-name 'claude-sonnet-4-6
-      :name 'claude-sonnet-4-6-thinking-32000
+      :model-name 'claude-sonnet-5
+      :name 'claude-sonnet-5-thinking-32000
       :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :model-name 'claude-sonnet-4-6
-      :name 'claude-sonnet-4-6
+      :model-name 'claude-sonnet-5
+      :name 'claude-sonnet-5
       :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :name 'claude-sonnet-4-6
+      :name 'claude-sonnet-5
       :provider 'positron_anthropic)
 
      (make-llm-setup-instance
-      :name 'claude-sonnet-4-6
+      :name (intern "claude-sonnet-5[1m]")
+      :provider 'positron_anthropic)
+
+     (make-llm-setup-instance
+      :name 'claude-sonnet-5
       :provider 'anthropic)))
 
    (make-llm-setup-model
