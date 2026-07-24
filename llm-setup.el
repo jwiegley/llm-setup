@@ -2230,8 +2230,8 @@ file is byte-identical, leave it untouched.  Return the expanded path."
 
 (defun llm-setup-get-instance-gptel-backend
     (model instance &optional hostname)
-  "Instance the llama-swap.yaml config for MODEL and INSTANCE.
-If HOSTNAME is non-nil, only generate definitions for that host."
+  "Return GPTel backend declarations for MODEL and INSTANCE.
+If HOSTNAME is non-nil, return only declarations for that host."
   (let* ((model-name (llm-setup-get-instance-name model instance)))
     (unless (memq (llm-setup-model-kind model) '(embedding reranker))
       (cl-loop
