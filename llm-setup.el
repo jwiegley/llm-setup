@@ -2477,58 +2477,6 @@ If HOSTNAME is non-nil, only generate definitions for that host."
 
 ;; (llm-setup-installed-models "vulcan")
 
-(cl-defun
-    llm-setup-generate-instance-declarations
-    (&key (hostname llm-setup-default-hostname))
-  "Generate model declarations from DIRECTORY's subdirectories.
-These declarations are for HOSTNAME."
-  (interactive)
-  (let ((dirs
-         (cl-remove-if-not
-          #'file-directory-p (directory-files "~/Models" t "\\`[^.]"))))
-    (with-current-buffer (get-buffer-create "*LLM-SETUP Instances*")
-      (erase-buffer)
-      (insert ";; Generated model configs from ~/Models\n")
-      (dolist (dir dirs)
-        (let* ((full-model (llm-setup-full-model-name dir))
-               (model-name (llm-setup-short-model-name full-model))
-               (context-length (llm-setup-get-context-length dir)))
-          (insert
-           "(make-llm-setup-model\n"
-           "  :name '"
-           model-name
-           "\n"
-           "  :context-length "
-           (if (null context-length)
-               "nil"
-             (number-to-string context-length))
-           "\n"
-           "  :temperature 1.0\n"
-           "  :min-p 0.05\n"
-           "  :top-p 0.8\n"
-           "  :top-k 20\n"
-           "  :kind nil\n"
-           "  :aliases '())\n\n")))
-      (insert "\n;; Generated model instances from ~/Models\n")
-      (dolist (dir dirs)
-        (let* ((full-model (llm-setup-full-model-name dir))
-               (model-name (llm-setup-short-model-name full-model)))
-          (insert
-           "(make-llm-setup-instance\n"
-           "  :model '"
-           model-name
-           "\n"
-           "  :hostnames '(\""
-           hostname
-           "\")\n"
-           "  :file-format 'GGUF\n"
-           "  :model-path \""
-           dir
-           "\"\n"
-           "  :engine 'llama-cpp\n"
-           "  :arguments '())\n\n")))
-      (display-buffer (current-buffer)))))
-
 ;;; llm-setup-sync — discover new and dead models
 
 (defun llm-setup-sync--discover-gguf ()
