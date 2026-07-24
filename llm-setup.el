@@ -894,7 +894,7 @@ credential_list:
     credential_info:
       description: \"API Key for oMLX on Hera\"
 "
-  "Function for generating credentials for LiteLLM's config.yaml file."
+  "Literal credential-list YAML for LiteLLM's config.yaml file."
   :type 'function
   :group 'llm-setup)
 
