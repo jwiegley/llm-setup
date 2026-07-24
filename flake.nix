@@ -29,7 +29,7 @@
           path = ./.;
           name = "llm-setup-el-src";
           filter =
-            path: type:
+            path: _:
             let
               baseName = builtins.baseNameOf path;
             in
