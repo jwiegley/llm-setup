@@ -2449,7 +2449,7 @@ If HOSTNAME is non-nil, only generate definitions for that host."
     " ; ")))
 
 (defun llm-setup-installed-models (&optional hostname)
-  "List all models from MLX and GGUF directories, optionally for HOSTNAME."
+  "List GGUF models, optionally from HOSTNAME."
   (interactive)
   (cl-loop
    for
