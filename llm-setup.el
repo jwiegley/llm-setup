@@ -1234,8 +1234,9 @@ Returns a cons cell (MODEL . INSTANCE) or nil if not found."
 
 (defun llm-setup-get-full-litellm-name (model instance)
   "Return the full LiteLLM model name for MODEL and INSTANCE.
-For local/vibe-proxy providers, returns \"host/name\".
-For remote providers, returns \"provider/name\"."
+For local/vibe-proxy providers, return \"host/name\".
+For oMLX, return \"host/omlx/name\".
+For remote providers, return \"provider/name\"."
   (let ((provider (llm-setup-instance-provider instance))
         (name (llm-setup-get-instance-name model instance)))
     (cond
@@ -1262,17 +1263,15 @@ Returns a string suitable for insertion into the LiteLLM config."
                  (if (memq provider '(local vibe-proxy omlx))
                      (llm-setup-instance-hostnames instance)
                    (list provider))))
-            ;; For each host where this instance is available
+            ;; For each local hostname or remote provider route
             (dolist (host hostnames)
               (let*
                   ((source-name
                     (format "%s/%s"
                             host
                             (llm-setup-get-instance-name model instance)))
-                   ;; Resolve each fallback to its full name
-                   ;; Fallbacks can be either:
-                   ;; - Full names like 'openai/gpt-4.1 (already qualified)
-                   ;; - Instance names like 'claude-sonnet-4-5-20250929-thinking-32000 (need lookup)
+                   ;; Resolve unqualified instance names; use slash-containing
+                   ;; route names as-is.
                    (resolved-fallbacks
                     (cl-loop
                      for
@@ -1285,7 +1284,7 @@ Returns a string suitable for insertion into the LiteLLM config."
                      (symbol-name fb)
                      if
                      (string-match-p "/" fb-str)
-                     ;; Already a full name, use as-is
+                     ;; Slash-containing route, use as-is
                      collect
                      fb-str
                      else
