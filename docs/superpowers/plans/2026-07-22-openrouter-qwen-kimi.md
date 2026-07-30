@@ -4,9 +4,9 @@
 
 **Goal:** Register Qwen3.7 Max and Kimi K3 as deterministic OpenRouter models and restore the model registry's uniqueness invariant.
 
-**Architecture:** Extend the existing `llm-setup-models-list` source of truth with two OpenRouter-only families. Merge the pending remote GLM instance into its existing local family so all generated GPTel and LiteLLM routes continue to derive from one unique family entry.
+**Architecture:** Extend the existing `llm-setup-models-list` source of truth with two OpenRouter-only families. Merge the pending remote GLM instance into its existing local family so all generated GPTel and Nix registry routes continue to derive from one unique family entry.
 
-**Tech Stack:** Emacs Lisp, ERT, GPTel backend generation, LiteLLM YAML generation, Nix quality checks.
+**Tech Stack:** Emacs Lisp, ERT, GPTel backend generation, Nix model-registry generation, Nix quality checks.
 
 ## Global Constraints
 
@@ -24,14 +24,14 @@
 - Modify: `llm-setup.el`
 
 **Interfaces:**
-- Consumes: `llm-setup-models-list`, `llm-setup-get-instance-gptel-backend`, and `llm-setup-insert-instance-litellm`.
-- Produces: deterministic GPTel and LiteLLM routes for `qwen/qwen3.7-max`, `moonshotai/kimi-k3`, and the consolidated `z-ai/glm-5.2` instance.
+- Consumes: `llm-setup-models-list`, `llm-setup-get-instance-gptel-backend`, and `llm-setup-render-nix-model-registry`.
+- Produces: deterministic GPTel and Nix registry routes for `qwen/qwen3.7-max`, `moonshotai/kimi-k3`, and the consolidated `z-ai/glm-5.2` instance.
 
 - [ ] **Step 1: Write the failing registry-route test**
 
 Add a table-driven ERT test that locates `Qwen3.7-Max` and `Kimi-K3`, checks
 their exact OpenRouter instance names, and checks their generated GPTel and
-LiteLLM identifiers. Add a focused assertion that `GLM-5.2` is a unique family
+Nix registry identifiers. Add a focused assertion that `GLM-5.2` is a unique family
 with both its local and OpenRouter instances.
 
 - [ ] **Step 2: Run the focused tests to verify they fail**

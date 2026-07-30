@@ -28,6 +28,6 @@ with a 1,048,576-token instance-level context override. Keep the family's
 ## Verification
 
 Add a table-driven ERT test that proves the two new families have only the
-requested OpenRouter instances and that GPTel and LiteLLM generation preserve
-their exact identifiers. Extend coverage for the consolidated GLM route, then
+requested OpenRouter instances and that GPTel and Nix registry projection
+preserve their exact identifiers. Extend coverage for the consolidated GLM route, then
 run the complete ERT suite, formatting checks, and `nix flake check`.
