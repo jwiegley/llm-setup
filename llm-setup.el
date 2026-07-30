@@ -353,14 +353,11 @@
       :model-path "~/Models/cstr_cohere-transcribe-03-2026-GGUF")))
 
    (make-llm-setup-model
-    :name 'deepseek-ai-DeepSeek-V4-Flash-8bit
+    :name 'DeepSeek-V4-Flash-4bit
     :instances
     (list
      (make-llm-setup-instance
-      :name 'mlx-community/deepseek-ai-DeepSeek-V4-Flash-8bit
-      :engine 'vllm-mlx)
-     (make-llm-setup-instance
-      :name 'deepseek-ai-DeepSeek-V4-Flash-8bit
+      :name 'DeepSeek-V4-Flash-4bit
       :provider 'omlx)))
 
    (make-llm-setup-model
@@ -499,30 +496,6 @@
       :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
-    :name 'Llama-2-13B-layer-mix-bpw-2.2-mlx
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'GreenBitAI/Llama-2-13B-layer-mix-bpw-2.2-mlx
-      :engine 'vllm-mlx)))
-
-   (make-llm-setup-model
-    :name 'Llama-2-13B-layer-mix-bpw-2.5-mlx
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'GreenBitAI/Llama-2-13B-layer-mix-bpw-2.5-mlx
-      :engine 'vllm-mlx)))
-
-   (make-llm-setup-model
-    :name 'Llama-2-13B-layer-mix-bpw-3.0-mlx
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'GreenBitAI/Llama-2-13B-layer-mix-bpw-3.0-mlx
-      :engine 'vllm-mlx)))
-
-   (make-llm-setup-model
     :name 'llama-3.3-70b
     :instances
     (list
@@ -627,23 +600,6 @@
       :provider 'omlx)))
 
    (make-llm-setup-model
-    :name 'Qwen3.6-27B-oQ8-mtp
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.6-27B-oQ8-mtp
-      :provider 'omlx)))
-
-   (make-llm-setup-model
-    :name 'Qwen3.6-35B-A3B-oQ4-mtp
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'Qwen3.6-35B-A3B-oQ4-mtp
-      :hostnames '("hera" "clio")
-      :provider 'omlx)))
-
-   (make-llm-setup-model
     :name 'Qwen3.7-Max
     :context-length 1000000
     :supports-reasoning t
@@ -679,23 +635,7 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/thesven")))
-
-   (make-llm-setup-model
-    :name 'TinyLlama-1.1B-Chat-v0.1-gptq-4bit
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'atorsvn/TinyLlama-1.1B-Chat-v0.1-gptq-4bit
-      :engine 'vllm-mlx)))
-
-   (make-llm-setup-model
-    :name 'TinyLlama-1.1B-step-50K-105b-gptq-4bit
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'atorsvn/TinyLlama-1.1B-step-50K-105b-gptq-4bit
-      :engine 'vllm-mlx))))
+      :model-path "~/Models/thesven"))))
   "List of configured models."
   :type '(repeat sexp)
   :group 'llm-setup)
