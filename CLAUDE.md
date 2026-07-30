@@ -91,9 +91,8 @@ with `llm-setup-nix-provider-defs` and the explicit default and Claude selection
 variables. It emits the ordered `default`, `claudeDefault`, `claudeHaiku`, and
 `claudeSubagent` selections in schema version 2.
 
-Nix provider facts may describe externally operated endpoints, including the
-provider whose ID is `litellm`. Those entries are nonsecret projection data;
-this package does not configure or restart the corresponding service.
+The Nix projection describes direct providers only; downstream gateways discover
+llama-swap models independently.
 
 ### Naming System
 
@@ -101,7 +100,6 @@ this package does not configure or restart the corresponding service.
 |---|---|---|
 | `llm-setup-model-name` | Family symbol | Internal registry key |
 | `llm-setup-instance-name` | Public instance symbol, or nil | llama-swap, Nix, and GPTel model key |
-| `llm-setup-get-full-instance-name` | `host/name`, `host/omlx/name`, or `provider/name` | Nix route key |
 | `llm-setup-short-model-name` | Directory name without organization/GGUF suffixes | Installed-model matching |
 
 ### llama-swap Generation
@@ -122,7 +120,7 @@ can restart it.
 2. `llm-setup-build-llama-swap-yaml` — write hera YAML and stop llama-swap locally
 3. `llm-setup-build-llama-swap-yaml "clio"` — write clio YAML via TRAMP and stop it via SSH
 4. `llm-setup-build-nix-model-registry` — atomically publish the nonsecret JSON registry
-5. Set `gptel-model` and `gptel-backend` via `gptel-backends-make-litellm`
+5. Set `gptel-model` and `gptel-backend` via `gptel-backends-llama-swap`
 
 ## Adding a New Model
 
@@ -135,7 +133,7 @@ can restart it.
 
 ### External Dependencies Not Defined Here
 
-- `gptel-backends-make-litellm` — retained external gptel integration called in
+- `gptel-backends-llama-swap` — direct llama-swap gptel integration called in
   reset step 5
 - `yaml-mode`, `json-mode` — used for display buffers but never `require`d
 

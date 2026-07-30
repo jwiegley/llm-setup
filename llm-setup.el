@@ -24,7 +24,7 @@
 
 (declare-function yaml-mode "yaml-mode" ())
 (declare-function json-mode "json-mode" ())
-(declare-function gptel-backends-make-litellm "gptel-ext")
+(declare-function gptel-backends-llama-swap "gptel-backends")
 
 (defvar gptel-model)
 (defvar gptel-backend)
@@ -68,12 +68,12 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-default-instance-name 'hera/omlx/Qwen3.6-27B-oQ4e-mtp
-  "Fully qualified model identifier used by GPTel and Aider."
+(defcustom llm-setup-default-instance-name 'GLM-5.2
+  "Model identifier used by GPTel and Aider."
   :type 'symbol
   :group 'llm-setup)
 
-(defcustom llm-setup-default-provider "litellm"
+(defcustom llm-setup-default-provider "llama-cpp-local"
   "Provider ID for the shared default model selection."
   :type 'string
   :group 'llm-setup)
@@ -1003,17 +1003,6 @@ alphabetically by the `:name' field (case-insensitive)."
   (or (llm-setup-instance-max-output-tokens instance)
       (llm-setup-model-max-output-tokens model)))
 
-(defun llm-setup-get-full-instance-name (model instance)
-  "Return the fully qualified route name for MODEL and INSTANCE."
-  (let ((provider (llm-setup-instance-provider instance))
-        (name (llm-setup-get-instance-name model instance)))
-    (cond
-     ((eq provider 'omlx)
-      (format "%s/omlx/%s" (car (llm-setup-instance-hostnames instance)) name))
-     ((memq provider '(local vibe-proxy))
-      (format "%s/%s" (car (llm-setup-instance-hostnames instance)) name))
-     (t
-      (format "%s/%s" provider name)))))
 
 (defsubst llm-setup-remote-hostname-p (hostname)
   "Return non-nil if HOSTNAME is both non-nil and a remote host.
@@ -1396,16 +1385,6 @@ llama-swap startup and are resident before the first request arrives."
       :display-name "Qwen3 Coder 480B A35B Instruct"
       :max-output-tokens 81920)))
    (list
-    :id "litellm"
-    :display-name "LiteLLM"
-    :base-url "https://litellm.vulcan.lan/v1/"
-    :api-key '((env . "LITELLM_API_KEY"))
-    :match-fn #'llm-setup--model-registry-shared-provider-match-p
-    :key-fn #'llm-setup-get-full-instance-name
-    :default-max-output-tokens 65536
-    :include-limits t
-    :default-output-limit 65536)
-   (list
     :id "llama-cpp-remote"
     :display-name "Llama.cpp (Remote)"
     :base-url "https://10.6.0.1/v1/"
@@ -1440,9 +1419,6 @@ Each entry is a plist with:
   :hosts - optional provider-level host availability
   :static-models - model facts authored independently of the instance registry
   :match-providers - list of llm-setup provider symbols to match
-  :match-fn - predicate (model instance) for complex matching
-  :name-prefix - optional prefix for model keys
-  :key-fn - optional (model instance) → string; overrides prefix-based keying
   :default-max-output-tokens - default value, or nil to use model value
   :include-limits - whether to emit context_limit and output_limit
   :default-output-limit - default output_limit value
@@ -1539,20 +1515,11 @@ If IS-OMLX is non-nil, append \"(MLX)\" suffix."
 
 (defun llm-setup--model-registry-instance-match-p (model instance provider-def)
   "Return non-nil if MODEL INSTANCE matches PROVIDER-DEF."
-  (let ((match-fn (plist-get provider-def :match-fn))
-        (match-providers (plist-get provider-def :match-providers)))
-    (cond
-     (match-fn
-      (funcall match-fn model instance))
-     (match-providers
-      (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
-           (memq (llm-setup-instance-provider instance) match-providers))))))
+  (let ((match-providers (plist-get provider-def :match-providers)))
+    (and match-providers
+         (not (memq (llm-setup-model-kind model) '(embedding reranker)))
+         (memq (llm-setup-instance-provider instance) match-providers))))
 
-(defun llm-setup--model-registry-shared-provider-match-p (model instance)
-  "Return non-nil if MODEL INSTANCE belongs to the shared provider."
-  (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
-       (memq (llm-setup-instance-provider instance)
-             llm-setup-all-model-providers)))
 
 (defconst llm-setup-nix-model-registry-hosts
   '("hera" "clio")
@@ -1569,19 +1536,9 @@ naming those hosts.  Instances that run on every host omit the field.")
                      relevant llm-setup-nix-model-registry-hosts)))
       relevant)))
 
-(defun llm-setup--model-registry-key (model instance provider-def)
-  "Compute the model ID for MODEL INSTANCE under PROVIDER-DEF."
-  (let ((name (llm-setup-get-instance-name model instance))
-        (key-fn (plist-get provider-def :key-fn))
-        (prefix (or (plist-get provider-def :name-prefix) "")))
-    (if key-fn
-        (funcall key-fn model instance)
-      (concat prefix
-              (if (and (eq (llm-setup-instance-provider instance) 'omlx)
-                       (not (string-empty-p prefix)))
-                  "omlx/"
-                "")
-              (symbol-name name)))))
+(defun llm-setup--model-registry-key (model instance _provider-def)
+  "Compute the model ID for MODEL INSTANCE."
+  (symbol-name (llm-setup-get-instance-name model instance)))
 
 (defun llm-setup--model-registry-instance-groups (provider-def)
   "Return PROVIDER-DEF's matching instance groups in declaration order."
@@ -1768,7 +1725,7 @@ file is byte-identical, leave it untouched.  Return the expanded path."
   (llm-setup-build-nix-model-registry)
   (message "[llm-setup-reset] Step 5/5: Updating GPTel backends...")
   (setq gptel-model llm-setup-default-instance-name
-        gptel-backend (gptel-backends-make-litellm))
+        gptel-backend (gptel-backends-llama-swap))
   (message "[llm-setup-reset] Complete!"))
 
 (defun llm-setup-get-instance-gptel-backend

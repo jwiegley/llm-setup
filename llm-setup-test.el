@@ -295,18 +295,14 @@
         (kill-buffer " *llm-setup-test-yaml*")))))
 
 (ert-deftest llm-setup-test-default-gptel-model-exists ()
-  "Require the shared client default to resolve to one GPTel backend model."
-  (should
-   (eq llm-setup-default-instance-name
-       'hera/omlx/Qwen3.6-27B-oQ4e-mtp))
-  (should
-   (equal (llm-setup-aider-model-name)
-          "openai/hera/omlx/Qwen3.6-27B-oQ4e-mtp"))
+  "Require the default to resolve through hera's llama-swap backend."
+  (should (eq llm-setup-default-instance-name 'GLM-5.2))
+  (should (equal (llm-setup-aider-model-name) "openai/GLM-5.2"))
   (should
    (= 1
       (cl-count
        llm-setup-default-instance-name
-       (mapcar #'car (llm-setup-gptel-backends))
+       (mapcar #'car (llm-setup-gptel-backends "hera"))
        :test #'eq))))
 
 (ert-deftest llm-setup-test-nix-model-registry-exact-schema ()
@@ -373,7 +369,7 @@
       (llm-setup-test--assert-hosts model))))
 
 (ert-deftest llm-setup-test-nix-model-registry-inventory ()
-  "Preserve the authored provider and route inventory."
+  "Preserve the authored direct-provider and route inventory."
   (let* ((registry (llm-setup-test--nix-model-registry))
          (providers (alist-get 'providers registry))
          (models (alist-get 'models registry)))
@@ -385,17 +381,13 @@
                  (alist-get 'id provider)))
         models)))
     (should
-     (llm-setup-test--nix-model
-      registry "litellm" "openrouter/moonshotai/kimi-k3"))
+     (llm-setup-test--nix-model registry "llama-cpp-local" "GLM-5.2"))
     (should
      (llm-setup-test--nix-model
-      registry "litellm" "openrouter/qwen/qwen3.7-max"))
+      registry "omlx" "Qwen3.6-27B-oQ4e-mtp"))
     (dolist (id '("gpt-5.6-luna" "gpt-5.6-sol" "gpt-5.6-terra"))
       (should
-       (llm-setup-test--nix-model registry "positron-openai" id))
-      (should
-       (llm-setup-test--nix-model
-        registry "litellm" (concat "positron_openai/" id))))))
+       (llm-setup-test--nix-model registry "positron-openai" id)))))
 
 (ert-deftest llm-setup-test-nix-model-registry-claude-selections ()
   "Publish exact Claude routes and preserve the Haiku-class selection."
@@ -416,14 +408,14 @@
             registry "positron-anthropic" model-id)))))))
 
 (ert-deftest llm-setup-test-nix-model-registry-gpt-5.6-sol-limits ()
-  "Preserve GPT-5.6 Sol's long context and output limits in the registry."
+  "Preserve GPT-5.6 Sol's output limit under its direct provider."
   (let ((model
          (llm-setup-test--nix-model
           (llm-setup-test--nix-model-registry)
-          "litellm" "positron_openai/gpt-5.6-sol")))
-    (should (= 1050000 (alist-get 'contextLimit model)))
+          "positron-openai" "gpt-5.6-sol")))
     (should (= 128000 (alist-get 'maxOutputTokens model)))
-    (should (= 128000 (alist-get 'outputLimit model)))))
+    (should-not (assq 'contextLimit model))
+    (should-not (assq 'outputLimit model))))
 
 (ert-deftest llm-setup-test-nix-model-registry-references-resolve ()
   "Keep provider IDs, routes, and every selected model unambiguous."
@@ -453,7 +445,7 @@
     (should
      (equal
       selection-routes
-      '(("litellm" . "hera/omlx/Qwen3.6-27B-oQ4e-mtp")
+      '(("llama-cpp-local" . "GLM-5.2")
         ("positron-anthropic" . "claude-opus-4-8[1m]")
         ("positron-anthropic" . "claude-sonnet-5")
         ("positron-anthropic" . "claude-opus-4-8"))))
@@ -521,8 +513,7 @@
           (mapcar (lambda (model) (alist-get 'provider model)) models))
          (expected-provider-order
           '("positron-anthropic" "positron-google" "positron-openai"
-            "nvidia" "litellm" "llama-cpp-remote" "omlx"
-            "llama-cpp-local")))
+            "nvidia" "llama-cpp-remote" "omlx" "llama-cpp-local")))
     (should
      (equal
       (mapcar (lambda (provider) (alist-get 'id provider)) providers)
@@ -583,10 +574,10 @@
        (llm-setup-nix-provider-defs
         (list
          (list
-          :id "litellm"
-          :display-name "LiteLLM"
+          :id "test-provider"
+          :display-name "Test Provider"
           :base-url "https://example.invalid/v1/"
-          :api-key '((env . "LITELLM_API_KEY"))
+          :api-key '((env . "TEST_API_KEY"))
           :match-providers '(local)
           :include-limits t
           :default-output-limit 99
@@ -595,7 +586,7 @@
        (registry (llm-setup-test--nix-model-registry))
        (models (alist-get 'models registry))
        (shared
-        (llm-setup-test--nix-model registry "litellm" "shared")))
+        (llm-setup-test--nix-model registry "test-provider" "shared")))
     (should
      (equal
       (mapcar (lambda (model) (alist-get 'id model)) models)
@@ -610,10 +601,6 @@
   (let* ((registry (llm-setup-test--nix-model-registry))
          (remote
           (llm-setup-test--nix-provider registry "llama-cpp-remote"))
-         (shared-omlx
-          (llm-setup-test--nix-model
-           registry "litellm"
-           "hera/omlx/cohere-transcribe-03-2026-mlx-fp16"))
          (omlx
           (llm-setup-test--nix-model
            registry "omlx" "cohere-transcribe-03-2026-mlx-fp16"))
@@ -627,7 +614,6 @@
     (dolist (provider (alist-get 'providers registry))
       (unless (equal (alist-get 'id provider) "llama-cpp-remote")
         (should-not (assq 'hosts provider))))
-    (should (equal (alist-get 'hosts shared-omlx) '("hera")))
     (should (equal (alist-get 'hosts omlx) '("hera")))
     (should (equal (alist-get 'hosts local-only) '("hera")))
     (should-not (assq 'hosts local-unrestricted))))
@@ -815,7 +801,7 @@
                    (push (list 'llama-swap hostname) events)))
                 ((symbol-function 'llm-setup-build-nix-model-registry)
                  (lambda (&optional _path) (push 'nix-registry events)))
-                ((symbol-function 'gptel-backends-make-litellm)
+                ((symbol-function 'gptel-backends-llama-swap)
                  (lambda () (push 'gptel events) 'test-backend)))
         (llm-setup-reset)
         (should
