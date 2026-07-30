@@ -3,14 +3,14 @@
 I've been running a growing collection of local LLMs across multiple
 machines, and the bookkeeping got out of hand pretty fast. Which models
 are on which host? What engine does each one need? How do I keep
-llama-swap, LiteLLM, and GPTel all in sync when I add or remove a model?
+llama-swap, the Nix model registry, and GPTel in sync when I add or remove
+a model?
 
 `llm-setup.el` is my answer to that. It's a single Emacs Lisp file that
-maintains a model registry -- a list of `llm-setup-model` and `llm-setup-instance`
-structs -- plus explicit model selections, then generates all downstream
-configuration from them: llama-swap YAML for each host, LiteLLM config for the
-central proxy, a nonsecret model registry for Nix, and GPTel backend definitions
-for in-editor use.
+maintains a model registry -- a list of `llm-setup-model` and
+`llm-setup-instance` structs -- plus explicit model selections. From these
+facts it generates llama-swap YAML for hera and clio, publishes a nonsecret
+model registry for Nix, and updates GPTel for in-editor use.
 
 ## How it works
 
@@ -22,27 +22,25 @@ and exceptional Nix-only static routes such as NVIDIA. The explicit default and
 Claude variables are the source of the exact model selections. Everything else
 is derived.
 
-The infrastructure looks like this:
+The infrastructure managed by this package looks like this:
 
 ```
 llm-setup-models-list (Elisp structs)
     │
-    ├─► llama-swap.yaml (per-host: hera, clio)
+    ├─► /Users/johnw/Models/llama-swap.yaml (hera, clio)
     │     └─ Model-switching proxy on port 8080
-    │
-    ├─► litellm/config.yaml (global: vulcan)
-    │     └─ Unified OpenAI-compatible proxy
     │
     ├─► config/ai/model-registry.json (Nix source)
     │     └─ Schema-v2 nonsecret model facts and four exact selections
     │
     └─► gptel backends (Emacs)
-          └─ In-editor LLM interaction via LiteLLM
+          └─ In-editor LLM interaction
 ```
 
-Running `M-x llm-setup-reset` validates the registry, rebuilds the runtime YAML
-configs and restarts the remote services, publishes the nonsecret Nix registry,
-and updates GPTel -- six steps, fully automated.
+Running `M-x llm-setup-reset` validates the registry, rebuilds and restarts
+llama-swap on hera and clio, publishes the nonsecret Nix registry, and updates
+GPTel in five steps. It does not generate or deploy configuration for downstream
+model gateways.
 
 ## Getting started
 

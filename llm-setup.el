@@ -24,7 +24,6 @@
 
 (declare-function yaml-mode "yaml-mode" ())
 (declare-function json-mode "json-mode" ())
-(declare-function lookup-password "lookup-password")
 (declare-function gptel-backends-make-litellm "gptel-ext")
 
 (defvar gptel-model)
@@ -70,7 +69,7 @@
   :group 'llm-setup)
 
 (defcustom llm-setup-default-instance-name 'hera/omlx/Qwen3.6-27B-oQ4e-mtp
-  "Fully qualified LiteLLM model identifier used by GPTel and Aider."
+  "Fully qualified model identifier used by GPTel and Aider."
   :type 'symbol
   :group 'llm-setup)
 
@@ -103,8 +102,7 @@
   "Return Aider's OpenAI-compatible name for the configured default model."
   (format "openai/%s" llm-setup-default-instance-name))
 
-(defcustom llm-setup-valid-hostnames '("hera" "clio" ;; "vulcan"
-                                       )
+(defcustom llm-setup-valid-hostnames '("hera" "clio")
   "Name of hosts that can run models."
   :type '(repeat string)
   :group 'llm-setup)
@@ -182,12 +180,10 @@
     llm-setup-instance
   "Deployment configuration for a single model instance."
   name ; public deployment name
-  model-name ; provider-facing model name override
   context-length ; context length to use for instance
   max-input-tokens ; number of tokens to accept
   max-output-tokens ; number of tokens the model can predict
   output-limit ; deployment-specific output ceiling
-  cache-control ; supports auto-caching?
   (provider 'local) ; where does the model run?
   (parallel 1) ; how many parallel connections to support
   (cache-type-k 'f16) ; K-quantization
@@ -200,7 +196,6 @@
   file-path ; if local: (optional) path to model file
   draft-model ; if local: (optional) path to draft model
   arguments ; if local: arguments to engine
-  fallbacks ; if remote: list of fallback model names
   (cache-prompt t) ; llama-cpp: if nil, emit --no-cache-prompt
   (cache-ram nil) ; numeric llama-cpp --cache-ram value
   (cache-reuse nil) ; integer: min chunk size for cache reuse
@@ -263,12 +258,10 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-name 'claude-fable-5
       :name 'claude-fable-5-thinking-32000
       :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :model-name 'claude-fable-5
       :name 'claude-fable-5
       :provider 'vibe-proxy)
 
@@ -289,7 +282,6 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-name 'claude-haiku-4-5-20251001
       :name 'claude-haiku-4-5-20251001
       :provider 'vibe-proxy)
 
@@ -306,12 +298,10 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-name 'claude-opus-4-8
       :name 'claude-opus-4-8-thinking-32000
       :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :model-name 'claude-opus-4-8
       :name 'claude-opus-4-8
       :provider 'vibe-proxy)
 
@@ -332,12 +322,10 @@
     :instances
     (list
      (make-llm-setup-instance
-      :model-name 'claude-sonnet-5
       :name 'claude-sonnet-5-thinking-32000
       :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :model-name 'claude-sonnet-5
       :name 'claude-sonnet-5
       :provider 'vibe-proxy)
 
@@ -753,205 +741,6 @@ so they share a group and are not swapped out as each one loads."
   :type '(repeat symbol)
   :group 'llm-setup)
 
-(defcustom llm-setup-litellm-path
-  "/ssh:vulcan|sudo:root@vulcan:/etc/litellm/config.yaml"
-  "Pathname to LiteLLM's config.yaml file."
-  :type 'file
-  :group 'llm-setup)
-
-(defcustom llm-setup-litellm-prolog ""
-  "Prolog for beginning of LiteLLM's config.yaml file."
-  :type 'string
-  :group 'llm-setup)
-
-(defcustom llm-setup-litellm-environment-function
-  (lambda ()
-    (format-spec
-     "
-environment_variables:
-  ANTHROPIC_API_KEY: \"%a\"
-  GEMINI_API_KEY: \"%g\"
-  OPENAI_API_KEY: \"%o\"
-  PERPLEXITYAI_API_KEY: \"%p\"
-  GROQ_API_KEY: \"%r\"
-  OPENROUTER_API_KEY: \"%e\"
-  POSITRON_ANTHROPIC_API_KEY: \"%A\"
-  POSITRON_GEMINI_API_KEY: \"%G\"
-  POSITRON_OPENAI_API_KEY: \"%O\"
-  POSITRON_API_KEY: \"%P\"
-"
-     `((?a
-        .
-        ,(lambda () (lookup-password "api.anthropic.com" "johnw" 443)))
-       (?g . ,(lambda () (lookup-password "api.gemini.com" "johnw" 443)))
-       (?o . ,(lambda () (lookup-password "api.openai.com" "johnw" 443)))
-       (?p . ,(lambda () (lookup-password "api.perplexity.ai" "johnw" 443)))
-       (?r . ,(lambda () (lookup-password "api.groq.com" "johnw" 443)))
-       (?e . ,(lambda () (lookup-password "openrouter.ai" "johnw" 443)))
-       (?A
-        .
-        ,(lambda ()
-           (lookup-password "positron@api.anthropic.com" "jwiegley" 443)))
-       (?G
-        .
-        ,(lambda ()
-           (lookup-password "positron@api.gemini.com" "jwiegley" 443)))
-       (?O
-        .
-        ,(lambda ()
-           (lookup-password "positron@api.openai.com" "jwiegley" 443)))
-       (?P
-        .
-        ,(lambda ()
-           (lookup-password
-            "positron@api-dev.positron.ai" "jwiegley" 443))))))
-  "Function for generating credentials for LiteLLM's config.yaml file."
-  :type 'function
-  :group 'llm-setup)
-
-(defcustom llm-setup-litellm-credentials "
-credential_list:
-  - credential_name: hera_llama_swap_credential
-    credential_values:
-      api_base: https://hera.lan:8443/v1
-      api_key: \"fake\"
-    credential_info:
-      description: \"API Key for llama-swap on Hera\"
-
-  - credential_name: hera_vibe_proxy_credential
-    credential_values:
-      api_base: http://hera.lan:8317/v1
-      api_key: \"fake\"
-    credential_info:
-      description: \"API Key for vibe-proxy on Hera\"
-
-  - credential_name: clio_llama_swap_credential
-    credential_values:
-      api_base: https://clio.lan:8443/v1
-      api_key: \"fake\"
-    credential_info:
-      description: \"API Key for llama-swap on Clio\"
-
-  - credential_name: openai_credential
-    credential_values:
-      api_key: os.environ/OPENAI_API_KEY
-    credential_info:
-      description: \"API Key for OpenAI\"
-
-  - credential_name: anthropic_credential
-    credential_values:
-      api_key: os.environ/ANTHROPIC_API_KEY
-    credential_info:
-      description: \"API Key for Anthropic\"
-
-  - credential_name: perplexity_credential
-    credential_values:
-      api_key: os.environ/PERPLEXITYAI_API_KEY
-    credential_info:
-      description: \"API Key for Perplexity\"
-
-  - credential_name: groq_credential
-    credential_values:
-      api_key: os.environ/GROQ_API_KEY
-    credential_info:
-      description: \"API Key for Groq\"
-
-  - credential_name: openrouter_credential
-    credential_values:
-      api_key: os.environ/OPENROUTER_API_KEY
-    credential_info:
-      description: \"API Key for OpenRouter\"
-
-  - credential_name: positron_openai_credential
-    credential_values:
-      api_key: os.environ/POSITRON_OPENAI_API_KEY
-    credential_info:
-      description: \"API Key for OpenAI (Positron)\"
-
-  - credential_name: positron_anthropic_credential
-    credential_values:
-      api_key: os.environ/POSITRON_ANTHROPIC_API_KEY
-    credential_info:
-      description: \"API Key for Anthropic (Positron)\"
-
-  - credential_name: positron_gemini_credential
-    credential_values:
-      api_key: os.environ/POSITRON_GEMINI_API_KEY
-    credential_info:
-      description: \"API Key for Google AI (Positron)\"
-
-  - credential_name: positron_credential
-    credential_values:
-      api_base: https://api-dev.positron.ai/v1
-      api_key: os.environ/POSITRON_API_KEY
-    credential_info:
-      description: \"API Key for Positron.ai\"
-
-  - credential_name: omlx_credential
-    credential_values:
-      api_base: http://hera.lan:8000/v1
-      api_key: \"dummy-key\"
-    credential_info:
-      description: \"API Key for oMLX on Hera\"
-"
-  "Literal credential-list YAML for LiteLLM's config.yaml file."
-  :type 'function
-  :group 'llm-setup)
-
-(defcustom llm-setup-litellm-epilog-spec "
-litellm_settings:
-  request_timeout: 7200
-  streaming_request_timeout: 300
-  ssl_verify: false
-  drop_params: true
-  # set_verbose: true
-  cache: true
-  cache_params:
-    type: redis
-    mode: default_off
-    namespace: \"agent-response-cache:v1\"
-    ttl: 300
-    host: \"10.0.2.2\"
-    port: 8085
-    supported_call_types:
-      - completion
-      - atext_completion
-      - aembedding
-      - atranscription
-
-guardrails:
-  - guardrail_name: \"harmony_filter\"
-    litellm_params:
-      guardrail: harmony_filter.HarmonyResponseFilter
-      mode: \"post_call\"
-      default_on: true
-
-router_settings:%s
-  routing_strategy: \"least-busy\"
-  num_retries: 3
-  request_timeout: 7200
-  streaming_request_timeout: 300
-  max_parallel_requests: 100
-  allowed_fails: 3
-  cooldown_time: 30
-  # provider_budget_config:
-  #   perplexity:
-  #     budget_limit: 5
-  #     time_period: 1mo
-
-general_settings:
-  background_health_checks: false
-  health_check_interval: 0
-  store_model_in_db: true
-  store_prompts_in_spend_logs: true
-  maximum_spend_logs_retention_period: \"90d\"
-  maximum_spend_logs_retention_interval: \"7d\"
-  enable_pass_through_endpoints: true
-"
-  "Epilog for LiteLLM's config.yaml file.
-Contains a %s placeholder for dynamically generated router fallbacks."
-  :type 'string
-  :group 'llm-setup)
 
 (defcustom llm-setup-nix-model-registry-path
   "~/src/nix/config/ai/model-registry.json"
@@ -1194,10 +983,6 @@ alphabetically by the `:name' field (case-insensitive)."
     (when gguf
       (shell-command (format "gguf-tools show %s" gguf)))))
 
-(defun llm-setup-get-instance-model-name (model instance)
-  "Return the provider-facing model name for MODEL and INSTANCE."
-  (or (llm-setup-instance-model-name instance)
-      (llm-setup-get-instance-name model instance)))
 
 (defun llm-setup-get-instance-name (model instance)
   "Return the public deployment name for MODEL and INSTANCE."
@@ -1218,25 +1003,8 @@ alphabetically by the `:name' field (case-insensitive)."
   (or (llm-setup-instance-max-output-tokens instance)
       (llm-setup-model-max-output-tokens model)))
 
-(defun llm-setup-lookup-fallback-instance (fallback-name &optional instances)
-  "Look up the instance whose name matches FALLBACK-NAME.
-Search INSTANCES if provided, otherwise call `llm-setup-instances-list'.
-Returns a cons cell (MODEL . INSTANCE) or nil if not found."
-  (cl-loop
-   for
-   (model . instance)
-   in
-   (or instances (llm-setup-instances-list))
-   when
-   (eq fallback-name (llm-setup-get-instance-name model instance))
-   return
-   (cons model instance)))
-
-(defun llm-setup-get-full-litellm-name (model instance)
-  "Return the full LiteLLM model name for MODEL and INSTANCE.
-For local/vibe-proxy providers, return \"host/name\".
-For oMLX, return \"host/omlx/name\".
-For remote providers, return \"provider/name\"."
+(defun llm-setup-get-full-instance-name (model instance)
+  "Return the fully qualified route name for MODEL and INSTANCE."
   (let ((provider (llm-setup-instance-provider instance))
         (name (llm-setup-get-instance-name model instance)))
     (cond
@@ -1246,75 +1014,6 @@ For remote providers, return \"provider/name\"."
       (format "%s/%s" (car (llm-setup-instance-hostnames instance)) name))
      (t
       (format "%s/%s" provider name)))))
-
-(defun llm-setup-format-router-fallbacks (&optional instances)
-  "Collect all instance fallbacks and format as router_settings YAML.
-Search INSTANCES if provided, otherwise call `llm-setup-instances-list'.
-Returns a string suitable for insertion into the LiteLLM config."
-  (let ((fallback-entries nil)
-        (instances (or instances (llm-setup-instances-list))))
-    ;; Collect all fallback mappings
-    (dolist (mi instances)
-      (cl-destructuring-bind
-          (model . instance) mi
-        (when-let* ((fallbacks (llm-setup-instance-fallbacks instance))
-                    (provider (llm-setup-instance-provider instance)))
-          (let ((hostnames
-                 (if (memq provider '(local vibe-proxy omlx))
-                     (llm-setup-instance-hostnames instance)
-                   (list provider))))
-            ;; For each local hostname or remote provider route
-            (dolist (host hostnames)
-              (let*
-                  ((source-name
-                    (format "%s/%s"
-                            host
-                            (llm-setup-get-instance-name model instance)))
-                   ;; Resolve unqualified instance names; use slash-containing
-                   ;; route names as-is.
-                   (resolved-fallbacks
-                    (cl-loop
-                     for
-                     fb
-                     in
-                     fallbacks
-                     for
-                     fb-str
-                     =
-                     (symbol-name fb)
-                     if
-                     (string-match-p "/" fb-str)
-                     ;; Slash-containing route, use as-is
-                     collect
-                     fb-str
-                     else
-                     ;; Look up the instance to get full name
-                     for
-                     fb-mi
-                     =
-                     (llm-setup-lookup-fallback-instance fb instances)
-                     when
-                     fb-mi
-                     collect
-                     (llm-setup-get-full-litellm-name
-                      (car fb-mi) (cdr fb-mi)))))
-                (when resolved-fallbacks
-                  (push (cons source-name resolved-fallbacks)
-                        fallback-entries))))))))
-    ;; Format as YAML
-    (if fallback-entries
-        (concat
-         "\n  fallbacks:\n"
-         (mapconcat (lambda (entry)
-                      (format "    - \"%s\": [%s]"
-                              (car entry)
-                              (mapconcat (lambda (fb)
-                                           (format "\"%s\"" fb))
-                                         (cdr entry)
-                                         ", ")))
-                    (nreverse fallback-entries)
-                    "\n"))
-      "")))
 
 (defsubst llm-setup-remote-hostname-p (hostname)
   "Return non-nil if HOSTNAME is both non-nil and a remote host.
@@ -1641,10 +1340,7 @@ llama-swap startup and are resident before the first request arrives."
 (defun llm-setup-build-llama-swap-yaml (&optional hostname)
   "Build llama-swap.yaml configuration, optionally for HOSTNAME."
   (let* ((target-host (or hostname llm-setup-default-hostname))
-         (yaml-path
-          (if (string= hostname "vulcan")
-              (expand-file-name "llama-swap.yaml" "/home/johnw/Models")
-            (expand-file-name "llama-swap.yaml" llm-setup-gguf-models))))
+         (yaml-path (expand-file-name "llama-swap.yaml" llm-setup-gguf-models)))
     (message "[llama-swap] Generating YAML for %s..." target-host)
     (with-temp-buffer
       (insert
@@ -1659,150 +1355,6 @@ llama-swap startup and are resident before the first request arrives."
       (call-process "killall" nil nil nil "llama-swap"))
     (message "[llama-swap] Done for %s" target-host)))
 
-(defun llm-setup-insert-instance-litellm (model instance)
-  "Instance the LiteLLM config for MODEL and INSTANCE."
-  (let* ((hostnames (llm-setup-instance-hostnames instance))
-         (provider (llm-setup-instance-provider instance))
-         (cache-control (llm-setup-instance-cache-control instance))
-         (name (llm-setup-get-instance-name model instance))
-         (model-name (llm-setup-get-instance-model-name model instance))
-         (kind (llm-setup-model-kind model))
-         (description (llm-setup-model-description model))
-         (max-input-tokens
-          (llm-setup-get-instance-max-input-tokens model instance))
-         (max-output-tokens
-          (llm-setup-get-instance-max-output-tokens model instance))
-         (supports-system-message
-          (llm-setup-model-supports-system-message model))
-         (supports-function-calling
-          (llm-setup-model-supports-function-calling model))
-         (supports-reasoning (llm-setup-model-supports-reasoning model))
-         (supports-response-schema
-          (llm-setup-model-supports-response-schema model)))
-    (dolist (host
-             (if (memq provider '(local vibe-proxy omlx))
-                 hostnames
-               (list provider)))
-      (let ((model-name-prefix
-             (if (eq provider 'omlx)
-                 (format "%s/omlx" host)
-               (format "%s" host))))
-        (insert
-         (format "
-  - model_name: %s/%s
-    litellm_params:
-      model: %s/%s
-      litellm_credential_name: %s_credential
-      %ssupports_system_message: %s
-    model_info:
-      mode: %S
-      description: %S%s%s
-      supports_function_calling: %s
-      supports_reasoning: %s
-      supports_response_schema: %s
-"
-                 model-name-prefix name
-                 (cond
-                  ((eq 'local provider)
-                   "openai")
-                  ((eq 'vibe-proxy provider)
-                   "openai")
-                  ((eq 'positron provider)
-                   "openai")
-                  ((eq 'omlx provider)
-                   "openai")
-                  ((string-match "positron_\\(.+\\)" (symbol-name provider))
-                   (match-string 1 (symbol-name provider)))
-                  (t
-                   provider))
-                 model-name
-                 (cond
-                  ((eq 'local provider)
-                   (concat host "_llama_swap"))
-                  ((eq 'vibe-proxy provider)
-                   (concat host "_vibe_proxy"))
-                  ((eq 'omlx provider)
-                   "omlx")
-                  (t
-                   provider))
-                 (if (eq kind 'embedding)
-                     "drop_params: true
-      encoding_format: \"float\"
-      "
-                   "")
-
-                 (concat
-                  (if supports-system-message
-                      "true"
-                    "false")
-                  (when cache-control
-                    "
-      cache_control_injection_points:
-        - location: message
-          role: system"))
-                 (cond ((or (null kind) (eq kind 'text-generation))
-                        "chat")
-                       ((eq kind 'audio-transcription)
-                        "audio_transcription")
-                       ((eq kind 'audio-speech)
-                        "audio_speech")
-                       (t
-                        kind))
-                 (or description "")
-                 (if max-input-tokens
-                     (format "\n      max_input_tokens: %s" max-input-tokens)
-                   "")
-                 (if max-output-tokens
-                     (format "\n      max_output_tokens: %s" max-output-tokens)
-                   "")
-                 (if supports-function-calling
-                     "true"
-                   "false")
-                 (if supports-reasoning
-                     "true"
-                   "false")
-                 (if supports-response-schema
-                     "true"
-                   "false")))))))
-
-(defun llm-setup-generate-litellm-yaml ()
-  "Build LiteLLM config.yaml configuration."
-  (with-current-buffer (get-buffer-create "*litellm-config.yaml*")
-    (erase-buffer)
-    (insert llm-setup-litellm-prolog)
-    (insert "model_list:")
-    (let ((instances (llm-setup-instances-list)))
-      (dolist (mi instances)
-        (cl-destructuring-bind
-            (model . instance)
-            mi
-          (llm-setup-insert-instance-litellm model instance)))
-      (insert llm-setup-litellm-credentials)
-      (insert (funcall llm-setup-litellm-environment-function))
-      ;; Format the epilog with dynamically generated router fallbacks
-      (insert
-       (format llm-setup-litellm-epilog-spec
-               (llm-setup-format-router-fallbacks instances))))
-    (yaml-mode)
-    (current-buffer)))
-
-;; (display-buffer (llm-setup-generate-litellm-yaml))
-
-(defun llm-setup-build-litellm-yaml ()
-  "Build LiteLLM config.yaml configuration."
-  (message "[litellm] Generating LiteLLM configuration...")
-  (let ((config-buf (llm-setup-generate-litellm-yaml)))
-    (with-temp-buffer
-      (insert
-       (with-current-buffer config-buf
-         (buffer-string)))
-      (message "[litellm] Writing to %s..." llm-setup-litellm-path)
-      (write-file llm-setup-litellm-path))
-    (kill-buffer config-buf))
-  (message "[litellm] Restarting LiteLLM service...")
-  ;; (shell-command "ssh vulcan sudo systemctl restart litellm.service")
-  (shell-command "sudo systemctl --user -M litellm@ restart litellm.service")
-  (message "[litellm] Done"))
 
 ;;; Nix model registry generation
 
@@ -1848,8 +1400,8 @@ llama-swap startup and are resident before the first request arrives."
     :display-name "LiteLLM"
     :base-url "https://litellm.vulcan.lan/v1/"
     :api-key '((env . "LITELLM_API_KEY"))
-    :match-fn #'llm-setup--model-registry-litellm-match-p
-    :key-fn #'llm-setup-get-full-litellm-name
+    :match-fn #'llm-setup--model-registry-shared-provider-match-p
+    :key-fn #'llm-setup-get-full-instance-name
     :default-max-output-tokens 65536
     :include-limits t
     :default-output-limit 65536)
@@ -1996,9 +1548,8 @@ If IS-OMLX is non-nil, append \"(MLX)\" suffix."
       (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
            (memq (llm-setup-instance-provider instance) match-providers))))))
 
-(defun llm-setup--model-registry-litellm-match-p (model instance)
-  "Return non-nil if MODEL INSTANCE should appear under the litellm provider.
-LiteLLM aggregates all non-embedding and non-reranker models."
+(defun llm-setup--model-registry-shared-provider-match-p (model instance)
+  "Return non-nil if MODEL INSTANCE belongs to the shared provider."
   (and (not (memq (llm-setup-model-kind model) '(embedding reranker)))
        (memq (llm-setup-instance-provider instance)
              llm-setup-all-model-providers)))
@@ -2204,26 +1755,18 @@ file is byte-identical, leave it untouched.  Return the expanded path."
   "Reset all of the configuration files related to LLMs."
   (interactive)
   (message "[llm-setup-reset] Starting reset process...")
-  ;; First check that everything is sane
-  (message "[llm-setup-reset] Step 1/6: Checking instances...")
+  (message "[llm-setup-reset] Step 1/5: Checking instances...")
   (unless (= 0 (llm-setup-check-instances))
     (error "Failed to check installed and defined instances"))
-  (message "[llm-setup-reset] Step 1/6: Instance check complete")
-  ;; Update llama-swap configurations on all machines that run models
-  (message "[llm-setup-reset] Step 2/6: Building llama-swap.yaml for %s..."
+  (message "[llm-setup-reset] Step 1/5: Instance check complete")
+  (message "[llm-setup-reset] Step 2/5: Building llama-swap.yaml for %s..."
            llm-setup-default-hostname)
   (llm-setup-build-llama-swap-yaml)
-  (message "[llm-setup-reset] Step 3/6: Building llama-swap.yaml for clio...")
+  (message "[llm-setup-reset] Step 3/5: Building llama-swap.yaml for clio...")
   (llm-setup-build-llama-swap-yaml "clio")
-  ;; (llm-setup-build-llama-swap-yaml "vulcan")
-  ;; Update LiteLLM to refer to all local and remote models
-  (message "[llm-setup-reset] Step 4/6: Building LiteLLM config...")
-  (llm-setup-build-litellm-yaml)
-  ;; Publish the nonsecret model registry consumed by Nix
-  (message "[llm-setup-reset] Step 5/6: Publishing Nix model registry...")
+  (message "[llm-setup-reset] Step 4/5: Publishing Nix model registry...")
   (llm-setup-build-nix-model-registry)
-  ;; Update GPTel with instance list, to remain in sync with LiteLLM
-  (message "[llm-setup-reset] Step 6/6: Updating GPTel backends...")
+  (message "[llm-setup-reset] Step 5/5: Updating GPTel backends...")
   (setq gptel-model llm-setup-default-instance-name
         gptel-backend (gptel-backends-make-litellm))
   (message "[llm-setup-reset] Complete!"))
@@ -2475,7 +2018,6 @@ If HOSTNAME is non-nil, only generate definitions for that host."
     collect
     (intern (llm-setup-short-model-name (llm-setup-full-model-name item))))))
 
-;; (llm-setup-installed-models "vulcan")
 
 ;;; llm-setup-sync — discover new and dead models
 

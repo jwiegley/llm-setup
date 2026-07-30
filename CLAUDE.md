@@ -2,61 +2,76 @@
 
 ## Package Overview
 
-`llm-setup.el` is a single-file LLM model management system for Emacs. It maintains deployed **model facts** in `llm-setup-models-list`, provider and exceptional Nix-only static-model facts in `llm-setup-nix-provider-defs`, and exact default and Claude selections in explicit Custom variables, then generates runtime plus Nix configurations for a multi-host infrastructure:
+`llm-setup.el` is a single-file LLM model management system for Emacs. It
+maintains deployed model facts in `llm-setup-models-list`, provider and
+exceptional Nix-only static-model facts in `llm-setup-nix-provider-defs`, and
+exact default and Claude selections in explicit Custom variables. It owns three
+outputs:
 
 ```
 llm-setup-models-list (Elisp structs)
     │
-    ├─► llama-swap.yaml (per-host: hera, clio)
+    ├─► /Users/johnw/Models/llama-swap.yaml (hera, clio)
     │     └─ Model-switching proxy on port 8080
-    │
-    ├─► litellm/config.yaml (global: vulcan)
-    │     └─ Unified OpenAI-compatible proxy aggregating all local + cloud providers
     │
     ├─► config/ai/model-registry.json (Nix source)
     │     └─ Schema-v2 nonsecret model facts and four exact selections
     │
     └─► gptel backends (Emacs)
-          └─ In-editor LLM interaction via LiteLLM
+          └─ In-editor LLM interaction
 ```
 
+The package does not generate or deploy configuration for downstream model
+gateways or manage their services.
+
 **Infrastructure topology:**
+
 - **hera** (primary) — runs most GGUF/MLX models via llama-swap
 - **clio** (secondary) — runs a subset of models via llama-swap
-- **vulcan** (remote) — runs LiteLLM as a systemd service, config deployed via multi-hop TRAMP (`/ssh:vulcan|sudo:root@vulcan:/etc/litellm/config.yaml`)
 
 ## Development Commands
 
-No traditional build system (no Makefile, Eask, or Cask). Nix provides the development environment and repository checks.
+No traditional build system (no Makefile, Eask, or Cask). Nix provides the
+development environment and repository checks.
 
 **ERT:**
+
 ```bash
 nix develop -c emacs --batch -L . --eval '(setq load-prefer-newer t)' \
   -l llm-setup-test.el -f ert-run-tests-batch-and-exit
 ```
 
 **Byte-compile:**
+
 ```bash
 emacs -batch -L . -f batch-byte-compile llm-setup.el
 ```
 
-**Validate configuration** (checks installed GGUF models plus enum, hostname, and path fields):
+**Validate configuration** (checks installed GGUF models plus enum, hostname,
+and path fields):
+
 ```elisp
 (llm-setup-check-instances)
 ```
 
-**Full deployment** (validate → rebuild runtime YAMLs → restart services → publish Nix registry → update gptel):
+**Full deployment** (validate → rebuild hera/clio llama-swap YAML → stop each
+llama-swap process for service-manager restart → publish Nix registry → update
+gptel):
+
 ```elisp
 (llm-setup-reset)
 ```
 
 **Interactive development** — after modifying `llm-setup.el`:
+
 ```elisp
 (unload-feature 'llm-setup t)
 (load-file "llm-setup.el")
 ```
 
-The deployed path (`~/.emacs.d/lisp/llm-setup`) is the same physical directory as the source (via Nix home-manager symlinks), so changes take effect immediately after `eval-buffer` or reload.
+The deployed path (`~/.emacs.d/lisp/llm-setup`) is the same physical directory
+as the source (via Nix home-manager symlinks), so changes take effect immediately
+after `eval-buffer` or reload.
 
 ## Architecture
 
@@ -64,57 +79,75 @@ The deployed path (`~/.emacs.d/lisp/llm-setup`) is the same physical directory a
 
 Two `cl-defstruct` types form the registry:
 
-- **`llm-setup-model`** — Family-level: name, description, characteristics (`high`/`medium`/`low`/`remote`/`local`/`thinking`/`instruct`/`coding`/`rewrite`), capabilities (`media`/`tool`/`json`/`url`), kind (`text-generation`/`embedding`/`reranker`/`audio-transcription`/`audio-speech`), sampling parameters, and a list of instances.
-- **`llm-setup-instance`** — Deployment-level: provider, engine, hostnames, model-path, file-path, draft-model, cache settings, fallbacks. Each instance belongs to exactly one `llm-setup-model`.
+- **`llm-setup-model`** — Family-level metadata, sampling parameters, and a list
+  of instances.
+- **`llm-setup-instance`** — Deployment-level provider, engine, hostnames, model
+  paths, llama.cpp cache settings, arguments, and concurrency limits.
 
-The deployed-model registry lives in `llm-setup-models-list` (a large `defcustom`). Downstream model generation iterates this via `llm-setup-instances-list`, which flattens it into `(model . instance)` cons pairs. The Nix projection combines those instances with `llm-setup-nix-provider-defs`, which owns provider facts and exceptional static routes. It also reads `llm-setup-default-provider`, `llm-setup-default-instance-name`, `llm-setup-claude-provider`, and the three `llm-setup-claude-*-model-id` variables. It emits the ordered `default`, `claudeDefault`, `claudeHaiku`, and `claudeSubagent` selections in schema version 2.
+The deployed-model registry lives in `llm-setup-models-list`. Downstream
+generation iterates it via `llm-setup-instances-list`, which flattens it into
+`(model . instance)` cons pairs. The Nix projection combines those instances
+with `llm-setup-nix-provider-defs` and the explicit default and Claude selection
+variables. It emits the ordered `default`, `claudeDefault`, `claudeHaiku`, and
+`claudeSubagent` selections in schema version 2.
+
+Nix provider facts may describe externally operated endpoints, including the
+provider whose ID is `litellm`. Those entries are nonsecret projection data;
+this package does not configure or restart the corresponding service.
 
 ### Naming System
 
-Each model has multiple names used in different contexts:
-
 | Accessor | Returns | Used For |
 |---|---|---|
-| `llm-setup-model-name` | Symbol like `Qwen3.5-27B` | Internal registry key |
-| `llm-setup-instance-name` | Symbol like `mlx-community/Qwen3.5-27B-4bit`, or nil → falls back to model name | llama-swap model key, LiteLLM model name |
-| `llm-setup-instance-model-name` | Override for provider-facing name (e.g. Claude vibe-proxy) | LiteLLM's provider-facing `model` value |
-| `llm-setup-get-full-litellm-name` | `"host/name"`, `"host/omlx/name"`, or `"provider/name"` | LiteLLM entries, fallback resolution |
-| `llm-setup-short-model-name` | Strips org prefix and GGUF suffix from directory name | Matching installed models to registry |
+| `llm-setup-model-name` | Family symbol | Internal registry key |
+| `llm-setup-instance-name` | Public instance symbol, or nil | llama-swap, Nix, and GPTel model key |
+| `llm-setup-get-full-instance-name` | `host/name`, `host/omlx/name`, or `provider/name` | Nix route key |
+| `llm-setup-short-model-name` | Directory name without organization/GGUF suffixes | Installed-model matching |
 
-### YAML Generation Pipeline
+### llama-swap Generation
 
-**llama-swap** (`llm-setup-generate-llama-swap-yaml`): Generates per-host. Iterates all instances, filters by hostname membership, and emits engine-specific CLI commands with `${PORT}` placeholders. `llm-setup-llama-swap-prolog` precedes the model entries; groups and preload hooks are generated from the emitted models and resident-model settings.
+`llm-setup-generate-llama-swap-yaml` generates per-host YAML. It filters
+instances by hostname and local provider eligibility, emits engine-specific CLI
+commands with `${PORT}` placeholders, and appends groups and preload hooks for
+the models actually emitted.
 
-**LiteLLM** (`llm-setup-generate-litellm-yaml`): Generates globally. All instances are included — local instances get one entry per hostname, remote instances get one entry per provider. Credentials come from `llm-setup-litellm-credentials`, API keys from `llm-setup-litellm-environment-function` (calls `lookup-password`). Router fallbacks are dynamically generated from instance `fallbacks` fields.
+`llm-setup-build-llama-swap-yaml` writes
+`/Users/johnw/Models/llama-swap.yaml` locally for hera or through TRAMP for
+clio, then stops the corresponding llama-swap process so its service manager
+can restart it.
 
-### `llm-setup-reset` Orchestration (6 steps)
+### `llm-setup-reset` Orchestration (5 steps)
 
 1. `llm-setup-check-instances` — validate registry; abort on any warning
-2. `llm-setup-build-llama-swap-yaml` — write YAML for hera, kill llama-swap locally
-3. `llm-setup-build-llama-swap-yaml "clio"` — write YAML for clio via TRAMP, kill via SSH
-4. `llm-setup-build-litellm-yaml` — write config to vulcan via TRAMP, restart systemd service
-5. `llm-setup-build-nix-model-registry` — atomically publish the nonsecret JSON registry for Nix
-6. Set `gptel-model` and `gptel-backend` via `gptel-backends-make-litellm` (defined externally)
+2. `llm-setup-build-llama-swap-yaml` — write hera YAML and stop llama-swap locally
+3. `llm-setup-build-llama-swap-yaml "clio"` — write clio YAML via TRAMP and stop it via SSH
+4. `llm-setup-build-nix-model-registry` — atomically publish the nonsecret JSON registry
+5. Set `gptel-model` and `gptel-backend` via `gptel-backends-make-litellm`
 
 ## Adding a New Model
 
 1. Download: `M-x llm-setup-download` (or `llm-setup-checkout` for git-lfs)
 2. Optionally inspect: `M-x llm-setup-show` to view GGUF metadata
-3. Add a `make-llm-setup-model` + `make-llm-setup-instance` entry to `llm-setup-models-list`
-4. Run `M-x llm-setup-reset` to validate, deploy, and publish the Nix registry
+3. Add a `make-llm-setup-model` + `make-llm-setup-instance` entry
+4. Run `M-x llm-setup-reset` to validate, deploy, and publish
 
 ## Critical Constraints
 
 ### External Dependencies Not Defined Here
-- `lookup-password` — used to fetch API keys from auth-source; defined elsewhere in the Emacs config
-- `gptel-backends-make-litellm` — called in `llm-setup-reset` step 6; defined in gptel configuration
-- `yaml-mode`, `json-mode` — used for display buffers but never `require`'d
+
+- `gptel-backends-make-litellm` — retained external gptel integration called in
+  reset step 5
+- `yaml-mode`, `json-mode` — used for display buffers but never `require`d
 
 ### TRAMP Patterns
-Remote operations use `/ssh:hostname:` prefix for file paths (constructed by `llm-setup-remote-path`). LiteLLM config uses multi-hop: `/ssh:vulcan|sudo:root@vulcan:`. Remote `executable-find` works by temporarily setting `default-directory` to the remote host.
+
+Remote model operations use `/ssh:hostname:` paths constructed by
+`llm-setup-remote-path`. Clio uses the same `/Users/johnw/Models` pathname as
+hera. Remote `executable-find` works by temporarily setting `default-directory`
+to the remote host.
 
 ### Allowed Enum Values
-All valid values for provider, engine, kind, characteristics, and capabilities are defined as `defconst` lists (`llm-setup-all-model-providers`, `llm-setup-all-model-engines`, etc.). `llm-setup-check-instances` validates against these.
 
-### Provider-to-LiteLLM Mapping
-In `llm-setup-insert-instance-litellm`, provider symbols map to LiteLLM provider strings: `local` → `"openai"`, `positron` → `"openai"`, `positron_anthropic` → `"anthropic"`, etc. Each provider also maps to a credential name.
+All valid provider, engine, kind, characteristic, and capability values are
+defined in the corresponding `llm-setup-all-*` constants and validated by
+`llm-setup-check-instances`.

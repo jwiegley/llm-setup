@@ -54,109 +54,6 @@
        (= (length hosts)
           (length (delete-dups (copy-sequence hosts))))))))
 
-(ert-deftest llm-setup-test-litellm-provider-model-alias ()
-  "Keep the public route distinct from its provider-facing model name."
-  (let ((model (make-llm-setup-model :name 'claude-fable))
-        (instance
-         (make-llm-setup-instance
-          :name 'claude-fable-5-thinking-32000
-          :model-name 'claude-fable-5
-          :provider 'vibe-proxy
-          :hostnames '("hera"))))
-    (with-temp-buffer
-      (llm-setup-insert-instance-litellm model instance)
-      (let ((yaml (buffer-string)))
-        (should
-         (string-match-p
-          (regexp-quote
-           "model_name: hera/claude-fable-5-thinking-32000\n")
-          yaml))
-        (should
-         (string-match-p
-          (regexp-quote "model: openai/claude-fable-5\n")
-          yaml))
-        (should-not
-         (string-match-p
-          (regexp-quote
-           "model: openai/claude-fable-5-thinking-32000\n")
-          yaml))))))
-
-(ert-deftest llm-setup-test-litellm-provider-model-name-fallback ()
-  "Use the public instance name when no provider override is configured."
-  (let ((model (make-llm-setup-model :name 'claude-fable))
-        (instance
-         (make-llm-setup-instance
-          :name 'claude-fable-5
-          :provider 'anthropic
-          :hostnames '("hera"))))
-    (with-temp-buffer
-      (llm-setup-insert-instance-litellm model instance)
-      (let ((yaml (buffer-string)))
-        (should
-         (string-match-p
-          (regexp-quote "model_name: anthropic/claude-fable-5\n")
-          yaml))
-        (should
-         (string-match-p
-          (regexp-quote "model: anthropic/claude-fable-5\n")
-          yaml))))))
-
-(ert-deftest llm-setup-test-claude-fable-routes ()
-  "Generate the provider-facing Fable name for every public route."
-  (let ((model
-         (seq-find
-          (lambda (candidate)
-            (eq (llm-setup-model-name candidate) 'claude-fable))
-          llm-setup-models-list)))
-    (should model)
-    (let ((instances (llm-setup-model-instances model))
-          (expectations
-           '((vibe-proxy
-              "claude-fable-5-thinking-32000"
-              "claude-fable-5"
-              "openai/claude-fable-5")
-             (vibe-proxy
-              "claude-fable-5"
-              "claude-fable-5"
-              "openai/claude-fable-5")
-             (positron_anthropic
-              "claude-fable-5"
-              "claude-fable-5"
-              "anthropic/claude-fable-5")
-             (positron_anthropic
-              "claude-fable-5[1m]"
-              "claude-fable-5[1m]"
-              "anthropic/claude-fable-5[1m]")
-             (anthropic
-              "claude-fable-5"
-              "claude-fable-5"
-              "anthropic/claude-fable-5"))))
-      (should (= (length expectations) (length instances)))
-      (cl-mapc
-       (lambda (instance expectation)
-         (pcase-let ((`(,provider ,public-name ,provider-model-name ,route)
-                      expectation))
-           (should (eq (llm-setup-instance-provider instance) provider))
-           (should
-            (equal (symbol-name (llm-setup-instance-name instance))
-                   public-name))
-           (should
-            (equal
-             (symbol-name
-              (llm-setup-get-instance-model-name model instance))
-             provider-model-name))
-           (with-temp-buffer
-             (llm-setup-insert-instance-litellm model instance)
-             (let ((yaml (buffer-string)))
-               (should
-                (string-match-p
-                 (regexp-quote (format "      model: %s\n" route))
-                 yaml))
-               (should-not
-                (string-match-p
-                 "^      model: [^\n]*/claude-fable$"
-                 yaml))))))
-       instances expectations))))
 
 (ert-deftest llm-setup-test-model-registry-sorted-and-unique ()
   "Keep model family names sorted case-insensitively and unique."
@@ -171,7 +68,7 @@
         (length (delete-dups (copy-sequence keys)))))))
 
 (ert-deftest llm-setup-test-openrouter-routes ()
-  "Generate exact GPTel and LiteLLM routes for OpenRouter models."
+  "Generate exact GPTel routes for OpenRouter models."
   (dolist (case '((Kimi-K3
                    moonshotai/kimi-k3
                    openrouter/moonshotai/kimi-k3
@@ -200,28 +97,7 @@
           (mapcar
            #'car
            (llm-setup-get-instance-gptel-backend model instance))
-          (list route-name)))
-        (with-temp-buffer
-          (llm-setup-insert-instance-litellm model instance)
-          (let ((yaml (buffer-string)))
-            (should
-             (string-match-p
-              (regexp-quote
-               (format "\n  - model_name: %s\n" route-name))
-              yaml))
-            (should
-             (string-match-p
-              (regexp-quote (format "\n      model: %s\n" route-name))
-              yaml))
-            (should
-             (string-match-p
-              (regexp-quote
-               "\n      litellm_credential_name: openrouter_credential\n")
-              yaml))
-            (should
-             (string-match-p
-              (regexp-quote "\n      supports_reasoning: true\n")
-              yaml))))))))
+          (list route-name)))))))
 
 (ert-deftest llm-setup-test-openrouter-glm-family ()
   "Keep local and OpenRouter GLM-5.2 instances in one family."
@@ -258,26 +134,13 @@
       (should (= 1048576
                  (llm-setup-instance-context-length openrouter)))
       (should (= 1048576
-                 (llm-setup-get-instance-context-length
-                  model openrouter)))
+                 (llm-setup-get-instance-context-length model openrouter)))
       (should
        (equal
         (mapcar
          #'car
          (llm-setup-get-instance-gptel-backend model openrouter))
-        (list route-name)))
-      (with-temp-buffer
-        (llm-setup-insert-instance-litellm model openrouter)
-        (let ((yaml (buffer-string)))
-          (should
-           (string-match-p
-            (regexp-quote
-             (format "\n  - model_name: %s\n" route-name))
-            yaml))
-          (should
-           (string-match-p
-            (regexp-quote (format "\n      model: %s\n" route-name))
-            yaml)))))))
+        (list route-name))))))
 
 (ert-deftest llm-setup-test-resident-model-references ()
   "Require resident and preloaded names to resolve to declared instances."
@@ -358,6 +221,78 @@
     (with-temp-buffer
       (llm-setup-insert-instance-llama-swap model instance "hera")
       (should-not (string-match-p "concurrencyLimit" (buffer-string))))))
+
+(ert-deftest llm-setup-test-llama-swap-generates-per-host ()
+  "Generate only host-eligible llama-swap entries for hera and clio."
+  (let ((llm-setup-models-list
+         (list
+          (make-llm-setup-model
+           :name 'both
+           :instances
+           (list (make-llm-setup-instance :hostnames '("hera" "clio"))))
+          (make-llm-setup-model
+           :name 'hera-only
+           :instances
+           (list (make-llm-setup-instance :hostnames '("hera"))))
+          (make-llm-setup-model
+           :name 'clio-only
+           :instances
+           (list (make-llm-setup-instance :hostnames '("clio"))))
+          (make-llm-setup-model
+           :name 'remote
+           :instances
+           (list (make-llm-setup-instance :provider 'openrouter))))))
+    (cl-letf (((symbol-function 'llm-setup-insert-instance-llama-swap)
+               (lambda (model _instance _hostname &optional _cache)
+                 (insert (format "\n    %s" (llm-setup-model-name model)))))
+              ((symbol-function 'yaml-mode) #'ignore))
+      (let ((hera
+             (with-current-buffer
+                 (llm-setup-generate-llama-swap-yaml "hera")
+               (buffer-string)))
+            (clio
+             (with-current-buffer
+                 (llm-setup-generate-llama-swap-yaml "clio")
+               (buffer-string))))
+        (dolist (name '("both" "hera-only"))
+          (should (string-match-p (regexp-quote name) hera)))
+        (dolist (name '("both" "clio-only"))
+          (should (string-match-p (regexp-quote name) clio)))
+        (should-not (string-match-p "clio-only" hera))
+        (should-not (string-match-p "hera-only" clio))
+        (should-not (string-match-p "remote" hera))
+        (should-not (string-match-p "remote" clio))))))
+
+(ert-deftest llm-setup-test-build-llama-swap-targets-hera-and-clio ()
+  "Write llama-swap YAML to ~/Models on hera and clio, then stop each service."
+  (let ((llm-setup-gguf-models "/Users/johnw/Models")
+        writes
+        calls)
+    (cl-letf (((symbol-function 'llm-setup-generate-llama-swap-yaml)
+               (lambda (hostname)
+                 (with-current-buffer (get-buffer-create " *llm-setup-test-yaml*")
+                   (erase-buffer)
+                   (insert hostname)
+                   (current-buffer))))
+              ((symbol-function 'write-file)
+               (lambda (path &rest _) (push path writes)))
+              ((symbol-function 'call-process)
+               (lambda (&rest args) (push args calls))))
+      (unwind-protect
+          (progn
+            (llm-setup-build-llama-swap-yaml)
+            (llm-setup-build-llama-swap-yaml "clio")
+            (should
+             (equal
+              (nreverse writes)
+              '("/Users/johnw/Models/llama-swap.yaml"
+                "/ssh:clio:/Users/johnw/Models/llama-swap.yaml")))
+            (should
+             (equal
+              (nreverse calls)
+              '(("killall" nil nil nil "llama-swap")
+                ("ssh" nil nil nil "clio" "killall" "llama-swap")))))
+        (kill-buffer " *llm-setup-test-yaml*")))))
 
 (ert-deftest llm-setup-test-default-gptel-model-exists ()
   "Require the shared client default to resolve to one GPTel backend model."
@@ -481,7 +416,7 @@
             registry "positron-anthropic" model-id)))))))
 
 (ert-deftest llm-setup-test-nix-model-registry-gpt-5.6-sol-limits ()
-  "Preserve GPT-5.6 Sol's long context and output limits through LiteLLM."
+  "Preserve GPT-5.6 Sol's long context and output limits in the registry."
   (let ((model
          (llm-setup-test--nix-model
           (llm-setup-test--nix-model-registry)
@@ -675,7 +610,7 @@
   (let* ((registry (llm-setup-test--nix-model-registry))
          (remote
           (llm-setup-test--nix-provider registry "llama-cpp-remote"))
-         (litellm-omlx
+         (shared-omlx
           (llm-setup-test--nix-model
            registry "litellm"
            "hera/omlx/cohere-transcribe-03-2026-mlx-fp16"))
@@ -692,7 +627,7 @@
     (dolist (provider (alist-get 'providers registry))
       (unless (equal (alist-get 'id provider) "llama-cpp-remote")
         (should-not (assq 'hosts provider))))
-    (should (equal (alist-get 'hosts litellm-omlx) '("hera")))
+    (should (equal (alist-get 'hosts shared-omlx) '("hera")))
     (should (equal (alist-get 'hosts omlx) '("hera")))
     (should (equal (alist-get 'hosts local-only) '("hera")))
     (should-not (assq 'hosts local-unrestricted))))
@@ -717,10 +652,8 @@
       registry "llama-cpp-local" "granite-speech-4.1-2b"))))
 
 (ert-deftest llm-setup-test-nix-model-registry-deterministic-and-secret-free ()
-  "Render deterministically without credential lookup or file writes."
-  (let ((llm-setup-api-key "TASK1-SENTINEL-SECRET")
-        (llm-setup-litellm-environment-function
-         (lambda () (ert-fail "Credential lookup must not run"))))
+  "Render deterministically without secrets or file writes."
+  (let ((llm-setup-api-key "TASK1-SENTINEL-SECRET"))
     (cl-letf (((symbol-function 'write-region)
                (lambda (&rest _) (ert-fail "write-region must not run")))
               ((symbol-function 'write-file)
@@ -871,25 +804,31 @@
             '("model-registry.json"))))
       (delete-directory directory t))))
 
-(ert-deftest llm-setup-test-reset-publishes-nix-registry-only ()
-  "Publish the Nix registry once without calling `write-file' directly."
-  (let ((nix-writes 0))
-    (cl-letf (((symbol-function 'llm-setup-check-instances)
-               (lambda () 0))
-              ((symbol-function 'llm-setup-build-llama-swap-yaml)
-               #'ignore)
-              ((symbol-function 'llm-setup-build-litellm-yaml)
-               #'ignore)
-              ((symbol-function 'llm-setup-build-nix-model-registry)
-               (lambda (&optional _path)
-                 (cl-incf nix-writes)))
-              ((symbol-function 'write-file)
-               (lambda (&rest _)
-                 (ert-fail "Unexpected file writer ran during reset")))
-              ((symbol-function 'gptel-backends-make-litellm)
-               #'ignore))
-      (llm-setup-reset))
-    (should (= 1 nix-writes))))
+(ert-deftest llm-setup-test-reset-orchestration ()
+  "Run hera/clio llama-swap, Nix registry, and GPTel updates in order."
+  (let (events)
+    (cl-progv '(gptel-model gptel-backend) '(nil nil)
+      (cl-letf (((symbol-function 'llm-setup-check-instances)
+                 (lambda () (push 'check events) 0))
+                ((symbol-function 'llm-setup-build-llama-swap-yaml)
+                 (lambda (&optional hostname)
+                   (push (list 'llama-swap hostname) events)))
+                ((symbol-function 'llm-setup-build-nix-model-registry)
+                 (lambda (&optional _path) (push 'nix-registry events)))
+                ((symbol-function 'gptel-backends-make-litellm)
+                 (lambda () (push 'gptel events) 'test-backend)))
+        (llm-setup-reset)
+        (should
+         (equal
+          (nreverse events)
+          '(check
+            (llama-swap nil)
+            (llama-swap "clio")
+            nix-registry
+            gptel)))
+        (should
+         (eq (symbol-value 'gptel-model) llm-setup-default-instance-name))
+        (should (eq (symbol-value 'gptel-backend) 'test-backend))))))
 
 (provide 'llm-setup-test)
 
