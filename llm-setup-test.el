@@ -55,6 +55,26 @@
           (length (delete-dups (copy-sequence hosts))))))))
 
 
+(ert-deftest llm-setup-test-sync-mlx-cache-disabled ()
+  "Ignore cached and registered MLX models when cache sync is disabled."
+  (let* ((llm-setup-sync-mlx-cache nil)
+         (model (make-llm-setup-model :name 'cached-mlx))
+         (instance
+          (make-llm-setup-instance
+           :name 'organization/cached-mlx-4bit
+           :engine 'vllm-mlx))
+         (instances (list (cons model instance))))
+    (cl-letf (((symbol-function 'file-directory-p)
+               (lambda (&rest _)
+                 (ert-fail "Disabled MLX sync must not inspect the cache"))))
+      (let ((discovered (llm-setup-sync--discover-mlx))
+            (known (llm-setup-sync--known-mlx-names instances)))
+        (should (zerop (hash-table-count discovered)))
+        (should (zerop (hash-table-count known)))
+        (should
+         (equal (llm-setup-sync--compare-mlx discovered known)
+                '(:new nil :dead nil)))))))
+
 (ert-deftest llm-setup-test-model-registry-sorted-and-unique ()
   "Keep model family names sorted case-insensitively and unique."
   (let ((keys

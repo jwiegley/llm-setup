@@ -645,6 +645,12 @@
 (defvar llm-setup-gguf-models (expand-file-name "Models" llm-setup-home))
 (defvar llm-setup-mlx-models
   (expand-file-name ".cache/huggingface/hub" llm-setup-home))
+
+(defcustom llm-setup-sync-mlx-cache nil
+  "Whether `llm-setup-sync' discovers models in the Hugging Face MLX cache."
+  :type 'boolean
+  :group 'llm-setup)
+
 (defvar llm-setup-lmstudio-models
   (expand-file-name "lmstudio/models" llm-setup-xdg-local))
 (defvar llm-setup-omlx-api-base "http://hera.lan:8000"
@@ -1935,11 +1941,12 @@ name symbol."
     result))
 
 (defun llm-setup-sync--discover-mlx ()
-  "Discover MLX model directories in `llm-setup-mlx-models'.
-Return a hash table mapping canonical name string (e.g.
+  "Discover cached MLX models when `llm-setup-sync-mlx-cache' is non-nil.
+Return a hash table mapping canonical name string (for example,
 \"mlx-community/Qwen3.5-27B-4bit\") to expanded directory path."
   (let ((result (make-hash-table :test 'equal)))
-    (when (file-directory-p llm-setup-mlx-models)
+    (when (and llm-setup-sync-mlx-cache
+               (file-directory-p llm-setup-mlx-models))
       (dolist (item (directory-files llm-setup-mlx-models t "\\`models--"))
         (when (file-directory-p item)
           (let ((canonical (llm-setup-full-model-name item)))
@@ -2007,20 +2014,21 @@ Return a hash table mapping expanded directory path to a list of
     result))
 
 (defun llm-setup-sync--known-mlx-names (&optional instances)
-  "Extract MLX instance names from the registry.
+  "Extract registered MLX names when `llm-setup-sync-mlx-cache' is non-nil.
 Search INSTANCES if provided, otherwise call `llm-setup-instances-list'.
-Return a hash table mapping canonical name string to a list of
+Return a hash table mapping canonical names to lists of
 \(model . instance) cons pairs."
   (let ((result (make-hash-table :test 'equal)))
-    (dolist (mi (or instances (llm-setup-instances-list)))
-      (cl-destructuring-bind
-          (model . instance) mi
-        (when (and (memq
-                    (llm-setup-instance-engine instance) '(mlx-lm vllm-mlx))
-                   (llm-setup-instance-name instance))
-          (push (cons model instance)
-                (gethash
-                 (symbol-name (llm-setup-instance-name instance)) result)))))
+    (when llm-setup-sync-mlx-cache
+      (dolist (mi (or instances (llm-setup-instances-list)))
+        (cl-destructuring-bind
+            (model . instance) mi
+          (when (and (memq
+                      (llm-setup-instance-engine instance) '(mlx-lm vllm-mlx))
+                     (llm-setup-instance-name instance))
+            (push (cons model instance)
+                  (gethash
+                   (symbol-name (llm-setup-instance-name instance)) result))))))
     result))
 
 (defun llm-setup-sync--known-omlx-names (&optional instances)
@@ -2250,9 +2258,10 @@ items.  MODELS-HASH is passed to scaffold functions."
              llm-setup-gguf-models
              gguf-count))
     (insert
-     (format ";;   MLX HF cache: %s (%d MLX dirs)\n"
-             llm-setup-mlx-models
-             mlx-count))
+     (if llm-setup-sync-mlx-cache
+         (format ";;   MLX HF cache: %s (%d MLX dirs)\n"
+                 llm-setup-mlx-models mlx-count)
+       ";;   MLX HF cache: disabled\n"))
     (insert
      (format ";;   oMLX API: %s (%s)\n"
              llm-setup-omlx-api-base
@@ -2612,14 +2621,15 @@ Return (ADDED . REMOVED) counts."
 ;;;###autoload
 (defun llm-setup-sync ()
   "Discover models, apply change to source, and verify.
-Scans GGUF directories, MLX HF cache, and oMLX API.  Compares
-against the registry, generates a report, removes dead entries and
-inserts new ones in the source file, then runs
-`llm-setup-check-instances' to confirm."
+Scans GGUF directories and the oMLX API, plus the MLX Hugging Face cache
+when `llm-setup-sync-mlx-cache' is non-nil.  Compares discoveries against
+the registry, generates a report, removes dead entries and inserts new ones
+in the source file, then runs `llm-setup-check-instances' to confirm."
   (interactive)
   (message "[llm-setup-sync] Scanning GGUF directories...")
   (let* ((discovered-gguf (llm-setup-sync--discover-gguf))
-         (_ (message "[llm-setup-sync] Scanning MLX HF cache..."))
+         (_ (when llm-setup-sync-mlx-cache
+              (message "[llm-setup-sync] Scanning MLX HF cache...")))
          (discovered-mlx (llm-setup-sync--discover-mlx))
          (_ (message "[llm-setup-sync] Querying oMLX API..."))
          (discovered-omlx (llm-setup-sync--discover-omlx))
