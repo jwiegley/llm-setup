@@ -143,16 +143,15 @@
       (should (= 2 (length instances)))
       (should local)
       (should openrouter)
-      (should (= 200000 (llm-setup-model-context-length model)))
+      (should (= 1048576 (llm-setup-model-context-length model)))
       (should (= 1.0 (llm-setup-model-temperature model)))
       (should
        (equal (llm-setup-instance-model-path local)
               "~/Models/unsloth_GLM-5.2-GGUF"))
-      (should (= 200000
+      (should (= 1048576
                  (llm-setup-get-instance-context-length model local)))
       (should (eq (llm-setup-instance-name openrouter) 'z-ai/glm-5.2))
-      (should (= 1048576
-                 (llm-setup-instance-context-length openrouter)))
+      (should-not (llm-setup-instance-context-length openrouter))
       (should (= 1048576
                  (llm-setup-get-instance-context-length model openrouter)))
       (should
@@ -414,9 +413,9 @@
   (let* ((registry (llm-setup-test--nix-model-registry))
          (selections (alist-get 'selections registry)))
     (dolist
-        (case '((claudeDefault "claude-opus-4-8[1m]")
+        (case '((claudeDefault "claude-opus-5[1m]")
                 (claudeHaiku "claude-sonnet-5")
-                (claudeSubagent "claude-opus-4-8")))
+                (claudeSubagent "claude-opus-5")))
       (pcase-let ((`(,role ,model-id) case))
         (let ((selection (alist-get role selections)))
           (should
@@ -466,9 +465,9 @@
      (equal
       selection-routes
       '(("llama-cpp-local" . "GLM-5.2")
-        ("positron-anthropic" . "claude-opus-4-8[1m]")
+        ("positron-anthropic" . "claude-opus-5[1m]")
         ("positron-anthropic" . "claude-sonnet-5")
-        ("positron-anthropic" . "claude-opus-4-8"))))
+        ("positron-anthropic" . "claude-opus-5"))))
     (dolist (selection-route selection-routes)
       (should (member selection-route routes)))))
 
@@ -533,7 +532,7 @@
           (mapcar (lambda (model) (alist-get 'provider model)) models))
          (expected-provider-order
           '("positron-anthropic" "positron-google" "positron-openai"
-            "nvidia" "llama-cpp-remote" "omlx" "llama-cpp-local")))
+            "nvidia" "omlx-remote" "omlx" "llama-cpp-local")))
     (should
      (equal
       (mapcar (lambda (provider) (alist-get 'id provider)) providers)
@@ -620,7 +619,7 @@
   "Project provider and model host restrictions, omitting unrestricted ones."
   (let* ((registry (llm-setup-test--nix-model-registry))
          (remote
-          (llm-setup-test--nix-provider registry "llama-cpp-remote"))
+          (llm-setup-test--nix-provider registry "omlx-remote"))
          (omlx
           (llm-setup-test--nix-model
            registry "omlx" "cohere-transcribe-03-2026-mlx-fp16"))
@@ -632,7 +631,7 @@
            registry "llama-cpp-local" "Bonsai-8B")))
     (should (equal (alist-get 'hosts remote) '("clio")))
     (dolist (provider (alist-get 'providers registry))
-      (unless (equal (alist-get 'id provider) "llama-cpp-remote")
+      (unless (equal (alist-get 'id provider) "omlx-remote")
         (should-not (assq 'hosts provider))))
     (should (equal (alist-get 'hosts omlx) '("hera")))
     (should (equal (alist-get 'hosts local-only) '("hera")))

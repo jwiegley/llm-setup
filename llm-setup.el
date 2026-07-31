@@ -83,7 +83,7 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-claude-default-model-id "claude-opus-4-8[1m]"
+(defcustom llm-setup-claude-default-model-id "claude-opus-5[1m]"
   "Model ID for Claude's default selection."
   :type 'string
   :group 'llm-setup)
@@ -93,7 +93,7 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-claude-subagent-model-id "claude-opus-4-8"
+(defcustom llm-setup-claude-subagent-model-id "claude-opus-5"
   "Model ID for Claude's subagent selection."
   :type 'string
   :group 'llm-setup)
@@ -289,23 +289,23 @@
     :instances
     (list
      (make-llm-setup-instance
-      :name 'claude-opus-4-8-thinking-32000
+      :name 'claude-opus-5-thinking-32000
       :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :name 'claude-opus-4-8
+      :name 'claude-opus-5
       :provider 'vibe-proxy)
 
      (make-llm-setup-instance
-      :name 'claude-opus-4-8
+      :name 'claude-opus-5
       :provider 'positron_anthropic)
 
      (make-llm-setup-instance
-      :name (intern "claude-opus-4-8[1m]")
+      :name (intern "claude-opus-5[1m]")
       :provider 'positron_anthropic)
 
      (make-llm-setup-instance
-      :name 'claude-opus-4-8
+      :name 'claude-opus-5
       :provider 'anthropic)))
 
    (make-llm-setup-model
@@ -369,16 +369,17 @@
 
    (make-llm-setup-model
     :name 'GLM-5.2
-    :context-length 200000
+    :context-length 1048576
     :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-5.2-GGUF")
+      :model-path "~/Models/unsloth_GLM-5.2-GGUF"
+      :cache-type-k 'q8_0
+      :cache-type-v 'q8_0)
 
      (make-llm-setup-instance
       :name 'z-ai/glm-5.2
-      :context-length 1048576
       :provider 'openrouter)))
 
    (make-llm-setup-model
@@ -1145,7 +1146,7 @@ llama-swap startup and are resident before the first request arrives."
     :base-url "https://api.anthropic.com"
     :api-key '((env . "ANTHROPIC_API_KEY"))
     :match-providers '(positron_anthropic)
-    :default-max-output-tokens 32768
+    :default-max-output-tokens 81920
     :include-limits nil)
    (list
     :id "positron-google"
@@ -1153,7 +1154,7 @@ llama-swap startup and are resident before the first request arrives."
     :base-url "https://generativelanguage.googleapis.com/v1beta/"
     :api-key '((env . "GEMINI_API_KEY"))
     :match-providers '(positron_gemini)
-    :default-max-output-tokens 32000
+    :default-max-output-tokens 81920
     :include-limits nil)
    (list
     :id "positron-openai"
@@ -1161,7 +1162,7 @@ llama-swap startup and are resident before the first request arrives."
     :base-url "https://api.openai.com/v1"
     :api-key '((env . "OPENAI_API_KEY"))
     :match-providers '(positron_openai)
-    :default-max-output-tokens 32000
+    :default-max-output-tokens 81920
     :include-limits nil)
    (list
     :id "nvidia"
@@ -1175,9 +1176,9 @@ llama-swap startup and are resident before the first request arrives."
       :display-name "Qwen3 Coder 480B A35B Instruct"
       :max-output-tokens 81920)))
    (list
-    :id "llama-cpp-remote"
+    :id "omlx-remote"
     :display-name "Llama.cpp (Remote)"
-    :base-url "https://10.6.0.1/v1/"
+    :base-url "https://hera.lan:8443/v1/"
     :api-key '((nonSecret . "dummy-api-key"))
     :hosts '("clio")
     :match-providers '(local)
@@ -1186,7 +1187,7 @@ llama-swap startup and are resident before the first request arrives."
    (list
     :id "omlx"
     :display-name "oMLX"
-    :base-url "http://hera.lan:8000/v1"
+    :base-url "http://localhost:8000/v1"
     :api-key '((nonSecret . "dummy-key"))
     :match-providers '(omlx)
     :default-max-output-tokens 128000
