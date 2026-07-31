@@ -245,15 +245,6 @@
                    "--ubatch-size" "4096"))))
 
    (make-llm-setup-model
-    :name 'Bonsai-8B
-    :context-length 131072
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/prism-ml_Bonsai-8B-gguf"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
     :name 'claude-fable
     :instances
     (list
@@ -353,11 +344,11 @@
       :model-path "~/Models/cstr_cohere-transcribe-03-2026-GGUF")))
 
    (make-llm-setup-model
-    :name 'DeepSeek-V4-Flash-4bit
+    :name 'DeepSeek-V4-Flash-0731
     :instances
     (list
      (make-llm-setup-instance
-      :name 'DeepSeek-V4-Flash-4bit
+      :name 'DeepSeek-V4-Flash-0731-oQ8-mtp
       :provider 'omlx)))
 
    (make-llm-setup-model
@@ -375,18 +366,6 @@
     (list
      (make-llm-setup-instance
       :provider 'positron_gemini)))
-
-   (make-llm-setup-model
-    :name 'GLM-4.7-Flash
-    :context-length 202752
-    :temperature 0.7
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_GLM-4.7-Flash-GGUF"
-      :arguments
-      '("--repeat-penalty" "1.0"))))
 
    (make-llm-setup-model
     :name 'GLM-5.2
@@ -433,48 +412,12 @@
     (list (make-llm-setup-instance :provider 'positron_openai)))
 
    (make-llm-setup-model
-    :name 'gpt-oss-120b
-    :context-length 131072
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gpt-oss-120b-GGUF")))
-
-   (make-llm-setup-model
-    :name 'gpt-oss-20b
-    :context-length 131072
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gpt-oss-20b-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'gpt-oss-safeguard-20b
-    :context-length 131072
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_gpt-oss-safeguard-20b-GGUF")))
-
-   (make-llm-setup-model
     :name 'granite-speech-4.1-2b
     :kind 'audio-transcription
     :instances
     (list
      (make-llm-setup-instance
       :model-path "~/Models/cstr_granite-speech-4.1-2b-GGUF")))
-
-   (make-llm-setup-model
-    :name 'Huihui-Qwable-3.6-27b-abliterated-MTP
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/huihui-ai_Huihui-Qwable-3.6-27b-abliterated-MTP-GGUF"
-      :arguments '("--spec-type" "draft-mtp" "--spec-draft-n-max" "6"))))
 
    (make-llm-setup-model
     :name 'Kimi-K3
@@ -485,15 +428,6 @@
      (make-llm-setup-instance
       :name 'moonshotai/kimi-k3
       :provider 'openrouter)))
-
-   (make-llm-setup-model
-    :name 'LFM2.5-350M
-    :context-length 131072
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/LiquidAI_LFM2.5-350M-GGUF"
-      :hostnames '("hera" "clio"))))
 
    (make-llm-setup-model
     :name 'llama-3.3-70b
@@ -515,23 +449,6 @@
       :model-path "~/Models/mradermacher_Meta-Llama-3.1-8B-GGUF")))
 
    (make-llm-setup-model
-    :name 'Nemotron-3-Nano-30B-A3B
-    :context-length 1048576
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Nemotron-3-Nano-30B-A3B-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'Nemotron-Cascade-2-30B-A3B
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/mradermacher_Nemotron-Cascade-2-30B-A3B-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
     :name 'nomic-embed-text-v2-moe
     :context-length 512
     :kind 'embedding
@@ -544,51 +461,6 @@
                    "--pooling" "mean"
                    "--batch-size" "8192"
                    "--ubatch-size" "4096"))))
-
-   (make-llm-setup-model
-    :name 'NVIDIA-Nemotron-3-Super-120B-A12B
-    :context-length 1048576
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_NVIDIA-Nemotron-3-Super-120B-A12B-GGUF")))
-
-   (make-llm-setup-model
-    :name 'Phi-4-reasoning-plus
-    :context-length 32768
-    :temperature 0.6
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/unsloth_Phi-4-reasoning-plus-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'Qwen.Qwen3-Reranker-8B
-    :kind 'reranker
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/DevQuasar_Qwen.Qwen3-Reranker-8B-GGUF"
-      :hostnames '("hera" "clio")
-      :arguments '("--reranking"
-                   "--batch-size" "4096"
-                   "--ubatch-size" "2048"))))
-
-   (make-llm-setup-model
-    :name 'Qwen3-Embedding-8B
-    :context-length 32767
-    :kind 'embedding
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/Qwen_Qwen3-Embedding-8B-GGUF"
-      :hostnames '("hera" "clio")
-      :arguments '("--embedding"
-                   "--pooling" "last"
-                   "--batch-size" "8192"
-                   "--ubatch-size" "2048"))))
 
    (make-llm-setup-model
     :name 'Qwen3.6-27B-oQ4e-mtp
@@ -607,35 +479,7 @@
     (list
      (make-llm-setup-instance
       :name 'qwen/qwen3.7-max
-      :provider 'openrouter)))
-
-   (make-llm-setup-model
-    :name 'Qwopus3.5-27B-v3
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/Jackrong_Qwopus3.5-27B-v3-GGUF"
-      :arguments '("--no-prefill-assistant")
-      :cache-type-k 'q8_0)))
-
-   (make-llm-setup-model
-    :name 'SERA-32B
-    :context-length 40960
-    :temperature 0.7
-    :top-p 0.8
-    :supports-reasoning t
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/noctrex_SERA-32B-GGUF"
-      :hostnames '("hera" "clio"))))
-
-   (make-llm-setup-model
-    :name 'thesven
-    :instances
-    (list
-     (make-llm-setup-instance
-      :model-path "~/Models/thesven"))))
+      :provider 'openrouter))))
   "List of configured models."
   :type '(repeat sexp)
   :group 'llm-setup)
