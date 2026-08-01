@@ -314,9 +314,10 @@
         (kill-buffer " *llm-setup-test-yaml*")))))
 
 (ert-deftest llm-setup-test-default-gptel-model-exists ()
-  "Require the default to resolve through hera's llama-swap backend."
-  (should (eq llm-setup-default-instance-name 'GLM-5.2))
-  (should (equal (llm-setup-aider-model-name) "openai/GLM-5.2"))
+  "Require the default to resolve through hera's oMLX backend."
+  (should (eq llm-setup-default-instance-name 'Qwen3.6-27B-oQ4e-mtp))
+  (should (equal (llm-setup-aider-model-name)
+                 "openai/Qwen3.6-27B-oQ4e-mtp"))
   (should
    (= 1
       (cl-count
@@ -403,10 +404,7 @@
      (llm-setup-test--nix-model registry "llama-cpp-local" "GLM-5.2"))
     (should
      (llm-setup-test--nix-model
-      registry "omlx" "Qwen3.6-27B-oQ4e-mtp"))
-    (dolist (id '("gpt-5.6-luna" "gpt-5.6-sol" "gpt-5.6-terra"))
-      (should
-       (llm-setup-test--nix-model registry "positron-openai" id)))))
+      registry "omlx" "Qwen3.6-27B-oQ4e-mtp"))))
 
 (ert-deftest llm-setup-test-nix-model-registry-claude-selections ()
   "Publish exact Claude routes and preserve the Haiku-class selection."
@@ -425,16 +423,6 @@
           (should
            (llm-setup-test--nix-model
             registry "positron-anthropic" model-id)))))))
-
-(ert-deftest llm-setup-test-nix-model-registry-gpt-5.6-sol-limits ()
-  "Preserve GPT-5.6 Sol's output limit under its direct provider."
-  (let ((model
-         (llm-setup-test--nix-model
-          (llm-setup-test--nix-model-registry)
-          "positron-openai" "gpt-5.6-sol")))
-    (should (= 128000 (alist-get 'maxOutputTokens model)))
-    (should-not (assq 'contextLimit model))
-    (should-not (assq 'outputLimit model))))
 
 (ert-deftest llm-setup-test-nix-model-registry-references-resolve ()
   "Keep provider IDs, routes, and every selected model unambiguous."
@@ -464,7 +452,7 @@
     (should
      (equal
       selection-routes
-      '(("llama-cpp-local" . "GLM-5.2")
+      '(("omlx" . "Qwen3.6-27B-oQ4e-mtp")
         ("positron-anthropic" . "claude-opus-5[1m]")
         ("positron-anthropic" . "claude-sonnet-5")
         ("positron-anthropic" . "claude-opus-5"))))
@@ -531,7 +519,7 @@
          (provider-ids
           (mapcar (lambda (model) (alist-get 'provider model)) models))
          (expected-provider-order
-          '("positron-anthropic" "positron-google" "positron-openai"
+          '("positron-anthropic" "positron-google"
             "nvidia" "omlx-remote" "omlx" "llama-cpp-local")))
     (should
      (equal
@@ -820,7 +808,7 @@
                    (push (list 'llama-swap hostname) events)))
                 ((symbol-function 'llm-setup-build-nix-model-registry)
                  (lambda (&optional _path) (push 'nix-registry events)))
-                ((symbol-function 'gptel-backends-llama-swap)
+                ((symbol-function 'gptel-backends-omlx)
                  (lambda () (push 'gptel events) 'test-backend)))
         (llm-setup-reset)
         (should

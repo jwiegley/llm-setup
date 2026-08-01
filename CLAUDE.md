@@ -120,7 +120,7 @@ can restart it.
 2. `llm-setup-build-llama-swap-yaml` — write hera YAML and stop llama-swap locally
 3. `llm-setup-build-llama-swap-yaml "clio"` — write clio YAML via TRAMP and stop it via SSH
 4. `llm-setup-build-nix-model-registry` — atomically publish the nonsecret JSON registry
-5. Set `gptel-model` and `gptel-backend` via `gptel-backends-llama-swap`
+5. Set `gptel-model` and `gptel-backend` via `gptel-backends-omlx`
 
 ## Adding a New Model
 
@@ -133,7 +133,7 @@ can restart it.
 
 ### External Dependencies Not Defined Here
 
-- `gptel-backends-llama-swap` — direct llama-swap gptel integration called in
+- `gptel-backends-omlx` — direct oMLX gptel integration called in
   reset step 5
 - `yaml-mode`, `json-mode` — used for display buffers but never `require`d
 

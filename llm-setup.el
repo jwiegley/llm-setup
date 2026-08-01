@@ -24,7 +24,7 @@
 
 (declare-function yaml-mode "yaml-mode" ())
 (declare-function json-mode "json-mode" ())
-(declare-function gptel-backends-llama-swap "gptel-backends")
+(declare-function gptel-backends-omlx "gptel-backends")
 
 (defvar gptel-model)
 (defvar gptel-backend)
@@ -68,12 +68,12 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-default-instance-name 'GLM-5.2
+(defcustom llm-setup-default-instance-name 'Qwen3.6-27B-oQ4e-mtp
   "Model identifier used by GPTel and Aider."
   :type 'symbol
   :group 'llm-setup)
 
-(defcustom llm-setup-default-provider "llama-cpp-local"
+(defcustom llm-setup-default-provider "omlx"
   "Provider ID for the shared default model selection."
   :type 'string
   :group 'llm-setup)
@@ -140,7 +140,6 @@
     anthropic
     gemini
     positron
-    positron_openai
     positron_anthropic
     positron_gemini
     perplexity
@@ -381,36 +380,6 @@
      (make-llm-setup-instance
       :name 'z-ai/glm-5.2
       :provider 'openrouter)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.5
-    :description "ChatGPT 5.5 (Positron)"
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_openai)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.6-luna
-    :description "ChatGPT 5.6 Luna (Positron)"
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_openai)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.6-sol
-    :description "ChatGPT 5.6 Sol (Positron)"
-    :context-length 1050000
-    :max-output-tokens 128000
-    :instances
-    (list
-     (make-llm-setup-instance
-      :provider 'positron_openai
-      :max-output-tokens 128000
-      :output-limit 128000)))
-
-   (make-llm-setup-model
-    :name 'gpt-5.6-terra
-    :description "ChatGPT 5.6 Terra (Positron)"
-    :instances
-    (list (make-llm-setup-instance :provider 'positron_openai)))
 
    (make-llm-setup-model
     :name 'granite-speech-4.1-2b
@@ -1157,14 +1126,6 @@ llama-swap startup and are resident before the first request arrives."
     :default-max-output-tokens 81920
     :include-limits nil)
    (list
-    :id "positron-openai"
-    :display-name "Positron"
-    :base-url "https://api.openai.com/v1"
-    :api-key '((env . "OPENAI_API_KEY"))
-    :match-providers '(positron_openai)
-    :default-max-output-tokens 81920
-    :include-limits nil)
-   (list
     :id "nvidia"
     :display-name "NVIDIA"
     :base-url "https://integrate.api.nvidia.com/v1"
@@ -1516,7 +1477,7 @@ file is byte-identical, leave it untouched.  Return the expanded path."
   (llm-setup-build-nix-model-registry)
   (message "[llm-setup-reset] Step 5/5: Updating GPTel backends...")
   (setq gptel-model llm-setup-default-instance-name
-        gptel-backend (gptel-backends-llama-swap))
+        gptel-backend (gptel-backends-omlx))
   (message "[llm-setup-reset] Complete!"))
 
 (defun llm-setup-get-instance-gptel-backend
