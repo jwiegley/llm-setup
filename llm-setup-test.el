@@ -93,9 +93,9 @@
                    moonshotai/kimi-k3
                    openrouter/moonshotai/kimi-k3
                    1048576)
-                  (Qwen3.7-Max
-                   qwen/qwen3.7-max
-                   openrouter/qwen/qwen3.7-max
+                  (Qwen3.8-Max
+                   qwen/qwen3.8-max
+                   openrouter/qwen/qwen3.8-max
                    1048576)))
     (pcase-let
         ((`(,family-name ,instance-name ,route-name ,context-length) case))
@@ -143,16 +143,16 @@
       (should (= 2 (length instances)))
       (should local)
       (should openrouter)
-      (should (= 1048576 (llm-setup-model-context-length model)))
+      (should (= 262144 (llm-setup-model-context-length model)))
       (should (= 1.0 (llm-setup-model-temperature model)))
       (should
        (equal (llm-setup-instance-model-path local)
               "~/Models/unsloth_GLM-5.2-GGUF"))
-      (should (= 1048576
+      (should (= 262144
                  (llm-setup-get-instance-context-length model local)))
       (should (eq (llm-setup-instance-name openrouter) 'z-ai/glm-5.2))
       (should-not (llm-setup-instance-context-length openrouter))
-      (should (= 1048576
+      (should (= 262144
                  (llm-setup-get-instance-context-length model openrouter)))
       (should
        (equal

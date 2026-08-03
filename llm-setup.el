@@ -315,7 +315,7 @@
 
    (make-llm-setup-model
     :name 'DeepSeek-V4-Flash-0731
-    :context-length 1048576
+    :context-length 262144
     :supports-reasoning t
     :instances
     (list
@@ -325,7 +325,7 @@
 
    (make-llm-setup-model
     :name 'GLM-5.2
-    :context-length 1048576
+    :context-length 262144
     :supports-reasoning t
     :instances
     (list
@@ -393,13 +393,13 @@
       :provider 'omlx)))
 
    (make-llm-setup-model
-    :name 'Qwen3.7-Max
+    :name 'Qwen3.8-Max
     :context-length 1048576
     :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
-      :name 'qwen/qwen3.7-max
+      :name 'qwen/qwen3.8-max
       :provider 'openrouter))))
   "List of configured models."
   :type '(repeat sexp)
