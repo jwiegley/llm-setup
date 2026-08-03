@@ -96,7 +96,7 @@
                   (Qwen3.7-Max
                    qwen/qwen3.7-max
                    openrouter/qwen/qwen3.7-max
-                   1000000)))
+                   1048576)))
     (pcase-let
         ((`(,family-name ,instance-name ,route-name ,context-length) case))
       (let* ((model
@@ -315,9 +315,11 @@
 
 (ert-deftest llm-setup-test-default-gptel-model-exists ()
   "Require the default to resolve through hera's oMLX backend."
-  (should (eq llm-setup-default-instance-name 'Qwen3.6-27B-oQ4e-mtp))
+  (should
+   (eq llm-setup-default-instance-name
+       'DeepSeek-V4-Flash-0731-oQ8e-mtp))
   (should (equal (llm-setup-aider-model-name)
-                 "openai/Qwen3.6-27B-oQ4e-mtp"))
+                 "openai/DeepSeek-V4-Flash-0731-oQ8e-mtp"))
   (should
    (= 1
       (cl-count
@@ -402,12 +404,19 @@
         models)))
     (should
      (llm-setup-test--nix-model registry "llama-cpp-local" "GLM-5.2"))
-    (should
+    (dolist
+        (id '("DeepSeek-V4-Flash-0731-oQ8e-mtp"
+              "Qwen3.6-27B-oQ4e-mtp"
+              "Qwen3.6-27B-oQ6e-mtp"))
+      (should (llm-setup-test--nix-model registry "omlx" id)))
+    (should-not
      (llm-setup-test--nix-model
-      registry "omlx" "Qwen3.6-27B-oQ4e-mtp"))))
+      registry "omlx" "GreenBitAI--Llama-2-13B-layer-mix-bpw-2.5-mlx"))
+    (should-not
+     (llm-setup-test--nix-provider registry "positron-openai"))))
 
 (ert-deftest llm-setup-test-nix-model-registry-claude-selections ()
-  "Publish exact Claude routes and preserve the Haiku-class selection."
+  "Publish exact Claude selections independently of direct routes."
   (let* ((registry (llm-setup-test--nix-model-registry))
          (selections (alist-get 'selections registry)))
     (dolist
@@ -419,13 +428,12 @@
           (should
            (equal (alist-get 'provider selection)
                   "positron-anthropic"))
-          (should (equal (alist-get 'model selection) model-id))
-          (should
-           (llm-setup-test--nix-model
-            registry "positron-anthropic" model-id)))))))
+          (should (equal (alist-get 'model selection) model-id)))))
+    (should-not
+     (llm-setup-test--nix-provider registry "positron-anthropic"))))
 
 (ert-deftest llm-setup-test-nix-model-registry-references-resolve ()
-  "Keep provider IDs, routes, and every selected model unambiguous."
+  "Keep provider IDs and model routes unambiguous."
   (let* ((registry (llm-setup-test--nix-model-registry))
          (providers (alist-get 'providers registry))
          (models (alist-get 'models registry))
@@ -435,12 +443,8 @@
            (lambda (model)
              (cons (alist-get 'provider model) (alist-get 'id model)))
            models))
-         (selection-routes
-          (mapcar
-           (lambda (selection)
-             (cons (alist-get 'provider (cdr selection))
-                   (alist-get 'model (cdr selection))))
-           (alist-get 'selections registry))))
+         (default-selection
+          (alist-get 'default (alist-get 'selections registry))))
     (should
      (= (length provider-ids)
         (length (delete-dups (copy-sequence provider-ids)))))
@@ -450,14 +454,10 @@
     (dolist (model models)
       (should (member (alist-get 'provider model) provider-ids)))
     (should
-     (equal
-      selection-routes
-      '(("omlx" . "Qwen3.6-27B-oQ4e-mtp")
-        ("positron-anthropic" . "claude-opus-5[1m]")
-        ("positron-anthropic" . "claude-sonnet-5")
-        ("positron-anthropic" . "claude-opus-5"))))
-    (dolist (selection-route selection-routes)
-      (should (member selection-route routes)))))
+     (member
+      (cons (alist-get 'provider default-selection)
+            (alist-get 'model default-selection))
+      routes))))
 
 (ert-deftest llm-setup-test-nix-model-registry-selection-variables ()
   "Project every model-selection variable into its exact role."
@@ -519,8 +519,7 @@
          (provider-ids
           (mapcar (lambda (model) (alist-get 'provider model)) models))
          (expected-provider-order
-          '("positron-anthropic" "positron-google"
-            "nvidia" "omlx-remote" "omlx" "llama-cpp-local")))
+          '("omlx-remote" "omlx" "llama-cpp-local")))
     (should
      (equal
       (mapcar (lambda (provider) (alist-get 'id provider)) providers)
@@ -608,22 +607,30 @@
   (let* ((registry (llm-setup-test--nix-model-registry))
          (remote
           (llm-setup-test--nix-provider registry "omlx-remote"))
+         (local-omlx
+          (llm-setup-test--nix-provider registry "omlx"))
+         (llama-swap
+          (llm-setup-test--nix-provider registry "llama-cpp-local"))
+         (remote-model
+          (llm-setup-test--nix-model
+           registry "omlx-remote" "DeepSeek-V4-Flash-0731-oQ8e-mtp"))
          (omlx
           (llm-setup-test--nix-model
            registry "omlx" "cohere-transcribe-03-2026-mlx-fp16"))
          (local-only
           (llm-setup-test--nix-model
-           registry "llama-cpp-local" "cohere-transcribe-03-2026"))
-         (local-unrestricted
-          (llm-setup-test--nix-model
-           registry "llama-cpp-local" "Bonsai-8B")))
+           registry "llama-cpp-local" "cohere-transcribe-03-2026")))
     (should (equal (alist-get 'hosts remote) '("clio")))
+    (should (equal (alist-get 'hosts local-omlx) '("hera")))
+    (should (equal (alist-get 'hosts llama-swap) '("hera")))
     (dolist (provider (alist-get 'providers registry))
-      (unless (equal (alist-get 'id provider) "omlx-remote")
+      (unless (member (alist-get 'id provider)
+                      '("omlx-remote" "omlx" "llama-cpp-local"))
         (should-not (assq 'hosts provider))))
+    (should remote-model)
+    (should-not (assq 'hosts remote-model))
     (should (equal (alist-get 'hosts omlx) '("hera")))
-    (should (equal (alist-get 'hosts local-only) '("hera")))
-    (should-not (assq 'hosts local-unrestricted))))
+    (should (equal (alist-get 'hosts local-only) '("hera")))))
 
 (ert-deftest llm-setup-test-nix-model-registry-excludes-embedding-and-reranker ()
   "Exclude embedding and reranker instances while retaining speech routes."
@@ -666,7 +673,7 @@
   (should
    (equal
     llm-setup-nix-model-registry-path
-    "~/src/nix/config/ai/model-registry.json"))
+    "~/src/nix/config/fleet/model-registry.json"))
   (let* ((directory (make-temp-file "llm-setup-registry-" t))
          (path (expand-file-name "model-registry.json" directory))
          (unused-default (expand-file-name "unused.json" directory))

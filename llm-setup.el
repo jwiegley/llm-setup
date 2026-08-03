@@ -68,7 +68,8 @@
   :type 'string
   :group 'llm-setup)
 
-(defcustom llm-setup-default-instance-name 'Qwen3.6-27B-oQ4e-mtp
+(defcustom llm-setup-default-instance-name
+  'DeepSeek-V4-Flash-0731-oQ8e-mtp
   "Model identifier used by GPTel and Aider."
   :type 'symbol
   :group 'llm-setup)
@@ -140,8 +141,6 @@
     anthropic
     gemini
     positron
-    positron_anthropic
-    positron_gemini
     perplexity
     groq
     openrouter
@@ -257,14 +256,6 @@
 
      (make-llm-setup-instance
       :name 'claude-fable-5
-      :provider 'positron_anthropic)
-
-     (make-llm-setup-instance
-      :name (intern "claude-fable-5[1m]")
-      :provider 'positron_anthropic)
-
-     (make-llm-setup-instance
-      :name 'claude-fable-5
       :provider 'anthropic)))
 
    (make-llm-setup-model
@@ -274,10 +265,6 @@
      (make-llm-setup-instance
       :name 'claude-haiku-4-5-20251001
       :provider 'vibe-proxy)
-
-     (make-llm-setup-instance
-      :name 'claude-haiku-4-5-20251001
-      :provider 'positron_anthropic)
 
      (make-llm-setup-instance
       :name 'claude-haiku-4-5-20251001
@@ -297,14 +284,6 @@
 
      (make-llm-setup-instance
       :name 'claude-opus-5
-      :provider 'positron_anthropic)
-
-     (make-llm-setup-instance
-      :name (intern "claude-opus-5[1m]")
-      :provider 'positron_anthropic)
-
-     (make-llm-setup-instance
-      :name 'claude-opus-5
       :provider 'anthropic)))
 
    (make-llm-setup-model
@@ -318,14 +297,6 @@
      (make-llm-setup-instance
       :name 'claude-sonnet-5
       :provider 'vibe-proxy)
-
-     (make-llm-setup-instance
-      :name 'claude-sonnet-5
-      :provider 'positron_anthropic)
-
-     (make-llm-setup-instance
-      :name (intern "claude-sonnet-5[1m]")
-      :provider 'positron_anthropic)
 
      (make-llm-setup-instance
       :name 'claude-sonnet-5
@@ -344,27 +315,13 @@
 
    (make-llm-setup-model
     :name 'DeepSeek-V4-Flash-0731
+    :context-length 1048576
+    :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
-      :name 'DeepSeek-V4-Flash-0731-oQ8-mtp
+      :name 'DeepSeek-V4-Flash-0731-oQ8e-mtp
       :provider 'omlx)))
-
-   (make-llm-setup-model
-    :name 'gemini-3-pro-preview
-    :description "Gemini 3 Pro (Positron)"
-    :instances
-    (list
-     (make-llm-setup-instance
-      :provider 'positron_gemini)))
-
-   (make-llm-setup-model
-    :name 'gemini-3.1-pro-preview
-    :description "Gemini 3.1 Pro (Positron)"
-    :instances
-    (list
-     (make-llm-setup-instance
-      :provider 'positron_gemini)))
 
    (make-llm-setup-model
     :name 'GLM-5.2
@@ -400,18 +357,6 @@
       :provider 'openrouter)))
 
    (make-llm-setup-model
-    :name 'llama-3.3-70b
-    :instances
-    (list
-     (make-llm-setup-instance
-      :name 'llama-3.3-70b-instruct-good-tp2
-      :provider 'positron)
-
-     (make-llm-setup-instance
-      :name 'llama-3.3-70b-versatile
-      :provider 'groq)))
-
-   (make-llm-setup-model
     :name 'Meta-Llama-3.1-8B
     :instances
     (list
@@ -433,17 +378,23 @@
                    "--ubatch-size" "4096"))))
 
    (make-llm-setup-model
-    :name 'Qwen3.6-27B-oQ4e-mtp
+    :name 'Qwen3.6-27B
+    :context-length 262144
+    :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
       :name 'Qwen3.6-27B-oQ4e-mtp
-      :hostnames '("hera" "clio")
+      :hostnames '("clio")
+      :provider 'omlx)
+
+     (make-llm-setup-instance
+      :name 'Qwen3.6-27B-oQ6e-mtp
       :provider 'omlx)))
 
    (make-llm-setup-model
     :name 'Qwen3.7-Max
-    :context-length 1000000
+    :context-length 1048576
     :supports-reasoning t
     :instances
     (list
@@ -503,7 +454,7 @@ so they share a group and are not swapped out as each one loads."
 
 
 (defcustom llm-setup-nix-model-registry-path
-  "~/src/nix/config/ai/model-registry.json"
+  "~/src/nix/config/fleet/model-registry.json"
   "Path to the generated Nix model registry JSON file."
   :type 'file
   :group 'llm-setup)
@@ -1110,46 +1061,21 @@ llama-swap startup and are resident before the first request arrives."
 (defconst llm-setup-nix-provider-defs
   (list
    (list
-    :id "positron-anthropic"
-    :display-name "Positron"
-    :base-url "https://api.anthropic.com"
-    :api-key '((env . "ANTHROPIC_API_KEY"))
-    :match-providers '(positron_anthropic)
-    :default-max-output-tokens 81920
-    :include-limits nil)
-   (list
-    :id "positron-google"
-    :display-name "Positron"
-    :base-url "https://generativelanguage.googleapis.com/v1beta/"
-    :api-key '((env . "GEMINI_API_KEY"))
-    :match-providers '(positron_gemini)
-    :default-max-output-tokens 81920
-    :include-limits nil)
-   (list
-    :id "nvidia"
-    :display-name "NVIDIA"
-    :base-url "https://integrate.api.nvidia.com/v1"
-    :api-key '((env . "NVIDIA_API_KEY"))
-    :static-models
-    (list
-     (list
-      :id "qwen/qwen3-coder-480b-a35b-instruct"
-      :display-name "Qwen3 Coder 480B A35B Instruct"
-      :max-output-tokens 81920)))
-   (list
     :id "omlx-remote"
-    :display-name "Llama.cpp (Remote)"
+    :display-name "oMLX (Remote)"
     :base-url "https://hera.lan:8443/v1/"
-    :api-key '((nonSecret . "dummy-api-key"))
+    :api-key '((nonSecret . "dummy-key"))
     :hosts '("clio")
-    :match-providers '(local)
+    :match-providers '(omlx)
     :default-max-output-tokens 128000
-    :include-limits nil)
+    :include-limits t
+    :default-output-limit 65536)
    (list
     :id "omlx"
     :display-name "oMLX"
     :base-url "http://localhost:8000/v1"
     :api-key '((nonSecret . "dummy-key"))
+    :hosts '("hera")
     :match-providers '(omlx)
     :default-max-output-tokens 128000
     :include-limits t
@@ -1160,6 +1086,7 @@ llama-swap startup and are resident before the first request arrives."
     :display-name "Llama.cpp"
     :base-url "http://localhost:8080/v1"
     :api-key '((nonSecret . "not-needed"))
+    :hosts '("hera")
     :match-providers '(local)
     :default-max-output-tokens 128000
     :include-limits t
@@ -1359,7 +1286,7 @@ naming those hosts.  Instances that run on every host omit the field.")
             (or (llm-setup-instance-output-limit instance)
                 (plist-get provider-def :default-output-limit))))
          (limited-hosts
-          (when (or (plist-get provider-def :include-host-filter) is-omlx)
+          (when (plist-get provider-def :include-host-filter)
             (llm-setup--model-registry-limited-hosts hostnames))))
     (append
      `((provider . ,(plist-get provider-def :id))

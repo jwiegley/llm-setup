@@ -14,7 +14,7 @@ llm-setup-models-list (Elisp structs)
     ├─► /Users/johnw/Models/llama-swap.yaml (hera, clio)
     │     └─ Model-switching proxy on port 8080
     │
-    ├─► config/ai/model-registry.json (Nix source)
+    ├─► config/fleet/model-registry.json (Nix source)
     │     └─ Schema-v2 nonsecret model facts and four exact selections
     │
     └─► gptel backends (Emacs)
