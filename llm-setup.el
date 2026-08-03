@@ -325,17 +325,18 @@
 
    (make-llm-setup-model
     :name 'GLM-5.2
-    :context-length 262144
     :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
       :model-path "~/Models/unsloth_GLM-5.2-GGUF"
+      :context-length 262144
       :cache-type-k 'q8_0
       :cache-type-v 'q8_0)
 
      (make-llm-setup-instance
       :name 'z-ai/glm-5.2
+      :context-length 1048576
       :provider 'openrouter)))
 
    (make-llm-setup-model

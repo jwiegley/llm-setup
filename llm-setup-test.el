@@ -151,8 +151,8 @@
       (should (= 262144
                  (llm-setup-get-instance-context-length model local)))
       (should (eq (llm-setup-instance-name openrouter) 'z-ai/glm-5.2))
-      (should-not (llm-setup-instance-context-length openrouter))
-      (should (= 262144
+      (should (= 1048576 (llm-setup-instance-context-length openrouter)))
+      (should (= 1048576
                  (llm-setup-get-instance-context-length model openrouter)))
       (should
        (equal
