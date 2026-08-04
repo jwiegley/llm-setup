@@ -32,7 +32,7 @@
          (equal (llm-setup-sync--compare-mlx discovered known)
                 '(:new nil :dead nil)))))))
 
-(ert-deftest llm-setup-test-model-registry-sorted-and-unique ()
+(ert-deftest llm-setup-test-model-list-sorted-and-unique ()
   "Keep model family names sorted case-insensitively and unique."
   (let ((keys
          (mapcar
