@@ -3,19 +3,14 @@
 ## Package Overview
 
 `llm-setup.el` is a single-file LLM model management system for Emacs. It
-maintains deployed model facts in `llm-setup-models-list`, provider and
-exceptional Nix-only static-model facts in `llm-setup-nix-provider-defs`, and
-exact default and Claude selections in explicit Custom variables. It owns three
-outputs:
+maintains deployed model facts in `llm-setup-models-list` and a selected default
+instance in `llm-setup-default-instance-name`. It owns two outputs:
 
 ```
 llm-setup-models-list (Elisp structs)
     │
     ├─► /Users/johnw/Models/llama-swap.yaml (hera, clio)
     │     └─ Model-switching proxy on port 8080
-    │
-    ├─► config/fleet/model-registry.json (Nix source)
-    │     └─ Schema-v2 nonsecret model facts and four exact selections
     │
     └─► gptel backends (Emacs)
           └─ In-editor LLM interaction
@@ -55,8 +50,7 @@ and path fields):
 ```
 
 **Full deployment** (validate → rebuild hera/clio llama-swap YAML → stop each
-llama-swap process for service-manager restart → publish Nix registry → update
-gptel):
+llama-swap process for service-manager restart → update gptel):
 
 ```elisp
 (llm-setup-reset)
@@ -86,20 +80,14 @@ Two `cl-defstruct` types form the registry:
 
 The deployed-model registry lives in `llm-setup-models-list`. Downstream
 generation iterates it via `llm-setup-instances-list`, which flattens it into
-`(model . instance)` cons pairs. The Nix projection combines those instances
-with `llm-setup-nix-provider-defs` and the explicit default and Claude selection
-variables. It emits the ordered `default`, `claudeDefault`, `claudeHaiku`, and
-`claudeSubagent` selections in schema version 2.
-
-The Nix projection describes direct providers only; downstream gateways discover
-llama-swap models independently.
+`(model . instance)` cons pairs for llama-swap and GPTel generation.
 
 ### Naming System
 
 | Accessor | Returns | Used For |
 |---|---|---|
 | `llm-setup-model-name` | Family symbol | Internal registry key |
-| `llm-setup-instance-name` | Public instance symbol, or nil | llama-swap, Nix, and GPTel model key |
+| `llm-setup-instance-name` | Public instance symbol, or nil | llama-swap and GPTel model key |
 | `llm-setup-short-model-name` | Directory name without organization/GGUF suffixes | Installed-model matching |
 
 ### llama-swap Generation
@@ -114,27 +102,26 @@ the models actually emitted.
 clio, then stops the corresponding llama-swap process so its service manager
 can restart it.
 
-### `llm-setup-reset` Orchestration (5 steps)
+### `llm-setup-reset` Orchestration (4 steps)
 
 1. `llm-setup-check-instances` — validate registry; abort on any warning
 2. `llm-setup-build-llama-swap-yaml` — write hera YAML and stop llama-swap locally
 3. `llm-setup-build-llama-swap-yaml "clio"` — write clio YAML via TRAMP and stop it via SSH
-4. `llm-setup-build-nix-model-registry` — atomically publish the nonsecret JSON registry
-5. Set `gptel-model` and `gptel-backend` via `gptel-backends-omlx`
+4. Set `gptel-model` and `gptel-backend` via `gptel-backends-omlx`
 
 ## Adding a New Model
 
 1. Download: `M-x llm-setup-download` (or `llm-setup-checkout` for git-lfs)
 2. Optionally inspect: `M-x llm-setup-show` to view GGUF metadata
 3. Add a `make-llm-setup-model` + `make-llm-setup-instance` entry
-4. Run `M-x llm-setup-reset` to validate, deploy, and publish
+4. Run `M-x llm-setup-reset` to validate and deploy
 
 ## Critical Constraints
 
 ### External Dependencies Not Defined Here
 
 - `gptel-backends-omlx` — direct oMLX gptel integration called in
-  reset step 5
+  reset step 4
 - `yaml-mode`, `json-mode` — used for display buffers but never `require`d
 
 ### TRAMP Patterns
