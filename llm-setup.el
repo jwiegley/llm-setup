@@ -10,9 +10,9 @@
 
 ;;; Commentary:
 
-;; Model management utility for GGUF, MLX, LMStudio, and Ollama models.
-;; Handles downloading, importing, configuration, and serving of AI models.
-;; Supports llama-cpp, mlx-lm, and vllm-mlx serving engines.
+;; Model management utility for GGUF, MLX, and oMLX models.
+;; Manages llama-swap.yaml deployment on the hera and clio hosts, and
+;; identifies the served models to GPTel.
 
 ;;; Code:
 
@@ -23,45 +23,10 @@
 (require 'subr-x)
 
 (declare-function yaml-mode "yaml-mode" ())
-(declare-function json-mode "json-mode" ())
 (declare-function gptel-backends-omlx "gptel-backends")
 
 (defvar gptel-model)
 (defvar gptel-backend)
-
-(defgroup llm-setup nil
-  "Model management configuration."
-  :group 'tools)
-
-(defcustom llm-setup-protocol "https"
-  "Protocol for model server."
-  :type 'string
-  :group 'llm-setup)
-
-(defcustom llm-setup-server "hera.lan"
-  "Server address."
-  :type 'string
-  :group 'llm-setup)
-
-(defcustom llm-setup-port 8443
-  "Server port."
-  :type 'integer
-  :group 'llm-setup)
-
-(defcustom llm-setup-prefix ""
-  "API prefix."
-  :type 'string
-  :group 'llm-setup)
-
-(defcustom llm-setup-api-key "sk-1234"
-  "API key."
-  :type 'string
-  :group 'llm-setup)
-
-(defcustom llm-setup-threads 24
-  "Number of threads."
-  :type 'integer
-  :group 'llm-setup)
 
 (defcustom llm-setup-default-hostname "hera"
   "Name of model host."
@@ -134,18 +99,12 @@
   (mime-types
    llm-setup-all-model-mime-types) ; MIME types that can be sent
   (context-length 262144) ; model context length
-  max-input-tokens ; number of tokens to accept
   (max-output-tokens 81920) ; number of tokens to predict
   (temperature 1.0) ; model temperature
   (min-p 0.01) ; minimum p
   (top-p 0.9) ; top p
   (top-k 20) ; top k
   (kind 'text-generation) ; symbol from llm-setup-all-model-kinds
-  (supports-system-message t) ; t if model supports system messages
-  (supports-function-calling t) ; t if model supports function calling
-  (supports-reasoning nil) ; t if model supports reasoning
-  (supports-response-schema nil) ; t if model supports response schema
-  aliases ; model alias names
   instances ; model instances
   )
 
@@ -154,9 +113,7 @@
   "Deployment configuration for a single model instance."
   name ; public deployment name
   context-length ; context length to use for instance
-  max-input-tokens ; number of tokens to accept
   max-output-tokens ; number of tokens the model can predict
-  output-limit ; deployment-specific output ceiling
   (provider 'local) ; where does the model run?
   (parallel 1) ; how many parallel connections to support
   (cache-type-k 'f16) ; K-quantization
@@ -291,7 +248,6 @@
    (make-llm-setup-model
     :name 'DeepSeek-V4-Flash-0731
     :context-length 262144
-    :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
@@ -300,7 +256,6 @@
 
    (make-llm-setup-model
     :name 'GLM-5.2
-    :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
@@ -325,7 +280,6 @@
    (make-llm-setup-model
     :name 'Kimi-K3
     :context-length 1048576
-    :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
@@ -356,7 +310,6 @@
    (make-llm-setup-model
     :name 'Qwen3.6-27B
     :context-length 262144
-    :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
@@ -371,7 +324,6 @@
    (make-llm-setup-model
     :name 'Qwen3.8-Max
     :context-length 1048576
-    :supports-reasoning t
     :instances
     (list
      (make-llm-setup-instance
@@ -382,8 +334,9 @@
   :group 'llm-setup)
 
 (defvar llm-setup-home (expand-file-name "~"))
-(defvar llm-setup-xdg-local (expand-file-name ".local/share" llm-setup-home))
+
 (defvar llm-setup-gguf-models (expand-file-name "Models" llm-setup-home))
+
 (defvar llm-setup-mlx-models
   (expand-file-name ".cache/huggingface/hub" llm-setup-home))
 
@@ -392,13 +345,10 @@
   :type 'boolean
   :group 'llm-setup)
 
-(defvar llm-setup-lmstudio-models
-  (expand-file-name "lmstudio/models" llm-setup-xdg-local))
 (defvar llm-setup-omlx-api-base "http://hera.lan:8000"
   "Base URL for the oMLX server.")
 (defvar llm-setup-omlx-api-key "dummy-key"
   "API key for the oMLX server.")
-
 (defcustom llm-setup-llama-swap-prolog "
 healthCheckTimeout: 7200
 startPort: 9400
@@ -427,15 +377,6 @@ one model, also add them to `llm-setup-llama-swap-always-on-models'
 so they share a group and are not swapped out as each one loads."
   :type '(repeat symbol)
   :group 'llm-setup)
-
-
-(defsubst llm-setup-api-base ()
-  "Get API base URL."
-  (format "%s://%s:%d%s"
-          llm-setup-protocol
-          llm-setup-server
-          llm-setup-port
-          llm-setup-prefix))
 
 (defun llm-setup-sort ()
   "Sort models in `llm-setup-models-list' by name.
@@ -477,16 +418,6 @@ alphabetically by the `:name' field (case-insensitive)."
                  (downcase (match-string 1)))))
            nil
            #'string<))))))
-
-(defun llm-setup-models-from-characteristics (&rest characteristics)
-  "Return all models that provides the full list of CHARACTERISTICS."
-  (cl-loop
-   for model in llm-setup-models-list
-   when (and-let* ((all-chars (llm-setup-model-characteristics model)))
-          (cl-subsetp characteristics all-chars))
-   collect (llm-setup-model-name model)))
-
-;; (llm-setup-models-from-characteristics 'high 'local 'thinking)
 
 (defun llm-setup-make-models-hash ()
   "Build a hashtable from NAME to MODEL for `llm-setup-models-list'."
@@ -557,114 +488,6 @@ alphabetically by the `:name' field (case-insensitive)."
                llm-setup-gguf-min-file-size)
             collect gguf)))))
 
-(defun llm-setup-get-context-length (model)
-  "Get maximum context length of MODEL."
-  (when-let* ((path (llm-setup-get-gguf-path model))
-              (gguf (expand-file-name path)))
-    (with-temp-buffer
-      (when (zerop (call-process "gguf-tools" nil t nil "show" gguf))
-        (goto-char (point-min))
-        (when (search-forward ".context_length" nil t)
-          (when (re-search-forward "\\[uint32\\] \\([0-9]+\\)" nil t)
-            (string-to-number (match-string 1))))))))
-
-(defun llm-setup-http-get (endpoint)
-  "GET request to ENDPOINT."
-  (let ((url-request-method "GET")
-        (url-request-extra-headers
-         `(("Authorization" . ,(concat "Bearer " llm-setup-api-key))
-           ("Content-Type" . "application/json")))
-        (buf
-         (url-retrieve-synchronously
-          (concat (llm-setup-api-base) endpoint) t)))
-    (unwind-protect
-        (with-current-buffer buf
-          (goto-char (point-min))
-          (re-search-forward "^$")
-          (json-read))
-      (kill-buffer buf))))
-
-(defun llm-setup-get-models ()
-  "Get list of available models from server."
-  (condition-case err
-      (let* ((response (llm-setup-http-get "/v1/models"))
-             (data (alist-get 'data response))
-             (models (make-hash-table :test 'equal)))
-        (seq-doseq (item data)
-          (let ((id (alist-get 'id item)))
-            (puthash id (list "M") models)))
-        models)
-    (error
-     (message "Error fetching models: %s" err)
-     (make-hash-table :test 'equal))))
-
-;; (inspect (llm-setup-get-models))
-
-(defun llm-setup-download (entries)
-  "Download models from HuggingFace ENTRIES."
-  (interactive "sModel entries (space-separated): ")
-  (dolist (entry (split-string entries))
-    (let* ((parts (split-string entry "/"))
-           (model
-            (string-join (cl-subseq parts 0 (min 2 (length parts))) "/"))
-           (name (replace-regexp-in-string "/" "_" model)))
-      (make-directory name t)
-      (shell-command (format "git clone hf.co:%s %s" model name)))))
-
-(defun llm-setup-checkout (models)
-  "Checkout MODELS using Git LFS."
-  (interactive "sModel files (space-separated): ")
-  (dolist (model (split-string models))
-    (when (file-regular-p model)
-      (let ((dir (file-name-directory model))
-            (base (file-name-nondirectory model)))
-        (shell-command
-         (format "cd %s && git lfs fetch --include %s" dir base))
-        (shell-command (format "cd %s && git lfs checkout %s" dir base))
-        (shell-command (format "cd %s && git lfs dedup" dir))))))
-
-(defun llm-setup-import-lmstudio (models)
-  "Import MODELS to LMStudio."
-  (interactive "sModel files (space-separated): ")
-  (dolist (model (split-string models))
-    (when (file-regular-p model)
-      (let* ((file-path (expand-file-name model))
-             (base
-              (replace-regexp-in-string
-               (concat
-                (regexp-quote llm-setup-gguf-models) "/")
-               "" file-path))
-             (name (replace-regexp-in-string "_" "/" base))
-             (target (expand-file-name name llm-setup-lmstudio-models)))
-        (make-directory (file-name-directory target) t)
-        (when (file-exists-p target)
-          (delete-file target))
-        (add-name-to-file file-path target)))))
-
-(defun llm-setup-import-ollama (models)
-  "Import MODELS to Ollama."
-  (interactive "sModel files (space-separated): ")
-  (dolist (model (split-string models))
-    (when (file-regular-p model)
-      (let* ((file-path (expand-file-name model))
-             (base-name (file-name-nondirectory model))
-             (modelfile-name
-              (replace-regexp-in-string "\\.gguf$" ".modelfile" base-name))
-             (model-name (replace-regexp-in-string "\\.gguf$" "" base-name)))
-        (with-temp-file modelfile-name
-          (insert (format "FROM %s\n" file-path)))
-        (shell-command
-         (format "ollama create %s -f %s" model-name modelfile-name))
-        (delete-file modelfile-name)))))
-
-(defun llm-setup-show (model)
-  "Show MODEL details."
-  (interactive "sModel directory: ")
-  (let ((gguf (llm-setup-get-gguf-path model)))
-    (when gguf
-      (shell-command (format "gguf-tools show %s" gguf)))))
-
-
 (defun llm-setup-get-instance-name (model instance)
   "Return the public deployment name for MODEL and INSTANCE."
   (or (llm-setup-instance-name instance) (llm-setup-model-name model)))
@@ -674,16 +497,11 @@ alphabetically by the `:name' field (case-insensitive)."
   (or (llm-setup-instance-context-length instance)
       (llm-setup-model-context-length model)))
 
-(defun llm-setup-get-instance-max-input-tokens (model instance)
-  "Find maximum input tokens for the given MODEL and INSTANCE."
-  (or (llm-setup-instance-max-input-tokens instance)
-      (llm-setup-model-max-input-tokens model)))
 
 (defun llm-setup-get-instance-max-output-tokens (model instance)
   "Find maximum output tokens for the given MODEL and INSTANCE."
   (or (llm-setup-instance-max-output-tokens instance)
       (llm-setup-model-max-output-tokens model)))
-
 
 (defsubst llm-setup-remote-hostname-p (hostname)
   "Return non-nil if HOSTNAME is both non-nil and a remote host.
@@ -1005,8 +823,6 @@ llama-swap startup and are resident before the first request arrives."
     (yaml-mode)
     (current-buffer)))
 
-;; (display-buffer (llm-setup-generate-llama-swap-yaml "hera"))
-
 (defun llm-setup-build-llama-swap-yaml (&optional hostname)
   "Build llama-swap.yaml configuration, optionally for HOSTNAME."
   (let* ((target-host (or hostname llm-setup-default-hostname))
@@ -1074,8 +890,6 @@ If HOSTNAME is non-nil, only generate definitions for that host."
    for (model . instance) in (llm-setup-instances-list)
    for backends = (llm-setup-get-instance-gptel-backend model instance hostname)
    when backends nconc backends))
-
-;; (inspect (llm-setup-gptel-backends))
 
 (defun llm-setup-check-instances ()
   "Check all model and instances definitions."
@@ -1171,56 +985,6 @@ If HOSTNAME is non-nil, only generate definitions for that host."
     (message "[llm-setup-check] Validation complete: %d warning(s)" warnings)
     warnings))
 
-(cl-defun llm-setup-run-mlx (model &key (port 8081))
-  "Start mlx-lm with a specific MODEL on the given PORT."
-  (interactive (list
-                (read-string "Model: ")
-                :port (read-number "Port: " 8081)))
-  (let ((proc
-         (start-process "mlx-lm" "*mlx-lm*" "mlx-lm"
-                        "--model"
-                        model
-                        "--port"
-                        (format "%d" port))))
-    (set-process-query-on-exit-flag proc nil)
-    (message "Started mlx-lm with model %s on port %d" model port)))
-
-(cl-defun llm-setup-run-vllm-mlx (model &key (port 8081))
-  "Start vllm-mlx with a specific MODEL on the given PORT."
-  (interactive (list
-                (read-string "Model: ")
-                :port (read-number "Port: " 8081)))
-  (let ((proc
-         (start-process "vllm-mlx" "*vllm-mlx*" "vllm-mlx"
-                        "serve"
-                        model
-                        "--port"
-                        (format "%d" port))))
-    (set-process-query-on-exit-flag proc nil)
-    (message "Started vllm-mlx with model %s on port %d" model port)))
-
-(cl-defun llm-setup-run-llama-cpp (model &key (port 8081))
-  "Start llama.cpp with a specific MODEL on the given PORT."
-  (interactive (list
-                (read-string "Model: ")
-                :port (read-number "Port: " 8081)))
-  (let ((proc
-         (start-process "llama-cpp" "*llama-cpp*" "llama-server"
-                        "--jinja"
-                        "--no-webui"
-                        "--offline"
-                        "--port"
-                        (format "%d" port)
-                        "--model"
-                        model
-                        "--threads"
-                        (format "%d" llm-setup-threads))))
-    (set-process-query-on-exit-flag proc nil)
-    (message "Started llama.cpp with model %s on port %d using %d threads"
-             model
-             port
-             llm-setup-threads)))
-
 (defun llm-setup-run-llama-swap ()
   "Start llama-swap with generated config."
   (interactive)
@@ -1228,21 +992,31 @@ If HOSTNAME is non-nil, only generate definitions for that host."
          (expand-file-name "llama-swap.yaml" llm-setup-gguf-models)))
     (shell-command (format "llama-swap --config %s" config-path))))
 
-(defun llm-setup-status ()
-  "Get llama-swap status."
+(defun llm-setup-installed-models (&optional hostname)
+  "List GGUF models, optionally from HOSTNAME."
   (interactive)
-  (with-current-buffer (get-buffer-create "*Model Status*")
-    (erase-buffer)
-    (insert (json-encode (llm-setup-http-get "/running")))
-    (json-pretty-print-buffer)
-    (json-mode)
-    (display-buffer (current-buffer))))
-
-(defun llm-setup-unload ()
-  "Unload current model."
-  (interactive)
-  (llm-setup-http-get "/unload")
-  (message "Current model unloaded"))
+  (cl-loop
+   for
+   base-dir
+   in
+   (list
+    (llm-setup-remote-path llm-setup-gguf-models hostname))
+   do
+   (message "[llm-setup-installed] Checking directory: %s" base-dir)
+   when
+   (file-exists-p base-dir)
+   nconc
+   (cl-loop
+    for
+    item
+    in
+    (directory-files base-dir t "\\`[^.]")
+    when
+    (file-directory-p item)
+    unless
+    (string= (file-name-nondirectory item) ".locks")
+    collect
+    (intern (llm-setup-short-model-name (llm-setup-full-model-name item))))))
 
 (defun llm-setup-git-pull-all ()
   "Run git-pull in all model directories."
@@ -1263,35 +1037,6 @@ If HOSTNAME is non-nil, only generate definitions for that host."
      dir)
     " ; ")))
 
-(defun llm-setup-installed-models (&optional hostname)
-  "List GGUF models, optionally from HOSTNAME."
-  (interactive)
-  (cl-loop
-   for
-   base-dir
-   in
-   (list
-    ;; (llm-setup-remote-path llm-setup-mlx-models hostname)
-    (llm-setup-remote-path llm-setup-gguf-models hostname))
-   do
-   (message "[llm-setup-installed] Checking directory: %s" base-dir)
-   when
-   (file-exists-p base-dir)
-   nconc
-   (cl-loop
-    for
-    item
-    in
-    (directory-files base-dir t "\\`[^.]")
-    when
-    (file-directory-p item)
-    unless
-    (string= (file-name-nondirectory item) ".locks")
-    collect
-    (intern (llm-setup-short-model-name (llm-setup-full-model-name item))))))
-
-
-;;; llm-setup-sync — discover new and dead models
 
 (defun llm-setup-sync--discover-gguf ()
   "Discover GGUF model directories in `llm-setup-gguf-models'.
@@ -1988,6 +1733,7 @@ Return (ADDED . REMOVED) counts."
               (cons added removed))))))))
 
 ;;;###autoload
+
 (defun llm-setup-sync ()
   "Discover models, apply change to source, and verify.
 Scans GGUF directories and the oMLX API, plus the MLX Hugging Face cache
@@ -2064,5 +1810,4 @@ in the source file, then runs `llm-setup-check-instances' to confirm."
                  added removed warnings)))))
 
 (provide 'llm-setup)
-
 ;;; llm-setup.el ends here

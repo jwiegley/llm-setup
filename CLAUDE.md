@@ -111,10 +111,8 @@ can restart it.
 
 ## Adding a New Model
 
-1. Download: `M-x llm-setup-download` (or `llm-setup-checkout` for git-lfs)
-2. Optionally inspect: `M-x llm-setup-show` to view GGUF metadata
-3. Add a `make-llm-setup-model` + `make-llm-setup-instance` entry
-4. Run `M-x llm-setup-reset` to validate and deploy
+1. Add a `make-llm-setup-model` + `make-llm-setup-instance` entry
+2. Run `M-x llm-setup-reset` to validate and deploy
 
 ## Critical Constraints
 
@@ -122,8 +120,7 @@ can restart it.
 
 - `gptel-backends-omlx` — direct oMLX gptel integration called in
   reset step 4
-- `yaml-mode`, `json-mode` — used for display buffers but never `require`d
-
+- `yaml-mode` — used for display buffers but never `require`d
 ### TRAMP Patterns
 
 Remote model operations use `/ssh:hostname:` paths constructed by

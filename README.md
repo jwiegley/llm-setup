@@ -50,9 +50,8 @@ This gives you Emacs (with `package-lint` and `relint`), `lefthook` for
 For day-to-day use, `llm-setup.el` loads into your Emacs session like any other
 package. The typical workflow is:
 
-1. Download a model with `M-x llm-setup-download`
-2. Add a `make-llm-setup-model` / `make-llm-setup-instance` entry to `llm-setup-models-list`
-3. Run `M-x llm-setup-reset` to validate and deploy
+1. Add a `make-llm-setup-model` / `make-llm-setup-instance` entry to `llm-setup-models-list`
+2. Run `M-x llm-setup-reset` to validate and deploy
 
 ## Development
 
