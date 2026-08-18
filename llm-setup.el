@@ -257,7 +257,12 @@
     (list
      (make-llm-setup-instance
       :name 'DeepSeek-V4-Flash-0731-oQ8e-mtp
-      :provider 'omlx)))
+      :provider 'omlx)
+
+     (make-llm-setup-instance
+      :name 'deepseek/deepseek-v4-flash-0731
+      :context-length 1048576
+      :provider 'openrouter)))
 
    (make-llm-setup-model
     :name 'GLM-5.2
@@ -313,17 +318,17 @@
                    "--ubatch-size" "4096"))))
 
    (make-llm-setup-model
-    :name 'Qwen3.6-27B
+    :name 'Qwen3.8-27B
     :context-length 262144
     :instances
     (list
      (make-llm-setup-instance
-      :name 'Qwen3.6-27B-oQ4e-mtp
+      :name 'Qwen3.8-27B-oQ4e-mtp
       :hostnames '("clio")
       :provider 'omlx)
 
      (make-llm-setup-instance
-      :name 'Qwen3.6-27B-oQ6e-mtp
+      :name 'Qwen3.8-27B-oQ6e-mtp-mlx
       :provider 'omlx)))
 
    (make-llm-setup-model
