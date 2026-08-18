@@ -311,7 +311,6 @@
     (list
      (make-llm-setup-instance
       :model-path "~/Models/nomic-ai_nomic-embed-text-v2-moe-GGUF"
-      :hostnames '("hera" "clio")
       :arguments '("--embedding"
                    "--pooling" "mean"
                    "--batch-size" "8192"
@@ -974,24 +973,36 @@ If HOSTNAME is non-nil, only generate definitions for that host."
                 (provider (llm-setup-instance-provider instance))
                 (engine (llm-setup-instance-engine instance))
                 (draft-model (llm-setup-instance-draft-model instance)))
-            (unless (or (null model-path) (file-directory-p model-path))
-              (warn "Unknown model-path: %s" model-path)
-              (cl-incf warnings))
-            (unless (or (null file-path) (file-regular-p file-path))
-              (warn "Unknown file-path: %s" file-path)
-              (cl-incf warnings))
             (dolist (host hostnames)
-              (unless (member host llm-setup-valid-hostnames)
-                (warn "Unknown hostname: %s" host)
-                (cl-incf warnings)))
+              (if (not (member host llm-setup-valid-hostnames))
+                  (progn
+                    (warn "Unknown hostname: %s" host)
+                    (cl-incf warnings))
+                (unless
+                    (or
+                     (null model-path)
+                     (file-directory-p
+                      (llm-setup-remote-path model-path host)))
+                  (warn "Unknown model-path for host %s: %s" host model-path)
+                  (cl-incf warnings))
+                (unless
+                    (or
+                     (null file-path)
+                     (file-regular-p (llm-setup-remote-path file-path host)))
+                  (warn "Unknown file-path for host %s: %s" host file-path)
+                  (cl-incf warnings))
+                (unless
+                    (or
+                     (null draft-model)
+                     (file-regular-p
+                      (llm-setup-remote-path draft-model host)))
+                  (warn "Unknown draft-model for host %s: %S" host draft-model)
+                  (cl-incf warnings))))
             (unless (memq provider llm-setup-all-model-providers)
               (warn "Unknown provider: %s" provider)
               (cl-incf warnings))
             (unless (memq engine llm-setup-all-model-engines)
               (warn "Unknown engine: %s" engine)
-              (cl-incf warnings))
-            (unless (or (null draft-model) (file-regular-p draft-model))
-              (warn "Unknown draft-model: %S" draft-model)
               (cl-incf warnings))))))
     (message "[llm-setup-check] Validation complete: %d warning(s)" warnings)
     warnings))

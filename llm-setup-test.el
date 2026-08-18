@@ -145,6 +145,46 @@
                 ("ssh" nil nil nil "hera" "killall" "llama-swap")))))
         (kill-buffer " *llm-setup-test-yaml*")))))
 
+(ert-deftest llm-setup-test-check-instances-validates-paths-per-host ()
+  "Validate instance paths on every assigned host."
+  (let ((llm-setup-default-hostname "hera")
+        (llm-setup-local-hostname "clio")
+        (llm-setup-valid-hostnames '("hera" "clio"))
+        (llm-setup-models-list
+         (list
+          (make-llm-setup-model
+           :name 'test
+           :instances
+           (list
+            (make-llm-setup-instance
+             :model-path "/models/hera"
+             :file-path "/models/model.gguf"
+             :draft-model "/models/draft.gguf")
+            (make-llm-setup-instance
+             :name 'test-both
+             :model-path "/models/both"
+             :hostnames '("hera" "clio"))))))
+        directories
+        files)
+    (cl-letf (((symbol-function 'llm-setup-installed-models)
+               (lambda (&optional _hostname) nil))
+              ((symbol-function 'file-directory-p)
+               (lambda (path) (push path directories) t))
+              ((symbol-function 'file-regular-p)
+               (lambda (path) (push path files) t)))
+      (should (= 0 (llm-setup-check-instances))))
+    (should
+     (equal
+      (sort directories #'string<)
+      '("/models/both"
+        "/ssh:hera:/models/both"
+        "/ssh:hera:/models/hera")))
+    (should
+     (equal
+      (sort files #'string<)
+      '("/ssh:hera:/models/draft.gguf"
+        "/ssh:hera:/models/model.gguf")))))
+
 (ert-deftest llm-setup-test-reset-orchestration ()
   "Run validation, local clio, remote hera, and GPTel updates in order."
   (let ((llm-setup-default-hostname "hera")
