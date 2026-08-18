@@ -47,7 +47,7 @@
           :concurrency-limit 32))
         (llm-setup-llama-server-executable "true"))
     (with-temp-buffer
-      (llm-setup-insert-instance-llama-swap model instance "hera")
+      (llm-setup-insert-instance-llama-swap model instance "clio")
       (should
        (string-match-p
         (regexp-quote
@@ -55,8 +55,19 @@
         (buffer-string))))
     (setf (llm-setup-instance-concurrency-limit instance) nil)
     (with-temp-buffer
-      (llm-setup-insert-instance-llama-swap model instance "hera")
+      (llm-setup-insert-instance-llama-swap model instance "clio")
       (should-not (string-match-p "concurrencyLimit" (buffer-string))))))
+
+(ert-deftest llm-setup-test-clio-is-local-without-moving-default-instances ()
+  "Run from clio while keeping omitted hostnames deployed on hera."
+  (let ((llm-setup-default-hostname "hera")
+        (llm-setup-local-hostname "clio"))
+    (should (equal (llm-setup-instance-hostnames (make-llm-setup-instance))
+                   '("hera")))
+    (should (equal (llm-setup-remote-path "/tmp/model" "clio")
+                   "/tmp/model"))
+    (should (equal (llm-setup-remote-path "/tmp/model" "hera")
+                   "/ssh:hera:/tmp/model"))))
 
 (ert-deftest llm-setup-test-llama-swap-generates-per-host ()
   "Generate only host-eligible llama-swap entries for hera and clio."
@@ -99,13 +110,16 @@
         (should-not (string-match-p "remote" hera))
         (should-not (string-match-p "remote" clio))))))
 
-(ert-deftest llm-setup-test-build-llama-swap-targets-hera-and-clio ()
-  "Write llama-swap YAML to ~/Models on hera and clio, then stop each service."
+(ert-deftest llm-setup-test-build-llama-swap-targets-clio-and-hera ()
+  "Write clio YAML locally and hera through TRAMP/SSH, then stop each service."
   (let ((llm-setup-gguf-models "/Users/johnw/Models")
+        (llm-setup-local-hostname "clio")
+        generated
         writes
         calls)
     (cl-letf (((symbol-function 'llm-setup-generate-llama-swap-yaml)
                (lambda (hostname)
+                 (push hostname generated)
                  (with-current-buffer (get-buffer-create " *llm-setup-test-yaml*")
                    (erase-buffer)
                    (insert hostname)
@@ -117,22 +131,25 @@
       (unwind-protect
           (progn
             (llm-setup-build-llama-swap-yaml)
-            (llm-setup-build-llama-swap-yaml "clio")
+            (llm-setup-build-llama-swap-yaml "hera")
+            (should (equal (nreverse generated) '("clio" "hera")))
             (should
              (equal
               (nreverse writes)
               '("/Users/johnw/Models/llama-swap.yaml"
-                "/ssh:clio:/Users/johnw/Models/llama-swap.yaml")))
+                "/ssh:hera:/Users/johnw/Models/llama-swap.yaml")))
             (should
              (equal
               (nreverse calls)
               '(("killall" nil nil nil "llama-swap")
-                ("ssh" nil nil nil "clio" "killall" "llama-swap")))))
+                ("ssh" nil nil nil "hera" "killall" "llama-swap")))))
         (kill-buffer " *llm-setup-test-yaml*")))))
 
 (ert-deftest llm-setup-test-reset-orchestration ()
-  "Run validation, hera/clio llama-swap, and GPTel updates in order."
-  (let (events)
+  "Run validation, local clio, remote hera, and GPTel updates in order."
+  (let ((llm-setup-default-hostname "hera")
+        (llm-setup-local-hostname "clio")
+        events)
     (cl-progv '(gptel-model gptel-backend) '(nil nil)
       (cl-letf (((symbol-function 'llm-setup-check-instances)
                  (lambda () (push 'check events) 0))
@@ -147,7 +164,7 @@
           (nreverse events)
           '(check
             (llama-swap nil)
-            (llama-swap "clio")
+            (llama-swap "hera")
             gptel)))
         (should
          (eq (symbol-value 'gptel-model) llm-setup-default-instance-name))

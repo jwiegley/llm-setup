@@ -31,9 +31,14 @@ llm-setup-models-list (Elisp structs)
           └─ In-editor LLM interaction
 ```
 
+The package is oriented to run from clio: clio paths and processes are local,
+while hera is managed through TRAMP and SSH. Model host assignments remain
+registry data and do not depend on the execution host.
+
 Running `M-x llm-setup-reset` validates the registry, rebuilds and restarts
-llama-swap on hera and clio, and updates GPTel in four steps. It does not
-generate or deploy configuration for downstream model gateways.
+llama-swap locally on clio and remotely on hera, and updates GPTel in four
+steps. It does not generate or deploy configuration for downstream model
+gateways.
 
 ## Getting started
 

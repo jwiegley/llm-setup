@@ -21,8 +21,8 @@ gateways or manage their services.
 
 **Infrastructure topology:**
 
-- **hera** (primary) — runs most GGUF/MLX models via llama-swap
-- **clio** (secondary) — runs a subset of models via llama-swap
+- **hera** (primary model host) — managed remotely from clio through TRAMP/SSH
+- **clio** (execution and secondary model host) — managed locally
 
 ## Development Commands
 
@@ -49,8 +49,8 @@ and path fields):
 (llm-setup-check-instances)
 ```
 
-**Full deployment** (validate → rebuild hera/clio llama-swap YAML → stop each
-llama-swap process for service-manager restart → update gptel):
+**Full deployment** (validate → rebuild clio locally and hera remotely → stop
+each llama-swap process for service-manager restart → update gptel):
 
 ```elisp
 (llm-setup-reset)
@@ -78,6 +78,10 @@ Two `cl-defstruct` types form the registry:
 - **`llm-setup-instance`** — Deployment-level provider, engine, hostnames, model
   paths, llama.cpp cache settings, arguments, and concurrency limits.
 
+`llm-setup-default-hostname` remains `hera` for instances that omit
+`:hostnames`. `llm-setup-local-hostname` is `clio` and controls only whether
+paths and process operations are local or remote.
+
 The deployed-model registry lives in `llm-setup-models-list`. Downstream
 generation iterates it via `llm-setup-instances-list`, which flattens it into
 `(model . instance)` cons pairs for llama-swap and GPTel generation.
@@ -98,15 +102,15 @@ commands with `${PORT}` placeholders, and appends groups and preload hooks for
 the models actually emitted.
 
 `llm-setup-build-llama-swap-yaml` writes
-`/Users/johnw/Models/llama-swap.yaml` locally for hera or through TRAMP for
-clio, then stops the corresponding llama-swap process so its service manager
+`/Users/johnw/Models/llama-swap.yaml` locally for clio or through TRAMP for
+hera, then stops the corresponding llama-swap process so its service manager
 can restart it.
 
 ### `llm-setup-reset` Orchestration (4 steps)
 
 1. `llm-setup-check-instances` — validate registry; abort on any warning
-2. `llm-setup-build-llama-swap-yaml` — write hera YAML and stop llama-swap locally
-3. `llm-setup-build-llama-swap-yaml "clio"` — write clio YAML via TRAMP and stop it via SSH
+2. `llm-setup-build-llama-swap-yaml` — write clio YAML and stop llama-swap locally
+3. `llm-setup-build-llama-swap-yaml "hera"` — write hera YAML via TRAMP and stop it via SSH
 4. Set `gptel-model` and `gptel-backend` via `gptel-backends-omlx`
 
 ## Adding a New Model
@@ -124,9 +128,9 @@ can restart it.
 ### TRAMP Patterns
 
 Remote model operations use `/ssh:hostname:` paths constructed by
-`llm-setup-remote-path`. Clio uses the same `/Users/johnw/Models` pathname as
-hera. Remote `executable-find` works by temporarily setting `default-directory`
-to the remote host.
+`llm-setup-remote-path`. Hera uses the same `/Users/johnw/Models` pathname as
+clio. Remote `executable-find` works by temporarily setting `default-directory`
+to hera.
 
 ### Allowed Enum Values
 

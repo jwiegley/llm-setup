@@ -11,8 +11,8 @@
 ;;; Commentary:
 
 ;; Model management utility for GGUF, MLX, and oMLX models.
-;; Manages llama-swap.yaml deployment on the hera and clio hosts, and
-;; identifies the served models to GPTel.
+;; Runs from clio while managing llama-swap.yaml on the hera and clio
+;; hosts, and identifies the served models to GPTel.
 
 ;;; Code:
 
@@ -29,7 +29,12 @@
 (defvar gptel-backend)
 
 (defcustom llm-setup-default-hostname "hera"
-  "Name of model host."
+  "Default deployment host for instances that omit `:hostnames'."
+  :type 'string
+  :group 'llm-setup)
+
+(defcustom llm-setup-local-hostname "clio"
+  "Model host where llm-setup commands run locally."
   :type 'string
   :group 'llm-setup)
 
@@ -505,8 +510,8 @@ alphabetically by the `:name' field (case-insensitive)."
 
 (defsubst llm-setup-remote-hostname-p (hostname)
   "Return non-nil if HOSTNAME is both non-nil and a remote host.
-Remote means it does not match `llm-setup-default-hostname'."
-  (and hostname (not (string= hostname llm-setup-default-hostname))))
+Remote means it does not match `llm-setup-local-hostname'."
+  (and hostname (not (string= hostname llm-setup-local-hostname))))
 
 (defsubst llm-setup-remote-path (path hostname)
   "Given a possibly remote HOSTNAME, return the correct PATH to reference it."
@@ -824,8 +829,8 @@ llama-swap startup and are resident before the first request arrives."
     (current-buffer)))
 
 (defun llm-setup-build-llama-swap-yaml (&optional hostname)
-  "Build llama-swap.yaml configuration, optionally for HOSTNAME."
-  (let* ((target-host (or hostname llm-setup-default-hostname))
+  "Build llama-swap.yaml for HOSTNAME, or the local host when nil."
+  (let* ((target-host (or hostname llm-setup-local-hostname))
          (yaml-path (expand-file-name "llama-swap.yaml" llm-setup-gguf-models)))
     (message "[llama-swap] Generating YAML for %s..." target-host)
     (with-temp-buffer
@@ -833,11 +838,11 @@ llama-swap startup and are resident before the first request arrives."
        (with-current-buffer (llm-setup-generate-llama-swap-yaml target-host)
          (buffer-string)))
       (message "[llama-swap] Writing to %s..."
-               (llm-setup-remote-path yaml-path hostname))
-      (write-file (llm-setup-remote-path yaml-path hostname)))
+               (llm-setup-remote-path yaml-path target-host))
+      (write-file (llm-setup-remote-path yaml-path target-host)))
     (message "[llama-swap] Stopping llama-swap on %s..." target-host)
-    (if (and hostname (not (string= hostname llm-setup-default-hostname)))
-        (call-process "ssh" nil nil nil hostname "killall" "llama-swap")
+    (if (llm-setup-remote-hostname-p target-host)
+        (call-process "ssh" nil nil nil target-host "killall" "llama-swap")
       (call-process "killall" nil nil nil "llama-swap"))
     (message "[llama-swap] Done for %s" target-host)))
 
@@ -850,10 +855,11 @@ llama-swap startup and are resident before the first request arrives."
     (error "Failed to check installed and defined instances"))
   (message "[llm-setup-reset] Step 1/4: Instance check complete")
   (message "[llm-setup-reset] Step 2/4: Building llama-swap.yaml for %s..."
-           llm-setup-default-hostname)
+           llm-setup-local-hostname)
   (llm-setup-build-llama-swap-yaml)
-  (message "[llm-setup-reset] Step 3/4: Building llama-swap.yaml for clio...")
-  (llm-setup-build-llama-swap-yaml "clio")
+  (message "[llm-setup-reset] Step 3/4: Building llama-swap.yaml for %s..."
+           llm-setup-default-hostname)
+  (llm-setup-build-llama-swap-yaml llm-setup-default-hostname)
   (message "[llm-setup-reset] Step 4/4: Updating GPTel backends...")
   (setq gptel-model llm-setup-default-instance-name
         gptel-backend (gptel-backends-omlx))
